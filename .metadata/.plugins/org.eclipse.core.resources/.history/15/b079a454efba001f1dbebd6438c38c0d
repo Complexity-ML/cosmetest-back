@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE hibernate-reverse-engineering PUBLIC
+    "-//Hibernate/Hibernate Reverse Engineering DTD 3.0//EN"
+    "http://hibernate.org/dtd/hibernate-reverse-engineering-3.0.dtd">
+<hibernate-reverse-engineering>
+	<type-mapping>
+		<sql-type jdbc-type="VARCHAR" hibernate-type="string"></sql-type>
+	</type-mapping>
+	<!-- Target the correct schema -->
+	<schema-selection match-schema="cosmetest" />
+
+	<!-- Optional: Include all tables in the schema -->
+	<table-filter match-schema="cosmetest" match-name=".*"></table-filter>
+</hibernate-reverse-engineering>

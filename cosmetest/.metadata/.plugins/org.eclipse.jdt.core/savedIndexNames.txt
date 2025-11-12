@@ -1,0 +1,11 @@
+INDEX VERSION 1.134+C:\Users\Boris\OneDrive\Bureau\cosmetest\.metadata\.plugins\org.eclipse.jdt.core
+112817452.index
+3126501493.index
+984107670.index
+11158353.index
+230151686.index
+1908295098.index
+1162683567.index
+2679121046.index
+1865797976.index
+1792041803.index
