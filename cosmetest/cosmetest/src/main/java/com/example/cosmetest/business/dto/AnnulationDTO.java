@@ -1,5 +1,7 @@
 package com.example.cosmetest.business.dto;
 
+import com.example.cosmetest.domain.model.TypeAnnulation;
+
 /**
  * Data Transfer Object pour les annulations
  * Utilisé pour transférer les données entre la couche de présentation et la couche business
@@ -11,6 +13,7 @@ public class AnnulationDTO {
     private int idEtude;
     private String dateAnnulation;
     private String commentaire;
+    private TypeAnnulation annulePar;
 
     // Constructeur par défaut
     public AnnulationDTO() {
@@ -30,6 +33,16 @@ public class AnnulationDTO {
         this.idEtude = idEtude;
         this.dateAnnulation = dateAnnulation;
         this.commentaire = commentaire;
+    }
+
+    // Constructeur complet avec annulePar
+    public AnnulationDTO(Integer idAnnuler, int idVol, int idEtude, String dateAnnulation, String commentaire, TypeAnnulation annulePar) {
+        this.idAnnuler = idAnnuler;
+        this.idVol = idVol;
+        this.idEtude = idEtude;
+        this.dateAnnulation = dateAnnulation;
+        this.commentaire = commentaire;
+        this.annulePar = annulePar;
     }
 
     // Getters et Setters
@@ -71,5 +84,13 @@ public class AnnulationDTO {
 
     public void setCommentaire(String commentaire) {
         this.commentaire = commentaire;
+    }
+
+    public TypeAnnulation getAnnulePar() {
+        return annulePar;
+    }
+
+    public void setAnnulePar(TypeAnnulation annulePar) {
+        this.annulePar = annulePar;
     }
 }

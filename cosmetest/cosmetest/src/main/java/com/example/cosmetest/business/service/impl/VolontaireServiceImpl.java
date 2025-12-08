@@ -675,7 +675,7 @@ public class VolontaireServiceImpl implements VolontaireService {
 
                     // Formatage de la date
                     String dateFormatted = dateNaissance.format(DateTimeFormatter.ofPattern("ddMMyy"));
-                    logger.info("Recherche photo pour: nom='{}', date='{}', type='{}'",
+                    logger.debug("Recherche photo pour: nom='{}', date='{}', type='{}'",
                             nomVolontaire, dateFormatted, photoType);
 
                     // Construction du préfixe selon le type de photo
@@ -712,32 +712,27 @@ public class VolontaireServiceImpl implements VolontaireService {
                             return null;
                     }
 
-                    // Tester toutes les variantes possibles avec logs détaillés
+                    // Tester toutes les variantes possibles
                     List<String> fileVariants = generatePhotoFileVariants(prefix, nomVolontaire, dateFormatted);
-                    logger.info("Génération de {} variantes à tester", fileVariants.size());
+                    logger.debug("Génération de {} variantes à tester pour {}", fileVariants.size(), nomVolontaire);
 
                     for (int i = 0; i < fileVariants.size(); i++) {
                         String fileName = fileVariants.get(i);
-                        logger.info("Test variante {}/{}: '{}'", i + 1, fileVariants.size(), fileName);
+                        logger.debug("Test variante {}/{}: '{}'", i + 1, fileVariants.size(), fileName);
 
                         if (checkPhotoExists(fileName)) {
-                            logger.info("✅ PHOTO TROUVÉE: '{}'", fileName);
+                            logger.debug("Photo trouvée: '{}'", fileName);
                             Map<String, Object> result = new HashMap<>();
                             result.put("photoUrl", photoServerUrl + fileName);
                             result.put("fileName", fileName);
                             result.put("exists", true);
                             return result;
-                        } else {
-                            logger.info("❌ Photo non trouvée: '{}'", fileName);
                         }
                     }
 
-                    // Aucune variante trouvée - logs détaillés
+                    // Aucune variante trouvée
                     String originalFileName = prefix + nomVolontaire.toLowerCase() + dateFormatted + ".JPG";
-                    logger.warn("🚨 AUCUNE PHOTO TROUVÉE après {} tentatives", fileVariants.size());
-                    logger.warn("Nom original tenté: '{}'", originalFileName);
-                    logger.warn("URL serveur photo: '{}'", photoServerUrl);
-                    logger.warn("Vérification activée: {}", photoCheckEnabled);
+                    logger.debug("Aucune photo trouvée après {} tentatives pour {}", fileVariants.size(), nomVolontaire);
 
                     Map<String, Object> result = new HashMap<>();
                     result.put("photoUrl", null);
@@ -764,7 +759,7 @@ public class VolontaireServiceImpl implements VolontaireService {
         };
 
         // Extensions possibles
-        String[] extensions = { ".JPG", ".jpg" };
+        String[] extensions = { ".JPG", ".jpg", ".JPEG", ".jpeg", ".PNG", ".png", ".pdf", ".PDF" };
 
         // Générer toutes les combinaisons
         for (String nameFormat : nameFormats) {
@@ -808,14 +803,8 @@ public class VolontaireServiceImpl implements VolontaireService {
             connection.setReadTimeout(photoReadTimeout);
 
             int responseCode = connection.getResponseCode();
-            logger.debug("Code de réponse HTTP pour '{}': {}", fileName, responseCode);
-
             boolean exists = (responseCode == HttpURLConnection.HTTP_OK);
-            if (!exists) {
-                logger.debug("Réponse HTTP {} pour: {}", responseCode, photoUrl);
-            } else {
-                logger.info("✅ PHOTO TROUVÉE avec encodage: '{}'", fileName);
-            }
+            logger.debug("Vérification photo '{}': {}", fileName, exists ? "trouvée" : "non trouvée");
 
             return exists;
 

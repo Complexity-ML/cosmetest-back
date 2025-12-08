@@ -17,11 +17,7 @@ public class RdvDTO {
     private String etat;
     private String commentaires;
     private String etudeRef;
-    //private UUID uuid;
-    //private Integer sequence; // Nouveau champ
-
-
-
+    private Integer duree;
 
     // Constructeur par défaut
     public RdvDTO( ) {
@@ -123,20 +119,12 @@ public class RdvDTO {
         return this.etudeRef;
     }
 
-    //public UUID getUuid() {
-    //    return uuid;
-    //}
+    public Integer getDuree() {
+        return duree;
+    }
 
-    //public void setUuid(UUID uuid) {
-    //    this.uuid = uuid;
-    //}
-
-    //public Integer getSequence() {
-    //    return sequence;
-    //}
-
-    //public void setSequence(Integer sequence) {
-    //    this.sequence = sequence;
-    //}
+    public void setDuree(Integer duree) {
+        this.duree = duree;
+    }
 
 }

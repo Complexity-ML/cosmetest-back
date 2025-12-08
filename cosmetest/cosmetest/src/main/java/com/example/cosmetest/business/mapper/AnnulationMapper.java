@@ -28,6 +28,7 @@ public class AnnulationMapper {
         dto.setIdEtude(annulation.getIdEtude());
         dto.setDateAnnulation(annulation.getDateAnnulation());
         dto.setCommentaire(annulation.getCommentaire());
+        dto.setAnnulePar(annulation.getAnnulePar());
 
         return dto;
     }
@@ -48,6 +49,7 @@ public class AnnulationMapper {
         annulation.setIdEtude(dto.getIdEtude());
         annulation.setDateAnnulation(dto.getDateAnnulation());
         annulation.setCommentaire(dto.getCommentaire());
+        annulation.setAnnulePar(dto.getAnnulePar());
 
         return annulation;
     }
@@ -68,6 +70,7 @@ public class AnnulationMapper {
         annulation.setIdEtude(dto.getIdEtude());
         annulation.setDateAnnulation(dto.getDateAnnulation());
         annulation.setCommentaire(dto.getCommentaire());
+        annulation.setAnnulePar(dto.getAnnulePar());
 
         return annulation;
     }

@@ -279,6 +279,7 @@ public class RdvServiceImpl implements RdvService {
         }
 
         dto.setHeure(rdv.getHeure());
+        dto.setDuree(rdv.getDuree());
         dto.setEtat(rdv.getEtat());
         dto.setCommentaires(rdv.getCommentaires());
 
@@ -386,6 +387,7 @@ public class RdvServiceImpl implements RdvService {
             rdv.setDate(java.sql.Date.valueOf(rdvDTO.getDate()));
         }
         rdv.setHeure(rdvDTO.getHeure());
+        rdv.setDuree(rdvDTO.getDuree());
         rdv.setCommentaires(rdvDTO.getCommentaires());
         rdv.setEtat(rdvDTO.getEtat() != null ? rdvDTO.getEtat() : "PLANIFIE");
         rdv.setIdGroupe(rdvDTO.getIdGroupe());
@@ -476,6 +478,7 @@ public class RdvServiceImpl implements RdvService {
                     rdv.setDate(java.sql.Date.valueOf(rdvDTO.getDate()));
                 }
                 rdv.setHeure(rdvDTO.getHeure());
+                rdv.setDuree(rdvDTO.getDuree());
                 rdv.setCommentaires(rdvDTO.getCommentaires());
                 rdv.setEtat(rdvDTO.getEtat() != null ? rdvDTO.getEtat() : "PLANIFIE");
                 rdv.setIdGroupe(rdvDTO.getIdGroupe());
@@ -525,6 +528,7 @@ public class RdvServiceImpl implements RdvService {
             Rdv rdv = rdvOpt.get();
             rdv.setDate(Date.valueOf(rdvDTO.getDate()));
             rdv.setHeure(rdvDTO.getHeure());
+            rdv.setDuree(rdvDTO.getDuree());
             rdv.setEtat(rdvDTO.getEtat());
             rdv.setCommentaires(rdvDTO.getCommentaires());
             rdv.setIdGroupe(rdvDTO.getIdGroupe());

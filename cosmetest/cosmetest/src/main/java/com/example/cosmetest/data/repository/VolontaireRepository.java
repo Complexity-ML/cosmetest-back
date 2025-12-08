@@ -79,10 +79,14 @@ public interface VolontaireRepository extends JpaRepository<Volontaire, Integer>
 
         /**
          * Recherche fulltext utilisant l'index idx_fulltext_vol
+         * Recherche dans: ID, nom, prénom, nom+prénom, email, téléphones
          */
         @Query(value = "SELECT v FROM Volontaire v WHERE " +
+                        "CAST(v.idVol AS string) LIKE :keyword OR " +
                         "LOWER(v.nomVol) LIKE LOWER(:keyword) OR " +
                         "LOWER(v.prenomVol) LIKE LOWER(:keyword) OR " +
+                        "LOWER(CONCAT(v.nomVol, ' ', v.prenomVol)) LIKE LOWER(:keyword) OR " +
+                        "LOWER(CONCAT(v.prenomVol, ' ', v.nomVol)) LIKE LOWER(:keyword) OR " +
                         "CAST(v.telDomicileVol AS string) LIKE :keyword OR " +
                         "CAST(v.telPortableVol AS string) LIKE :keyword OR " +
                         "LOWER(v.emailVol) LIKE LOWER(:keyword)")
@@ -90,15 +94,22 @@ public interface VolontaireRepository extends JpaRepository<Volontaire, Integer>
 
         /**
          * Version SQL native optimisée exploitant directement l'index fulltext
+         * Recherche dans: ID, nom, prénom, nom+prénom, email, téléphones
          */
         @Query(value = "SELECT * FROM volontaire WHERE " +
+                        "CAST(id_vol AS CHAR) LIKE :keyword OR " +
                         "LOWER(nom_vol) LIKE LOWER(:keyword) OR " +
                         "LOWER(prenom_vol) LIKE LOWER(:keyword) OR " +
+                        "LOWER(CONCAT(nom_vol, ' ', prenom_vol)) LIKE LOWER(:keyword) OR " +
+                        "LOWER(CONCAT(prenom_vol, ' ', nom_vol)) LIKE LOWER(:keyword) OR " +
                         "CAST(tel_domicile_vol AS CHAR) LIKE :keyword OR " +
                         "CAST(tel_portable_vol AS CHAR) LIKE :keyword OR " +
                         "LOWER(email_vol) LIKE LOWER(:keyword)", countQuery = "SELECT COUNT(*) FROM volontaire WHERE " +
+                                        "CAST(id_vol AS CHAR) LIKE :keyword OR " +
                                         "LOWER(nom_vol) LIKE LOWER(:keyword) OR " +
                                         "LOWER(prenom_vol) LIKE LOWER(:keyword) OR " +
+                                        "LOWER(CONCAT(nom_vol, ' ', prenom_vol)) LIKE LOWER(:keyword) OR " +
+                                        "LOWER(CONCAT(prenom_vol, ' ', nom_vol)) LIKE LOWER(:keyword) OR " +
                                         "CAST(tel_domicile_vol AS CHAR) LIKE :keyword OR " +
                                         "CAST(tel_portable_vol AS CHAR) LIKE :keyword OR " +
                                         "LOWER(email_vol) LIKE LOWER(:keyword)", nativeQuery = true)
@@ -126,10 +137,14 @@ public interface VolontaireRepository extends JpaRepository<Volontaire, Integer>
 
         /**
          * Recherche de volontaires par texte (recherche plein texte)
+         * Recherche dans: ID, nom, prénom, nom+prénom, email, téléphones
          */
         @Query(value = "SELECT * FROM volontaire v WHERE " +
+                        "CAST(v.id_vol AS CHAR) LIKE CONCAT('%', :searchText, '%') OR " +
                         "LOWER(v.nom_vol) LIKE LOWER(CONCAT('%', :searchText, '%')) OR " +
                         "LOWER(v.prenom_vol) LIKE LOWER(CONCAT('%', :searchText, '%')) OR " +
+                        "LOWER(CONCAT(v.nom_vol, ' ', v.prenom_vol)) LIKE LOWER(CONCAT('%', :searchText, '%')) OR " +
+                        "LOWER(CONCAT(v.prenom_vol, ' ', v.nom_vol)) LIKE LOWER(CONCAT('%', :searchText, '%')) OR " +
                         "LOWER(v.email_vol) LIKE LOWER(CONCAT('%', :searchText, '%')) OR " +
                         "CAST(v.tel_domicile_vol AS CHAR) LIKE CONCAT('%', :searchText, '%') OR " +
                         "CAST(v.tel_portable_vol AS CHAR) LIKE CONCAT('%', :searchText, '%')", nativeQuery = true)
@@ -146,15 +161,29 @@ public interface VolontaireRepository extends JpaRepository<Volontaire, Integer>
         @Query("SELECT v FROM Volontaire v ORDER BY v.dateI DESC")
         List<Volontaire> findRecentVolontaires(Pageable pageable);
 
+        /**
+         * Recherche tous les volontaires (archivés et non archivés)
+         * Recherche dans: ID, nom, prénom, nom+prénom, email
+         */
         @Query("SELECT v FROM Volontaire v WHERE " +
-                        "(LOWER(v.nomVol) LIKE LOWER(CONCAT('%', :search, '%')) " +
+                        "(CAST(v.idVol AS string) LIKE CONCAT('%', :search, '%') " +
+                        "OR LOWER(v.nomVol) LIKE LOWER(CONCAT('%', :search, '%')) " +
                         "OR LOWER(v.prenomVol) LIKE LOWER(CONCAT('%', :search, '%')) " +
+                        "OR LOWER(CONCAT(v.nomVol, ' ', v.prenomVol)) LIKE LOWER(CONCAT('%', :search, '%')) " +
+                        "OR LOWER(CONCAT(v.prenomVol, ' ', v.nomVol)) LIKE LOWER(CONCAT('%', :search, '%')) " +
                         "OR LOWER(v.emailVol) LIKE LOWER(CONCAT('%', :search, '%')))")
         Page<Volontaire> searchAll(@Param("search") String search, Pageable pageable);
 
+        /**
+         * Recherche les volontaires actifs (non archivés)
+         * Recherche dans: ID, nom, prénom, nom+prénom, email
+         */
         @Query("SELECT v FROM Volontaire v WHERE v.archive = false AND " +
-                        "(LOWER(v.nomVol) LIKE LOWER(CONCAT('%', :search, '%')) " +
+                        "(CAST(v.idVol AS string) LIKE CONCAT('%', :search, '%') " +
+                        "OR LOWER(v.nomVol) LIKE LOWER(CONCAT('%', :search, '%')) " +
                         "OR LOWER(v.prenomVol) LIKE LOWER(CONCAT('%', :search, '%')) " +
+                        "OR LOWER(CONCAT(v.nomVol, ' ', v.prenomVol)) LIKE LOWER(CONCAT('%', :search, '%')) " +
+                        "OR LOWER(CONCAT(v.prenomVol, ' ', v.nomVol)) LIKE LOWER(CONCAT('%', :search, '%')) " +
                         "OR LOWER(v.emailVol) LIKE LOWER(CONCAT('%', :search, '%')))")
         Page<Volontaire> searchActive(@Param("search") String search, Pageable pageable);
 

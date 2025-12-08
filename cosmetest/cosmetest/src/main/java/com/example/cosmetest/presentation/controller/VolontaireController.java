@@ -625,9 +625,19 @@ public class VolontaireController {
                 }
                 byte[] imageBytes = outputStream.toByteArray();
 
+                // Détecter le type de fichier et configurer le MediaType approprié
+                MediaType mediaType;
+                if (fileName.toLowerCase().endsWith(".pdf")) {
+                    mediaType = MediaType.APPLICATION_PDF;
+                } else if (fileName.toLowerCase().endsWith(".png")) {
+                    mediaType = MediaType.IMAGE_PNG;
+                } else {
+                    mediaType = MediaType.IMAGE_JPEG;
+                }
+
                 // Configurer les en-têtes HTTP
                 HttpHeaders headers = new HttpHeaders();
-                headers.setContentType(MediaType.IMAGE_JPEG);
+                headers.setContentType(mediaType);
                 headers.setCacheControl(CacheControl.maxAge(1, TimeUnit.DAYS));
                 headers.setPragma("cache");
 
@@ -668,9 +678,31 @@ public class VolontaireController {
             }
 
             String photoUrl = (String) photoInfo.get("photoUrl");
+            String fileName = (String) photoInfo.get("fileName");
 
-            // Télécharger l'image
-            URI uri = URI.create(photoUrl);
+            // IMPORTANT: Encoder l'URL pour gérer les espaces et caractères spéciaux
+            String encodedPhotoUrl;
+            try {
+                // Séparer l'URL de base et le nom de fichier
+                String baseUrl = photoUrl.substring(0, photoUrl.lastIndexOf('/') + 1);
+                String fileNameOnly = photoUrl.substring(photoUrl.lastIndexOf('/') + 1);
+
+                // Encoder seulement le nom de fichier
+                String encodedFileName = URLEncoder.encode(fileNameOnly, StandardCharsets.UTF_8)
+                        .replace("+", "%20");
+
+                encodedPhotoUrl = baseUrl + encodedFileName;
+
+                logger.debug("URL originale: {}", photoUrl);
+                logger.debug("URL encodée: {}", encodedPhotoUrl);
+
+            } catch (Exception e) {
+                logger.error("Erreur lors de l'encodage de l'URL '{}': {}", photoUrl, e.getMessage());
+                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+            }
+
+            // Télécharger l'image avec l'URL encodée
+            URI uri = URI.create(encodedPhotoUrl);
             URL url = uri.toURL();
             URLConnection connection = url.openConnection();
             try (InputStream inputStream = connection.getInputStream()) {
@@ -683,13 +715,24 @@ public class VolontaireController {
                 }
                 byte[] imageBytes = outputStream.toByteArray();
 
+                // Détecter le type de fichier et configurer le MediaType approprié
+                MediaType mediaType;
+                if (fileName.toLowerCase().endsWith(".pdf")) {
+                    mediaType = MediaType.APPLICATION_PDF;
+                } else if (fileName.toLowerCase().endsWith(".png")) {
+                    mediaType = MediaType.IMAGE_PNG;
+                } else {
+                    mediaType = MediaType.IMAGE_JPEG;
+                }
+
                 // Configurer les en-têtes HTTP
                 HttpHeaders headers = new HttpHeaders();
-                headers.setContentType(MediaType.IMAGE_JPEG);
+                headers.setContentType(mediaType);
                 headers.setCacheControl(CacheControl.maxAge(1, TimeUnit.DAYS));
                 headers.setPragma("cache");
 
-                logger.info("Miniature récupérée avec succès pour le volontaire ID: {} et le type: {}", id, type);
+                logger.info("Miniature récupérée avec succès pour le volontaire ID: {} et le type: {} ({})",
+                        id, type, fileName);
                 return new ResponseEntity<>(imageBytes, headers, HttpStatus.OK);
             }
         } catch (Exception e) {

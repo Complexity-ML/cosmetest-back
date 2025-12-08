@@ -56,6 +56,9 @@ public class Rdv {
 	@Column(name = "COMMENTAIRES")
 	private String commentaires;
 
+	@Column(name = "DUREE")
+	private Integer duree;
+
 	public Rdv() {
 	}
 
@@ -138,6 +141,14 @@ public class Rdv {
 
 	public void setCommentaires(String commentaires) {
 		this.commentaires = commentaires;
+	}
+
+	public Integer getDuree() {
+		return this.duree;
+	}
+
+	public void setDuree(Integer duree) {
+		this.duree = duree;
 	}
 
 	public Etude getEtude() {

@@ -14,6 +14,10 @@ public class Annulation implements java.io.Serializable {
 	private String dateAnnulation;
 	private String commentaire;
 
+	@Enumerated(EnumType.STRING)
+	@Column(name = "annule_par", length = 20)
+	private TypeAnnulation annulePar;
+
 	public Annulation() {
 	}
 
@@ -28,6 +32,14 @@ public class Annulation implements java.io.Serializable {
 		this.idEtude = idEtude;
 		this.dateAnnulation = dateAnnulation;
 		this.commentaire = commentaire;
+	}
+
+	public Annulation(int idVol, int idEtude, String dateAnnulation, String commentaire, TypeAnnulation annulePar) {
+		this.idVol = idVol;
+		this.idEtude = idEtude;
+		this.dateAnnulation = dateAnnulation;
+		this.commentaire = commentaire;
+		this.annulePar = annulePar;
 	}
 
 	public Integer getIdAnnuler() {
@@ -68,6 +80,14 @@ public class Annulation implements java.io.Serializable {
 
 	public void setCommentaire(String commentaire) {
 		this.commentaire = commentaire;
+	}
+
+	public TypeAnnulation getAnnulePar() {
+		return this.annulePar;
+	}
+
+	public void setAnnulePar(TypeAnnulation annulePar) {
+		this.annulePar = annulePar;
 	}
 
 }

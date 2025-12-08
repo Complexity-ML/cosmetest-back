@@ -36,6 +36,7 @@ public class RdvMapper {
         dto.setHeure(rdv.getHeure());
         dto.setEtat(rdv.getEtat());
         dto.setCommentaires(rdv.getCommentaires());
+        dto.setDuree(rdv.getDuree());
 
         // Utiliser la relation JPA pour accéder à l'objet Etude
         if (rdv.getEtude() != null) {
@@ -70,6 +71,7 @@ public class RdvMapper {
         rdv.setHeure(dto.getHeure());
         rdv.setEtat(dto.getEtat());
         rdv.setCommentaires(dto.getCommentaires());
+        rdv.setDuree(dto.getDuree());
 
         return rdv;
     }
@@ -93,6 +95,7 @@ public class RdvMapper {
         rdv.setHeure(dto.getHeure());
         rdv.setEtat(dto.getEtat());
         rdv.setCommentaires(dto.getCommentaires());
+        rdv.setDuree(dto.getDuree());
 
         return rdv;
     }
