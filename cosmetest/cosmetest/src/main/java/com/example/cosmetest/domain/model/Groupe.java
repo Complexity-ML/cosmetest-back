@@ -1,5 +1,5 @@
 package com.example.cosmetest.domain.model;
-// Generated 15 d�c. 2024, 15:56:41 by Hibernate Tools 6.5.1.Final
+// Generated 15 déc. 2024, 15:56:41 by Hibernate Tools 6.5.1.Final
 
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
@@ -29,6 +29,8 @@ public class Groupe implements java.io.Serializable {
 	private int ageMinimum;
 	private int ageMaximum;
 	private String ethnie;
+	@Column(length = 100)
+	private String phototype;
 	private int nbSujet;
 	private int iv;
 
@@ -113,6 +115,14 @@ public class Groupe implements java.io.Serializable {
 
 	public void setEthnie(String ethnie) {
 		this.ethnie = ethnie;
+	}
+
+	public String getPhototype() {
+		return this.phototype;
+	}
+
+	public void setPhototype(String phototype) {
+		this.phototype = phototype;
 	}
 
 	public int getNbSujet() {

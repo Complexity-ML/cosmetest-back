@@ -192,8 +192,39 @@ public class EtudeDTO {
     public String getProduits() {
         return produits;
     }
-    
+
     public void setProduits(String produits) {
         this.produits = produits;
+    }
+
+    // Getter pour le frontend qui attend "id" au lieu de "idEtude"
+    public Integer getId() {
+        return idEtude;
+    }
+
+    // Champ pour le nombre de volontaires inscrits (utilisé par le dashboard)
+    private int volontaires = 0;
+
+    public int getVolontaires() {
+        return volontaires;
+    }
+
+    public void setVolontaires(int volontaires) {
+        this.volontaires = volontaires;
+    }
+
+    // Getter pour le statut calculé basé sur les dates
+    public String getStatus() {
+        if (dateDebut == null || dateFin == null) {
+            return "À venir";
+        }
+        Date today = new Date(System.currentTimeMillis());
+        if (today.before(dateDebut)) {
+            return "À venir";
+        } else if (today.after(dateFin)) {
+            return "Terminée";
+        } else {
+            return "En cours";
+        }
     }
 }

@@ -32,6 +32,7 @@ public class GroupeMapper {
                 groupe.getAgeMinimum(),
                 groupe.getAgeMaximum(),
                 groupe.getEthnie(),
+                groupe.getPhototype(),
                 groupe.getNbSujet(),
                 groupe.getIv()
         );
@@ -56,6 +57,7 @@ public class GroupeMapper {
         groupe.setAgeMinimum(dto.getAgeMinimum());
         groupe.setAgeMaximum(dto.getAgeMaximum());
         groupe.setEthnie(dto.getEthnie());
+        groupe.setPhototype(dto.getPhototype());
         groupe.setNbSujet(dto.getNbSujet());
         groupe.setIv(dto.getIv());
 
@@ -115,6 +117,10 @@ public class GroupeMapper {
 
         if (dto.getEthnie() != null) {
             entity.setEthnie(dto.getEthnie());
+        }
+
+        if (dto.getPhototype() != null) {
+            entity.setPhototype(dto.getPhototype());
         }
 
         entity.setNbSujet(dto.getNbSujet());

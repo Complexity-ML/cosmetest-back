@@ -34,14 +34,17 @@ public class DashboardServiceImpl implements DashboardService {
     @Autowired
     private RdvRepository rdvRepository;
 
+    @Autowired
+    private EtudeVolontaireService etudeVolontaireService;
+
     @Override
     public DashboardStatsDTO getDashboardStats() {
         DashboardStatsDTO stats = new DashboardStatsDTO();
 
         stats.setVolontairesActifs(volontaireService.countActiveVolontaires());
 
-        int etudesEnCours = etudeService.countCurrentEtudes();
-        System.out.println(" Nombre d'études en cours récupérées : " + etudesEnCours);
+        // Utiliser getCurrentEtudes() pour avoir le même comptage que la liste affichée
+        int etudesEnCours = etudeService.getCurrentEtudes().size();
         stats.setEtudesEnCours(etudesEnCours);
 
         stats.setRdvToday(rdvService.countRdvForToday());
@@ -175,5 +178,23 @@ public class DashboardServiceImpl implements DashboardService {
         dto.setEtat(rdv.getEtat());
         dto.setCommentaires(rdv.getCommentaires());
         return dto;
+    }
+
+    @Override
+    public List<EtudeDTO> getEtudesEnCours(int limit) {
+        List<EtudeDTO> etudes = etudeService.getCurrentEtudes();
+
+        // Peupler le nombre de volontaires pour chaque étude
+        for (EtudeDTO etude : etudes) {
+            if (etude.getIdEtude() != null) {
+                Long count = etudeVolontaireService.countVolontairesByEtude(etude.getIdEtude());
+                etude.setVolontaires(count != null ? count.intValue() : 0);
+            }
+        }
+
+        if (etudes.size() > limit) {
+            return etudes.subList(0, limit);
+        }
+        return etudes;
     }
 }

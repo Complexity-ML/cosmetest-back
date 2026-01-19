@@ -1,5 +1,5 @@
 package com.example.cosmetest.domain.model;
-// Generated 15 d�c. 2024, 15:56:41 by Hibernate Tools 6.5.1.Final
+// Generated 15 déc. 2024, 15:56:41 by Hibernate Tools 6.5.1.Final
 import jakarta.persistence.*;
 
 @Entity // Indique que cette classe est une entité JPA

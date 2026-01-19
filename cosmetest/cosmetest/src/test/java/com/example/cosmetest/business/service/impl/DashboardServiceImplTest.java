@@ -82,7 +82,12 @@ class DashboardServiceImplTest {
     void testGetDashboardStats_Success() {
         // Arrange
         when(volontaireService.countActiveVolontaires()).thenReturn(150);
-        when(etudeService.countCurrentEtudes()).thenReturn(10);
+        // L'implémentation utilise getCurrentEtudes().size() au lieu de countCurrentEtudes()
+        List<EtudeDTO> etudes = Arrays.asList(
+                new EtudeDTO(), new EtudeDTO(), new EtudeDTO(), new EtudeDTO(), new EtudeDTO(),
+                new EtudeDTO(), new EtudeDTO(), new EtudeDTO(), new EtudeDTO(), new EtudeDTO()
+        ); // 10 études
+        when(etudeService.getCurrentEtudes()).thenReturn(etudes);
         when(rdvService.countRdvForToday()).thenReturn(5);
         when(preinscritService.countPreinscrits()).thenReturn(25);
 
@@ -97,7 +102,7 @@ class DashboardServiceImplTest {
         assertThat(result.getPreinscrits()).isEqualTo(25);
 
         verify(volontaireService, times(1)).countActiveVolontaires();
-        verify(etudeService, times(1)).countCurrentEtudes();
+        verify(etudeService, times(1)).getCurrentEtudes();
         verify(rdvService, times(1)).countRdvForToday();
         verify(preinscritService, times(1)).countPreinscrits();
     }
@@ -107,7 +112,8 @@ class DashboardServiceImplTest {
     void testGetDashboardStats_AllZero() {
         // Arrange
         when(volontaireService.countActiveVolontaires()).thenReturn(0);
-        when(etudeService.countCurrentEtudes()).thenReturn(0);
+        // L'implémentation utilise getCurrentEtudes().size() au lieu de countCurrentEtudes()
+        when(etudeService.getCurrentEtudes()).thenReturn(Collections.emptyList());
         when(rdvService.countRdvForToday()).thenReturn(0);
         when(preinscritService.countPreinscrits()).thenReturn(0);
 
@@ -127,7 +133,13 @@ class DashboardServiceImplTest {
     void testGetDashboardStats_LargeValues() {
         // Arrange
         when(volontaireService.countActiveVolontaires()).thenReturn(10000);
-        when(etudeService.countCurrentEtudes()).thenReturn(500);
+        // L'implémentation utilise getCurrentEtudes().size() au lieu de countCurrentEtudes()
+        // Créer une liste de 500 études
+        List<EtudeDTO> largeEtudesList = new java.util.ArrayList<>();
+        for (int i = 0; i < 500; i++) {
+            largeEtudesList.add(new EtudeDTO());
+        }
+        when(etudeService.getCurrentEtudes()).thenReturn(largeEtudesList);
         when(rdvService.countRdvForToday()).thenReturn(200);
         when(preinscritService.countPreinscrits()).thenReturn(1500);
 

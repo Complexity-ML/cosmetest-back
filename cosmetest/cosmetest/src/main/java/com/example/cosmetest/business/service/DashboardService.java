@@ -11,4 +11,5 @@ public interface DashboardService {
     List<EtudeDTO> getRecentEtudes(int limit);
     List<ActiviteRecenteDTO> getRecentActivities(int limit);
     List<RdvDTO> getUpcomingRdvs(int limit);
+    List<EtudeDTO> getEtudesEnCours(int limit);
 }

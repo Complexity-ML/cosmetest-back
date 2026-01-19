@@ -29,6 +29,8 @@ public class GroupeDTO {
 
     private String ethnie;
 
+    private String phototype;
+
     @PositiveOrZero(message = "Le nombre de sujets doit être positif ou zéro")
     private int nbSujet;
 
@@ -40,7 +42,7 @@ public class GroupeDTO {
     }
 
     public GroupeDTO(Integer idGroupe, Integer idEtude, String intitule, String description,
-                     int ageMinimum, int ageMaximum, String ethnie, int nbSujet, int iv) {
+                     int ageMinimum, int ageMaximum, String ethnie, String phototype, int nbSujet, int iv) {
         this.idGroupe = idGroupe;
         this.idEtude = idEtude;
         this.intitule = intitule;
@@ -48,6 +50,7 @@ public class GroupeDTO {
         this.ageMinimum = ageMinimum;
         this.ageMaximum = ageMaximum;
         this.ethnie = ethnie;
+        this.phototype = phototype;
         this.nbSujet = nbSujet;
         this.iv = iv;
     }
@@ -107,6 +110,14 @@ public class GroupeDTO {
 
     public void setEthnie(String ethnie) {
         this.ethnie = ethnie;
+    }
+
+    public String getPhototype() {
+        return phototype;
+    }
+
+    public void setPhototype(String phototype) {
+        this.phototype = phototype;
     }
 
     public int getNbSujet() {

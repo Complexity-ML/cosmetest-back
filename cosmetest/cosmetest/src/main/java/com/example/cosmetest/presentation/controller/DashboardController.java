@@ -58,4 +58,9 @@ public class DashboardController {
 
         return ResponseEntity.ok(rdvs);
     }
+
+    @GetMapping("/etude/en-cours")
+    public ResponseEntity<List<EtudeDTO>> getEtudesEnCours() {
+        return ResponseEntity.ok(dashboardService.getEtudesEnCours(10));
+    }
 }
