@@ -39,3 +39,10 @@ out/
 .env
 application-local.properties
 **/application-prod.properties
+
+
+# Logs
+*.log
+*.log.*
+logs/
+**/logs/
