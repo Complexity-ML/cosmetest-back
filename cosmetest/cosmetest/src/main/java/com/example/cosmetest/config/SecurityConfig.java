@@ -43,8 +43,21 @@ public class SecurityConfig {
             
             // Configuration des autorisations
             .authorizeHttpRequests(auth -> auth
+                // Authentification et documentation
                 .requestMatchers("/api/auth/**", "/v3/api-docs/**", "/swagger-ui/**").permitAll()
-                .requestMatchers("/api/health").permitAll()   // Autoriser le health check
+                .requestMatchers("/api/health").permitAll()
+                // Fichiers statiques du frontend (SPA React/Vite)
+                .requestMatchers("/", "/index.html", "/favicon.ico", "/vite.svg").permitAll()
+                .requestMatchers("/assets/**").permitAll()
+                // Routes SPA - permettre l'accès sans auth (le frontend gère sa propre auth)
+                .requestMatchers("/login", "/login/**").permitAll()
+                .requestMatchers("/dashboard", "/dashboard/**").permitAll()
+                .requestMatchers("/etudes", "/etudes/**").permitAll()
+                .requestMatchers("/volontaires", "/volontaires/**").permitAll()
+                .requestMatchers("/planning", "/planning/**").permitAll()
+                .requestMatchers("/admin", "/admin/**").permitAll()
+                .requestMatchers("/settings", "/settings/**").permitAll()
+                // Toutes les requêtes API nécessitent une authentification
                 .anyRequest().authenticated()
             )
             
@@ -70,9 +83,10 @@ public class SecurityConfig {
         // Configuration CORS plus sécurisée mais flexible pour développement
         configuration.setAllowedOriginPatterns(List.of(
                 "http://localhost:*",
-                "http://127.0.0.1:*", 
+                "http://127.0.0.1:*",
                 "http://192.168.*:*",
-                "http://10.0.*:*"
+                "http://10.0.*:*",
+                "http://intranet:*" // Intranet sur n'importe quel port
         ));
         
         configuration.setAllowCredentials(true);

@@ -18,16 +18,45 @@ import jakarta.validation.Valid;
 import jakarta.servlet.http.HttpServletResponse;
 
 @RestController
-@CrossOrigin(origins = {"http://192.168.127.36:3000","http://192.168.127.36:5000"}, allowCredentials = "true")
+@CrossOrigin(origins = {"http://192.168.127.36:3000","http://192.168.127.36:5000","http://intranet:5000"}, allowCredentials = "true")
 public class AuthController {
 
     private final AuthService authService;
     private final AuthenticationManager authenticationManager;
 
+    // Déterminer si on est en production (HTTPS) ou en dev (HTTP)
+    private final boolean isProduction = !"dev".equals(
+            System.getenv().getOrDefault("SPRING_PROFILES_ACTIVE", "dev")
+    );
+
     public AuthController(AuthService authService,
                           AuthenticationManager authenticationManager) {
         this.authService = authService;
         this.authenticationManager = authenticationManager;
+    }
+
+    /**
+     * Génère la valeur du cookie JWT avec les bons paramètres selon l'environnement
+     * - En production (HTTPS): Secure + SameSite=None
+     * - En développement (HTTP): SameSite=Lax (sans Secure)
+     */
+    private String buildCookieValue(String jwt, int maxAge) {
+        StringBuilder cookie = new StringBuilder();
+        cookie.append("jwt=").append(jwt != null ? jwt : "");
+        cookie.append("; Path=/");
+        cookie.append("; Max-Age=").append(maxAge);
+        cookie.append("; HttpOnly");
+
+        if (isProduction) {
+            // Production: HTTPS requis
+            cookie.append("; Secure");
+            cookie.append("; SameSite=None");
+        } else {
+            // Développement: HTTP autorisé
+            cookie.append("; SameSite=Lax");
+        }
+
+        return cookie.toString();
     }
 
     // === ROUTES /api/auth ===
@@ -59,12 +88,7 @@ public class AuthController {
             }
 
             // 3) Construire manuellement l'en-tête Set-Cookie (pour navigateurs web)
-            String cookieValue = "jwt=" + jwt
-                    + "; Path=/"
-                    + "; Max-Age=86400"  // 1 jour (exprimé en secondes)
-                    + "; HttpOnly"
-                    //+ "; Secure"
-                    + "; SameSite=Lax"; // Autorise cross-site
+            String cookieValue = buildCookieValue(jwt, 86400); // 1 jour
 
             // 4) Fixer l'en-tête
             response.setHeader("Set-Cookie", cookieValue);
@@ -90,12 +114,7 @@ public class AuthController {
     @PostMapping("/api/auth/logout")
     public ResponseEntity<?> logoutUser(HttpServletResponse response) {
         // 1) Générer un Set-Cookie pour expirer le précédent
-        String cookieValue = "jwt="
-                + "; Path=/"
-                + "; Max-Age=0"   // expire immédiatement
-                + "; HttpOnly"
-                //+ "; Secure"
-                + "; SameSite=Lax";
+        String cookieValue = buildCookieValue(null, 0); // Expire immédiatement
 
         // 2) Fixer l'en-tête
         response.setHeader("Set-Cookie", cookieValue);
@@ -103,11 +122,6 @@ public class AuthController {
         // 3) Retourner la confirmation
         return ResponseEntity.ok("Déconnexion réussie");
     }
-
-    boolean isProduction = !"dev".equals(
-            System.getenv().getOrDefault("SPRING_PROFILES_ACTIVE", "dev")
-    );
-
 
     @GetMapping("/api/auth/user")
     public ResponseEntity<?> getUserInfo(Authentication authentication) {
