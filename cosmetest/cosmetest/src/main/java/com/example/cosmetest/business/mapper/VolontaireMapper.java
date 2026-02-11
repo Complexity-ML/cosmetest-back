@@ -128,6 +128,7 @@ public class VolontaireMapper {
         dto.setPerteDeFermeteVisage(volontaire.getPerteDeFermeteVisage());
         dto.setPerteDeFermeteCou(volontaire.getPerteDeFermeteCou());
         dto.setPerteDeFermeteDecollete(volontaire.getPerteDeFermeteDecollete());
+        dto.setPerteDeFermeteAvantBras(volontaire.getPerteDeFermeteAvantBras());
 
         // Caractéristiques particulières
         dto.setPilosite(volontaire.getPilosite());
@@ -347,6 +348,7 @@ public class VolontaireMapper {
         volontaire.setPerteDeFermeteVisage(dto.getPerteDeFermeteVisage());
         volontaire.setPerteDeFermeteCou(dto.getPerteDeFermeteCou());
         volontaire.setPerteDeFermeteDecollete(dto.getPerteDeFermeteDecollete());
+        volontaire.setPerteDeFermeteAvantBras(dto.getPerteDeFermeteAvantBras());
 
         // Caractéristiques particulières
         volontaire.setPilosite(dto.getPilosite());
@@ -615,6 +617,241 @@ public class VolontaireMapper {
         if (dto.getSecheressePieds() != null)
             entity.setSecheressePieds(dto.getSecheressePieds());
 
+        // Taches pigmentaires
+        if (dto.getTachesPigmentairesVisage() != null)
+            entity.setTachesPigmentairesVisage(dto.getTachesPigmentairesVisage());
+        if (dto.getTachesPigmentairesCou() != null)
+            entity.setTachesPigmentairesCou(dto.getTachesPigmentairesCou());
+        if (dto.getTachesPigmentairesDecollete() != null)
+            entity.setTachesPigmentairesDecollete(dto.getTachesPigmentairesDecollete());
+        if (dto.getTachesPigmentairesMains() != null)
+            entity.setTachesPigmentairesMains(dto.getTachesPigmentairesMains());
+
+        // Perte de fermeté
+        if (dto.getPerteDeFermeteVisage() != null)
+            entity.setPerteDeFermeteVisage(dto.getPerteDeFermeteVisage());
+        if (dto.getPerteDeFermeteCou() != null)
+            entity.setPerteDeFermeteCou(dto.getPerteDeFermeteCou());
+        if (dto.getPerteDeFermeteDecollete() != null)
+            entity.setPerteDeFermeteDecollete(dto.getPerteDeFermeteDecollete());
+        if (dto.getPerteDeFermeteAvantBras() != null)
+            entity.setPerteDeFermeteAvantBras(dto.getPerteDeFermeteAvantBras());
+
+        // Caractéristiques particulières
+        if (dto.getPilosite() != null)
+            entity.setPilosite(dto.getPilosite());
+        if (dto.getCicatrices() != null)
+            entity.setCicatrices(dto.getCicatrices());
+        if (dto.getTatouages() != null)
+            entity.setTatouages(dto.getTatouages());
+        if (dto.getPiercings() != null)
+            entity.setPiercings(dto.getPiercings());
+
+        // Vergetures
+        if (dto.getVergeturesJambes() != null)
+            entity.setVergeturesJambes(dto.getVergeturesJambes());
+        if (dto.getVergeturesFessesHanches() != null)
+            entity.setVergeturesFessesHanches(dto.getVergeturesFessesHanches());
+        if (dto.getVergeturesVentreTaille() != null)
+            entity.setVergeturesVentreTaille(dto.getVergeturesVentreTaille());
+        if (dto.getVergeturesPoitrineDecollete() != null)
+            entity.setVergeturesPoitrineDecollete(dto.getVergeturesPoitrineDecollete());
+
+        // Cellulite
+        if (dto.getCelluliteJambes() != null)
+            entity.setCelluliteJambes(dto.getCelluliteJambes());
+        if (dto.getCelluliteFessesHanches() != null)
+            entity.setCelluliteFessesHanches(dto.getCelluliteFessesHanches());
+        if (dto.getCelluliteVentreTaille() != null)
+            entity.setCelluliteVentreTaille(dto.getCelluliteVentreTaille());
+        if (dto.getCelluliteBras() != null)
+            entity.setCelluliteBras(dto.getCelluliteBras());
+
+        // Mesures
+        if (dto.getIhBrasDroit() != null)
+            entity.setIhBrasDroit(dto.getIhBrasDroit());
+        if (dto.getIhBrasGauche() != null)
+            entity.setIhBrasGauche(dto.getIhBrasGauche());
+
+        // Cheveux
+        if (dto.getCouleurCheveux() != null)
+            entity.setCouleurCheveux(dto.getCouleurCheveux());
+        if (dto.getNatureCheveux() != null)
+            entity.setNatureCheveux(dto.getNatureCheveux());
+        if (dto.getLongueurCheveux() != null)
+            entity.setLongueurCheveux(dto.getLongueurCheveux());
+        if (dto.getEpaisseurCheveux() != null)
+            entity.setEpaisseurCheveux(dto.getEpaisseurCheveux());
+        if (dto.getNatureCuirChevelu() != null)
+            entity.setNatureCuirChevelu(dto.getNatureCuirChevelu());
+        if (dto.getCheveuxAbimes() != null)
+            entity.setCheveuxAbimes(dto.getCheveuxAbimes());
+        if (dto.getCheveuxCassants() != null)
+            entity.setCheveuxCassants(dto.getCheveuxCassants());
+        if (dto.getCheveuxPlats() != null)
+            entity.setCheveuxPlats(dto.getCheveuxPlats());
+        if (dto.getCheveuxTernes() != null)
+            entity.setCheveuxTernes(dto.getCheveuxTernes());
+        if (dto.getPointesFourchues() != null)
+            entity.setPointesFourchues(dto.getPointesFourchues());
+        if (dto.getPellicules() != null)
+            entity.setPellicules(dto.getPellicules());
+        if (dto.getDemangeaisonsDuCuirChevelu() != null)
+            entity.setDemangeaisonsDuCuirChevelu(dto.getDemangeaisonsDuCuirChevelu());
+        if (dto.getCuirCheveluSensible() != null)
+            entity.setCuirCheveluSensible(dto.getCuirCheveluSensible());
+        if (dto.getChuteDeCheveux() != null)
+            entity.setChuteDeCheveux(dto.getChuteDeCheveux());
+        if (dto.getCalvitie() != null)
+            entity.setCalvitie(dto.getCalvitie());
+
+        // Cils
+        if (dto.getEpaisseurCils() != null)
+            entity.setEpaisseurCils(dto.getEpaisseurCils());
+        if (dto.getLongueurCils() != null)
+            entity.setLongueurCils(dto.getLongueurCils());
+        if (dto.getCourbureCils() != null)
+            entity.setCourbureCils(dto.getCourbureCils());
+        if (dto.getCilsAbimes() != null)
+            entity.setCilsAbimes(dto.getCilsAbimes());
+        if (dto.getCilsBroussailleux() != null)
+            entity.setCilsBroussailleux(dto.getCilsBroussailleux());
+        if (dto.getChuteDeCils() != null)
+            entity.setChuteDeCils(dto.getChuteDeCils());
+        if (dto.getCils() != null)
+            entity.setCils(dto.getCils());
+        if (dto.getCaracteristiqueSourcils() != null)
+            entity.setCaracteristiqueSourcils(dto.getCaracteristiqueSourcils());
+
+        // Ongles
+        if (dto.getOnglesMous() != null)
+            entity.setOnglesMous(dto.getOnglesMous());
+        if (dto.getOnglesCassants() != null)
+            entity.setOnglesCassants(dto.getOnglesCassants());
+        if (dto.getOnglesStries() != null)
+            entity.setOnglesStries(dto.getOnglesStries());
+        if (dto.getOnglesDedoubles() != null)
+            entity.setOnglesDedoubles(dto.getOnglesDedoubles());
+
+        // Visage
+        if (dto.getLesionsRetentionnelles() != null)
+            entity.setLesionsRetentionnelles(dto.getLesionsRetentionnelles());
+        if (dto.getLesionsInflammatoires() != null)
+            entity.setLesionsInflammatoires(dto.getLesionsInflammatoires());
+        if (dto.getCernesPigmentaires() != null)
+            entity.setCernesPigmentaires(dto.getCernesPigmentaires());
+        if (dto.getCernesVasculaires() != null)
+            entity.setCernesVasculaires(dto.getCernesVasculaires());
+        if (dto.getPoches() != null)
+            entity.setPoches(dto.getPoches());
+        if (dto.getPoresVisibles() != null)
+            entity.setPoresVisibles(dto.getPoresVisibles());
+        if (dto.getTeintInhomogene() != null)
+            entity.setTeintInhomogene(dto.getTeintInhomogene());
+        if (dto.getTeintTerne() != null)
+            entity.setTeintTerne(dto.getTeintTerne());
+        if (dto.getYeux() != null)
+            entity.setYeux(dto.getYeux());
+        if (dto.getLevres() != null)
+            entity.setLevres(dto.getLevres());
+
+        // Santé féminine
+        if (dto.getMenopause() != null)
+            entity.setMenopause(dto.getMenopause());
+        if (dto.getThs() != null)
+            entity.setThs(dto.getThs());
+        if (dto.getContraception() != null)
+            entity.setContraception(dto.getContraception());
+        if (dto.getBouffeeChaleurMenaupose() != null)
+            entity.setBouffeeChaleurMenaupose(dto.getBouffeeChaleurMenaupose());
+
+        // Antécédents médicaux
+        if (dto.getAnamnese() != null)
+            entity.setAnamnese(dto.getAnamnese());
+        if (dto.getTraitement() != null)
+            entity.setTraitement(dto.getTraitement());
+        if (dto.getAcne() != null)
+            entity.setAcne(dto.getAcne());
+        if (dto.getCouperoseRosacee() != null)
+            entity.setCouperoseRosacee(dto.getCouperoseRosacee());
+        if (dto.getPsoriasis() != null)
+            entity.setPsoriasis(dto.getPsoriasis());
+        if (dto.getDermiteSeborrheique() != null)
+            entity.setDermiteSeborrheique(dto.getDermiteSeborrheique());
+        if (dto.getEczema() != null)
+            entity.setEczema(dto.getEczema());
+        if (dto.getAngiome() != null)
+            entity.setAngiome(dto.getAngiome());
+        if (dto.getPityriasis() != null)
+            entity.setPityriasis(dto.getPityriasis());
+        if (dto.getVitiligo() != null)
+            entity.setVitiligo(dto.getVitiligo());
+        if (dto.getMelanome() != null)
+            entity.setMelanome(dto.getMelanome());
+        if (dto.getZona() != null)
+            entity.setZona(dto.getZona());
+        if (dto.getHerpes() != null)
+            entity.setHerpes(dto.getHerpes());
+        if (dto.getPelade() != null)
+            entity.setPelade(dto.getPelade());
+
+        // Allergies
+        if (dto.getReactionAllergique() != null)
+            entity.setReactionAllergique(dto.getReactionAllergique());
+        if (dto.getAllergiesCommentaires() != null)
+            entity.setAllergiesCommentaires(dto.getAllergiesCommentaires());
+        if (dto.getDesensibilisation() != null)
+            entity.setDesensibilisation(dto.getDesensibilisation());
+        if (dto.getTerrainAtopique() != null)
+            entity.setTerrainAtopique(dto.getTerrainAtopique());
+
+        // Scores
+        if (dto.getScorePod() != null)
+            entity.setScorePod(dto.getScorePod());
+        if (dto.getScorePog() != null)
+            entity.setScorePog(dto.getScorePog());
+        if (dto.getScoreFront() != null)
+            entity.setScoreFront(dto.getScoreFront());
+        if (dto.getScoreLion() != null)
+            entity.setScoreLion(dto.getScoreLion());
+        if (dto.getScorePpd() != null)
+            entity.setScorePpd(dto.getScorePpd());
+        if (dto.getScorePpg() != null)
+            entity.setScorePpg(dto.getScorePpg());
+        if (dto.getScoreDod() != null)
+            entity.setScoreDod(dto.getScoreDod());
+        if (dto.getScoreDog() != null)
+            entity.setScoreDog(dto.getScoreDog());
+        if (dto.getScoreSngd() != null)
+            entity.setScoreSngd(dto.getScoreSngd());
+        if (dto.getScoreSngg() != null)
+            entity.setScoreSngg(dto.getScoreSngg());
+        if (dto.getScoreLevsup() != null)
+            entity.setScoreLevsup(dto.getScoreLevsup());
+        if (dto.getScoreComlevd() != null)
+            entity.setScoreComlevd(dto.getScoreComlevd());
+        if (dto.getScoreComlevg() != null)
+            entity.setScoreComlevg(dto.getScoreComlevg());
+        if (dto.getScorePtose() != null)
+            entity.setScorePtose(dto.getScorePtose());
+        if (dto.getIta() != null)
+            entity.setIta(dto.getIta());
+
+        // Divers
+        if (dto.getOriginePere() != null)
+            entity.setOriginePere(dto.getOriginePere());
+        if (dto.getOrigineMere() != null)
+            entity.setOrigineMere(dto.getOrigineMere());
+        if (dto.getNbCigarettesJour() != null)
+            entity.setNbCigarettesJour(dto.getNbCigarettesJour());
+        entity.setHauteurSiege(dto.getHauteurSiege());
+        if (dto.getMapyeux() != null)
+            entity.setMapyeux(dto.getMapyeux());
+        if (dto.getMaplevres() != null)
+            entity.setMaplevres(dto.getMaplevres());
+        if (dto.getMapsourcils() != null)
+            entity.setMapsourcils(dto.getMapsourcils());
+
         // Notes et évaluations
         if (dto.getNotes() != null)
             entity.setNotes(dto.getNotes());
@@ -626,9 +863,6 @@ public class VolontaireMapper {
             entity.setNotesTeint(dto.getNotesTeint());
         if (dto.getNotesCynetique() != null)
             entity.setNotesCynetique(dto.getNotesCynetique());
-
-        // Et ainsi de suite pour tous les autres champs...
-        // Trop de code à inclure, mais le principe est le même pour tous les champs
 
         return entity;
     }

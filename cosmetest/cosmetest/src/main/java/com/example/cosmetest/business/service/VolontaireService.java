@@ -266,4 +266,12 @@ public interface VolontaireService {
     Page<VolontaireDTO> getVolontairesPaginated(int page, int size, boolean includeArchived, String search);
 
     List<Volontaire> findAllByIdIn(List<Integer> idList);
+
+    /**
+     * Recherche un volontaire par son adresse email
+     *
+     * @param email l'adresse email du volontaire
+     * @return le volontaire correspondant, s'il existe
+     */
+    Optional<VolontaireDTO> findByEmail(String email);
 }

@@ -35,6 +35,7 @@ public class VolontaireDetailDTO extends VolontaireDTO {
     private String perteDeFermeteVisage;
     private String perteDeFermeteCou;
     private String perteDeFermeteDecollete;
+    private String perteDeFermeteAvantBras;
 
     // Caractéristiques particulières
     private String pilosite;
@@ -336,6 +337,14 @@ public class VolontaireDetailDTO extends VolontaireDTO {
 
     public void setPerteDeFermeteDecollete(String perteDeFermeteDecollete) {
         this.perteDeFermeteDecollete = perteDeFermeteDecollete;
+    }
+
+    public String getPerteDeFermeteAvantBras() {
+        return perteDeFermeteAvantBras;
+    }
+
+    public void setPerteDeFermeteAvantBras(String perteDeFermeteAvantBras) {
+        this.perteDeFermeteAvantBras = perteDeFermeteAvantBras;
     }
 
     public String getPilosite() {

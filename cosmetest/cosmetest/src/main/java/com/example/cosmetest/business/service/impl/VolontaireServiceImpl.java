@@ -299,7 +299,8 @@ public class VolontaireServiceImpl implements VolontaireService {
             return Optional.empty();
         }
 
-        validateVolontaire(volontaireDetailDTO);
+        // Pas de validateVolontaire ici : cet endpoint met à jour les détails (peau, cheveux, etc.)
+        // Les champs obligatoires (nomVol, prenomVol) sont déjà en base et ne sont pas modifiés
 
         return volontaireRepository.findById(id)
                 .map(existingVolontaire -> {
@@ -936,5 +937,15 @@ public class VolontaireServiceImpl implements VolontaireService {
     @Override
     public List<Volontaire> findAllByIdIn(List<Integer> ids) {
         return volontaireRepository.findAllByIdVolIn(ids);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Optional<VolontaireDTO> findByEmail(String email) {
+        List<Volontaire> volontaires = volontaireRepository.findByEmailVol(email);
+        if (volontaires.isEmpty()) {
+            return Optional.empty();
+        }
+        return Optional.of(volontaireMapper.toDTO(volontaires.get(0)));
     }
 }

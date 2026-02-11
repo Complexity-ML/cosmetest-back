@@ -439,6 +439,34 @@ public class VolontaireController {
     }
 
     /**
+     * Recherche un volontaire par son adresse email
+     *
+     * @param email l'adresse email du volontaire
+     * @return le volontaire correspondant ou 404
+     */
+    @GetMapping("/by-email")
+    @Transactional(readOnly = true)
+    public ResponseEntity<?> getVolontaireByEmail(@RequestParam String email) {
+        logger.info("Recherche du volontaire par email: {}", email);
+
+        if (email == null || email.trim().isEmpty()) {
+            return ResponseEntity.badRequest().body(Map.of(
+                    "message", "L'email ne peut pas être vide"));
+        }
+
+        return volontaireService.findByEmail(email.trim())
+                .map(volontaire -> {
+                    Map<String, Object> frontendData = ReflectionUtils.convertDtoToFrontendMap(volontaire);
+                    logger.info("Volontaire trouvé par email: {}", email);
+                    return ResponseEntity.ok(frontendData);
+                })
+                .orElseGet(() -> {
+                    logger.info("Aucun volontaire trouvé avec l'email: {}", email);
+                    return ResponseEntity.notFound().build();
+                });
+    }
+
+    /**
      * Gestionnaire d'exception pour les erreurs de conversion de type de paramètre
      */
     @ExceptionHandler(MethodArgumentTypeMismatchException.class)

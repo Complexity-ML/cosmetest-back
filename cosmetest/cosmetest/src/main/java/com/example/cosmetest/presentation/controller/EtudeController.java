@@ -82,13 +82,28 @@ public class EtudeController {
     }
 
     /**
-     * Récupère une étude par sa référence
-     * 
+     * Récupère une étude par sa référence (path variable — ne fonctionne pas si la ref contient des slashes)
+     *
      * @param ref Référence de l'étude
      * @return L'étude ou 404 si non trouvée
      */
     @GetMapping("/ref/{ref}")
     public ResponseEntity<EtudeDTO> getEtudeByRef(@PathVariable String ref) {
+        Optional<EtudeDTO> etude = etudeService.getEtudeByRef(ref);
+
+        return etude
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.notFound().build());
+    }
+
+    /**
+     * Récupère une étude par sa référence (query param — fonctionne avec tous les caractères)
+     *
+     * @param ref Référence de l'étude
+     * @return L'étude ou 404 si non trouvée
+     */
+    @GetMapping("/search-by-ref")
+    public ResponseEntity<EtudeDTO> searchByRef(@RequestParam String ref) {
         Optional<EtudeDTO> etude = etudeService.getEtudeByRef(ref);
 
         return etude

@@ -49,6 +49,7 @@ public class PanelDTO {
     private String perteDeFermeteVisage;
     private String perteDeFermeteCou;
     private String perteDeFermeteDecollete;
+    private String perteDeFermeteAvantBras;
 
     // Caractéristiques physiques diverses
     private String pilosite;
@@ -399,6 +400,14 @@ public class PanelDTO {
 
     public void setPerteDeFermeteDecollete(String perteDeFermeteDecollete) {
         this.perteDeFermeteDecollete = perteDeFermeteDecollete;
+    }
+
+    public String getPerteDeFermeteAvantBras() {
+        return perteDeFermeteAvantBras;
+    }
+
+    public void setPerteDeFermeteAvantBras(String perteDeFermeteAvantBras) {
+        this.perteDeFermeteAvantBras = perteDeFermeteAvantBras;
     }
 
     public String getPilosite() {
@@ -1236,6 +1245,7 @@ public class PanelDTO {
                 ", perteDeFermeteVisage='" + perteDeFermeteVisage + '\'' +
                 ", perteDeFermeteCou='" + perteDeFermeteCou + '\'' +
                 ", perteDeFermeteDecollete='" + perteDeFermeteDecollete + '\'' +
+                ", perteDeFermeteAvantBras='" + perteDeFermeteAvantBras + '\'' +
                 ", pilosite='" + pilosite + '\'' +
                 ", cicatrices='" + cicatrices + '\'' +
                 ", tatouages='" + tatouages + '\'' +

@@ -87,7 +87,7 @@ public class Volontaire implements java.io.Serializable {
 	@Column(length = 30)
 	private String expositionSolaire;
 
-	@Column(length = 15)
+	@Column(length = 50)
 	private String phototype;
 
 	@Column(length = 30)
@@ -146,6 +146,9 @@ public class Volontaire implements java.io.Serializable {
 
 	@Column(length = 20)
 	private String perteDeFermeteDecollete;
+
+	@Column(length = 20)
+	private String perteDeFermeteAvantBras;
 
 	// Physical characteristics
 	@Column(length = 20)
@@ -942,6 +945,14 @@ public class Volontaire implements java.io.Serializable {
 
 	public void setPerteDeFermeteDecollete(String perteDeFermeteDecollete) {
 		this.perteDeFermeteDecollete = perteDeFermeteDecollete;
+	}
+
+	public String getPerteDeFermeteAvantBras() {
+		return this.perteDeFermeteAvantBras;
+	}
+
+	public void setPerteDeFermeteAvantBras(String perteDeFermeteAvantBras) {
+		this.perteDeFermeteAvantBras = perteDeFermeteAvantBras;
 	}
 
 	public String getPilosite() {
