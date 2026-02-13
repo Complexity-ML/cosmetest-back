@@ -189,6 +189,26 @@ public interface VolontaireRepository extends JpaRepository<Volontaire, Integer>
 
         List<Volontaire> findAllByIdVolIn(java.util.List<Integer> ids);
 
+        /**
+         * Recherche multi-champs avec conditions AND (chaque champ filtre indépendamment)
+         * Les paramètres null ou vides sont ignorés
+         */
+        @Query("SELECT v FROM Volontaire v WHERE " +
+                        "(:includeArchived = true OR v.archive = false) " +
+                        "AND (:nom IS NULL OR LOWER(v.nomVol) LIKE LOWER(CONCAT('%', :nom, '%'))) " +
+                        "AND (:prenom IS NULL OR LOWER(v.prenomVol) LIKE LOWER(CONCAT('%', :prenom, '%'))) " +
+                        "AND (:email IS NULL OR LOWER(v.emailVol) LIKE LOWER(CONCAT('%', :email, '%'))) " +
+                        "AND (:tel IS NULL OR v.telPortableVol LIKE CONCAT('%', :tel, '%') OR v.telDomicileVol LIKE CONCAT('%', :tel, '%')) " +
+                        "AND (:idVol IS NULL OR CAST(v.idVol AS string) LIKE CONCAT('%', :idVol, '%'))")
+        Page<Volontaire> searchByMultipleFields(
+                        @Param("includeArchived") boolean includeArchived,
+                        @Param("nom") String nom,
+                        @Param("prenom") String prenom,
+                        @Param("email") String email,
+                        @Param("tel") String tel,
+                        @Param("idVol") String idVol,
+                        Pageable pageable);
+
         // ==================== NOUVELLES MÉTHODES OPTIMISÉES POUR LE CALENDRIER
         // ====================
 

@@ -75,6 +75,27 @@ public class VolontaireController {
     }
 
     /**
+     * Recherche multi-champs avec conditions AND
+     * Chaque champ filtre indépendamment (3 lettres minimum recommandé)
+     */
+    @GetMapping("/search/multi")
+    @Transactional(readOnly = true)
+    public ResponseEntity<Page<VolontaireDTO>> searchMultiField(
+            @RequestParam(required = false) String nom,
+            @RequestParam(required = false) String prenom,
+            @RequestParam(required = false) String email,
+            @RequestParam(required = false) String tel,
+            @RequestParam(required = false) String idVol,
+            @RequestParam(defaultValue = "false") boolean includeArchived,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+
+        Page<VolontaireDTO> results = volontaireService.searchByMultipleFields(
+                nom, prenom, email, tel, idVol, includeArchived, page, size);
+        return ResponseEntity.ok(results);
+    }
+
+    /**
      * Récupère tous les volontaires sans pagination pour le matching
      *
      * @return liste complète des volontaires

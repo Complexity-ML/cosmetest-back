@@ -921,8 +921,33 @@ public class VolontaireServiceImpl implements VolontaireService {
         return volontairesPage.map(this::convertToDto);
     }
 
+    @Override
+    public Page<VolontaireDTO> searchByMultipleFields(String nom, String prenom, String email, String tel,
+            String idVol, boolean includeArchived, int page, int size) {
+        Pageable pageable = PageRequest.of(page, size);
+
+        // Nettoyer les paramètres : transformer les chaînes vides en null
+        String cleanNom = (nom != null && !nom.trim().isEmpty()) ? nom.trim() : null;
+        String cleanPrenom = (prenom != null && !prenom.trim().isEmpty()) ? prenom.trim() : null;
+        String cleanEmail = (email != null && !email.trim().isEmpty()) ? email.trim() : null;
+        String cleanTel = (tel != null && !tel.trim().isEmpty()) ? tel.trim() : null;
+        String cleanIdVol = (idVol != null && !idVol.trim().isEmpty()) ? idVol.trim() : null;
+
+        // Si aucun champ renseigné, retourner la liste paginée standard
+        if (cleanNom == null && cleanPrenom == null && cleanEmail == null && cleanTel == null && cleanIdVol == null) {
+            Page<Volontaire> volontairesPage = includeArchived
+                    ? volontaireRepository.findAll(pageable)
+                    : volontaireRepository.findByArchiveFalse(pageable);
+            return volontairesPage.map(this::convertToDto);
+        }
+
+        Page<Volontaire> volontairesPage = volontaireRepository.searchByMultipleFields(
+                includeArchived, cleanNom, cleanPrenom, cleanEmail, cleanTel, cleanIdVol, pageable);
+        return volontairesPage.map(this::convertToDto);
+    }
+
     private VolontaireDTO convertToDto(Volontaire volontaire) {
-        return new VolontaireDTO(
+        VolontaireDTO dto = new VolontaireDTO(
                 volontaire.getIdVol(),
                 volontaire.getTitreVol(),
                 volontaire.getNomVol(),
@@ -932,6 +957,9 @@ public class VolontaireServiceImpl implements VolontaireService {
                 volontaire.getDateNaissance(),
                 volontaire.getArchive(),
                 volontaire.getTypePeauVisage());
+        dto.setPhototype(volontaire.getPhototype());
+        dto.setEthnie(volontaire.getEthnie());
+        return dto;
     }
 
     @Override
