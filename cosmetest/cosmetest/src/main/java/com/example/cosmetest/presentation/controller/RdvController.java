@@ -195,13 +195,33 @@ public class RdvController {
 
         // Check if the record exists
         RdvId rdvId = new RdvId(idEtude, idRdv);
-        if (!rdvService.getRdvById(rdvId).isPresent()) {
+        Optional<RdvDTO> existingRdvOpt = rdvService.getRdvById(rdvId);
+        if (!existingRdvOpt.isPresent()) {
             return ResponseEntity.status(404)
                     .body(Map.of("error", "No rendezvous found with ID: " + rdvId));
         }
 
+        List<String> warnings = new ArrayList<>();
+
+        // Vérifier le chevauchement seulement si on assigne un volontaire
+        if (rdvDTO.getIdVolontaire() != null) {
+            Integer previousVolontaireId = existingRdvOpt.get().getIdVolontaire();
+            // Vérifier seulement si c'est une nouvelle assignation (volontaire différent)
+            if (!Objects.equals(rdvDTO.getIdVolontaire(), previousVolontaireId)) {
+                if (checkForOverlappingStudies(rdvDTO.getIdVolontaire(), idEtude)) {
+                    warnings.add("Le volontaire participe déjà à une étude dont la période chevauche celle-ci.");
+                }
+            }
+        }
+
         rdvService.updateRdv(rdvDTO);
-        return ResponseEntity.ok().build();
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("success", true);
+        if (!warnings.isEmpty()) {
+            response.put("warnings", warnings);
+        }
+        return ResponseEntity.ok(response);
     }
 
     /**
