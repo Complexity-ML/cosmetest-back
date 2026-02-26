@@ -1,7 +1,11 @@
 package com.example.cosmetest.presentation.controller;
 
 import com.example.cosmetest.business.dto.EtudeVolontaireDTO;
+import com.example.cosmetest.business.dto.GroupeDTO;
+import com.example.cosmetest.business.dto.RdvDTO;
 import com.example.cosmetest.business.service.EtudeVolontaireService;
+import com.example.cosmetest.business.service.GroupeService;
+import com.example.cosmetest.business.service.RdvService;
 import com.example.cosmetest.domain.model.EtudeVolontaireId;
 
 import org.springframework.data.domain.Page;
@@ -12,8 +16,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import jakarta.validation.Valid;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * Contrôleur REST pour les associations étude-volontaire
@@ -25,9 +29,15 @@ import java.util.Optional;
 public class EtudeVolontaireController {
 
     private final EtudeVolontaireService etudeVolontaireService;
+    private final RdvService rdvService;
+    private final GroupeService groupeService;
 
-    public EtudeVolontaireController(EtudeVolontaireService etudeVolontaireService) {
+    public EtudeVolontaireController(EtudeVolontaireService etudeVolontaireService,
+                                     RdvService rdvService,
+                                     GroupeService groupeService) {
         this.etudeVolontaireService = etudeVolontaireService;
+        this.rdvService = rdvService;
+        this.groupeService = groupeService;
     }
 
     // ===============================
@@ -336,6 +346,102 @@ public class EtudeVolontaireController {
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(ApiResponse.error("ERREUR_INTERNE", e.getMessage()));
+        }
+    }
+
+    // ===============================
+    // ENDPOINT DE RÉPARATION
+    // ===============================
+
+    /**
+     * Répare les associations EtudeVolontaire manquantes pour une étude donnée.
+     * Parcourt les RDV de l'étude, détecte les volontaires assignés qui n'ont pas
+     * d'association EtudeVolontaire, et recrée les associations manquantes.
+     */
+    @PostMapping("/repair/{idEtude}")
+    public ResponseEntity<Map<String, Object>> repairAssociations(@PathVariable int idEtude) {
+        try {
+            // 1. Récupérer tous les RDV de l'étude
+            List<RdvDTO> rdvs = rdvService.getRdvsByIdEtude(idEtude);
+
+            // 2. Extraire les volontaires uniques assignés à des RDV
+            Set<Integer> rdvVolontaireIds = rdvs.stream()
+                    .map(RdvDTO::getIdVolontaire)
+                    .filter(id -> id != null && id != 0)
+                    .collect(Collectors.toSet());
+
+            // 3. Récupérer les associations existantes
+            List<EtudeVolontaireDTO> existingAssociations = etudeVolontaireService.getEtudeVolontairesByEtude(idEtude);
+            Set<Integer> existingVolontaireIds = existingAssociations.stream()
+                    .map(EtudeVolontaireDTO::getIdVolontaire)
+                    .collect(Collectors.toSet());
+
+            // 4. Trouver les volontaires manquants
+            Set<Integer> missingVolontaireIds = new HashSet<>(rdvVolontaireIds);
+            missingVolontaireIds.removeAll(existingVolontaireIds);
+
+            // 5. Récupérer le premier groupe de l'étude pour les valeurs par défaut
+            List<GroupeDTO> groupes = groupeService.getGroupesByIdEtude(idEtude);
+            int defaultGroupeId = 0;
+            int defaultIv = 0;
+            if (!groupes.isEmpty()) {
+                GroupeDTO firstGroupe = groupes.get(0);
+                defaultGroupeId = firstGroupe.getIdGroupe() != null ? firstGroupe.getIdGroupe() : 0;
+                defaultIv = firstGroupe.getIv();
+            }
+
+            // 6. Créer les associations manquantes
+            int repaired = 0;
+            List<String> errors = new ArrayList<>();
+            for (Integer volontaireId : missingVolontaireIds) {
+                try {
+                    // Chercher le groupe réel depuis le RDV si possible
+                    int groupeId = defaultGroupeId;
+                    int iv = defaultIv;
+                    Optional<RdvDTO> rdvWithGroupe = rdvs.stream()
+                            .filter(r -> Objects.equals(r.getIdVolontaire(), volontaireId) && r.getIdGroupe() != null && r.getIdGroupe() != 0)
+                            .findFirst();
+                    if (rdvWithGroupe.isPresent()) {
+                        groupeId = rdvWithGroupe.get().getIdGroupe();
+                        // Récupérer l'IV du groupe réel
+                        for (GroupeDTO g : groupes) {
+                            if (g.getIdGroupe() != null && g.getIdGroupe() == groupeId) {
+                                iv = g.getIv();
+                                break;
+                            }
+                        }
+                    }
+
+                    EtudeVolontaireDTO dto = new EtudeVolontaireDTO(
+                            idEtude,
+                            groupeId,
+                            volontaireId,
+                            iv,
+                            0,    // numsujet
+                            0,    // paye
+                            "INSCRIT"
+                    );
+                    etudeVolontaireService.saveEtudeVolontaire(dto);
+                    repaired++;
+                } catch (Exception e) {
+                    errors.add("Volontaire " + volontaireId + ": " + e.getMessage());
+                }
+            }
+
+            Map<String, Object> result = new HashMap<>();
+            result.put("etudeId", idEtude);
+            result.put("volontairesInRdvs", rdvVolontaireIds.size());
+            result.put("existingAssociations", existingVolontaireIds.size());
+            result.put("missing", missingVolontaireIds.size());
+            result.put("repaired", repaired);
+            if (!errors.isEmpty()) {
+                result.put("errors", errors);
+            }
+
+            return ResponseEntity.ok(result);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", "Erreur lors de la réparation: " + e.getMessage()));
         }
     }
 
