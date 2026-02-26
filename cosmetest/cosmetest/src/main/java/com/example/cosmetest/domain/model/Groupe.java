@@ -34,7 +34,7 @@ public class Groupe implements java.io.Serializable {
 	private int nbSujet;
 	private int iv;
 
-	@OneToMany(mappedBy = "groupe", cascade = CascadeType.ALL, orphanRemoval = true)
+	@OneToMany(mappedBy = "groupe", cascade = {CascadeType.PERSIST, CascadeType.MERGE})
 	private List<EtudeVolontaire> etudeVolontaires = new ArrayList<>();
 
 	public Groupe() {

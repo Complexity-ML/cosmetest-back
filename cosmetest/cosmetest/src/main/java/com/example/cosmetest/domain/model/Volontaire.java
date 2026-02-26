@@ -442,7 +442,7 @@ public class Volontaire implements java.io.Serializable {
 	@Column(name = "notes_cynetique", columnDefinition = "TINYINT" + " DEFAULT 4")
 	private Integer notesCynetique;
 
-	@OneToMany(mappedBy = "volontaire", cascade = CascadeType.ALL, orphanRemoval = true)
+	@OneToMany(mappedBy = "volontaire", cascade = {CascadeType.PERSIST, CascadeType.MERGE})
 	private List<EtudeVolontaire> etudeVolontaires = new ArrayList<>();
 
 	public Volontaire() {
