@@ -286,11 +286,8 @@ public class EtudeServiceImpl implements EtudeService {
 
     @Override
     public List<EtudeDTO> getRecentEtudes(int limit) {
-        // Implémentation temporaire
-        List<Etude> etudes = etudeRepository.findAll();
+        List<Etude> etudes = new ArrayList<>(etudeRepository.findByArchiveFalse());
 
-        // Trier par date - utilisez l'attribut réel de date dans votre entité
-        // Par exemple, si vous avez dateDebut au lieu de dateCreation
         etudes.sort((e1, e2) -> {
             if (e1.getDateDebut() == null || e2.getDateDebut() == null) {
                 return 0;
@@ -298,26 +295,13 @@ public class EtudeServiceImpl implements EtudeService {
             return e2.getDateDebut().compareTo(e1.getDateDebut());
         });
 
-        // Limiter le nombre de résultats
         if (etudes.size() > limit) {
             etudes = etudes.subList(0, limit);
         }
 
-        // Convertir en DTO - utilisez votre méthode de conversion
         return etudes.stream()
-                .map(etude -> convertToDTO(etude))
+                .map(etudeMapper::toDto)
                 .collect(Collectors.toList());
-    }
-
-    // Ajoutez cette méthode si elle n'existe pas
-    private EtudeDTO convertToDTO(Etude etude) {
-        EtudeDTO dto = new EtudeDTO();
-        // Remplissez le DTO avec les données de l'entité
-        dto.setIdEtude(etude.getIdEtude());
-        dto.setTitre(etude.getTitre());
-        dto.setRef(etude.getRef());
-        // etc.
-        return dto;
     }
 
     @Override
@@ -425,8 +409,18 @@ public class EtudeServiceImpl implements EtudeService {
             throw new IllegalArgumentException("La référence " + etudeDTO.getRef() + " est déjà utilisée");
         }
 
-        // Conversion en entité
-        Etude etude = etudeMapper.toEntity(etudeDTO);
+        // Conversion en entité (UPDATE vs CREATE)
+        Etude etude;
+        if (etudeDTO.getIdEtude() != null) {
+            Optional<Etude> existingOpt = etudeRepository.findById(etudeDTO.getIdEtude());
+            if (existingOpt.isPresent()) {
+                etude = etudeMapper.updateEntityFromDto(etudeDTO, existingOpt.get());
+            } else {
+                etude = etudeMapper.toEntity(etudeDTO);
+            }
+        } else {
+            etude = etudeMapper.toEntity(etudeDTO);
+        }
 
         // Sauvegarde
         Etude savedEtude = etudeRepository.save(etude);
