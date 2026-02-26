@@ -43,7 +43,7 @@ public class Etude implements java.io.Serializable {
 	@OneToMany(mappedBy = "etude", cascade = {CascadeType.PERSIST, CascadeType.MERGE})
 	private List<Rdv> rdvs = new ArrayList<>();
 
-	@OneToMany(mappedBy = "etude", cascade = CascadeType.ALL, orphanRemoval = true)
+	@OneToMany(mappedBy = "etude", cascade = {CascadeType.PERSIST, CascadeType.MERGE})
 	private List<EtudeVolontaire> etudeVolontaires = new ArrayList<>();
 
 	public Etude() {
