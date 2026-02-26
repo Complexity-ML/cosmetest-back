@@ -43,7 +43,7 @@ public class EtudeMapper {
         dto.setNbSujets(etude.getNbSujets());
 
         dto.setPaye(etude.getPaye());
-
+        dto.setArchive(etude.isArchive());
 
         return dto;
     }
@@ -82,7 +82,7 @@ public class EtudeMapper {
         }
 
         etude.setPaye(dto.getPaye());
-
+        etude.setArchive(dto.isArchive());
 
         return etude;
     }
@@ -121,7 +121,7 @@ public class EtudeMapper {
         }
 
         etude.setPaye(dto.getPaye());
-
+        etude.setArchive(dto.isArchive());
 
         return etude;
     }

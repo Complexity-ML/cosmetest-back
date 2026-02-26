@@ -21,7 +21,7 @@ public class EtudeDTO {
     private String nbSujets;
     private int paye;
     private int iv;
-     // Ajout pour stocker le montant de la rémunération
+    private boolean archive = false;
 
     // Constructeur par défaut
     public EtudeDTO() {
@@ -187,6 +187,14 @@ public class EtudeDTO {
 
     public void setIv(int iv) {
         this.iv = iv;
+    }
+
+    public boolean isArchive() {
+        return archive;
+    }
+
+    public void setArchive(boolean archive) {
+        this.archive = archive;
     }
 
     public String getProduits() {

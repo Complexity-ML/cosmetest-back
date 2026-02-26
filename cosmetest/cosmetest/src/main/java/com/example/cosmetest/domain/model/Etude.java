@@ -40,6 +40,9 @@ public class Etude implements java.io.Serializable {
 
 	private int paye;
 
+	@Column(name = "ARCHIVE", nullable = false, columnDefinition = "BOOLEAN DEFAULT FALSE")
+	private boolean archive = false;
+
 	@OneToMany(mappedBy = "etude", cascade = {CascadeType.PERSIST, CascadeType.MERGE})
 	private List<Rdv> rdvs = new ArrayList<>();
 
@@ -176,6 +179,14 @@ public class Etude implements java.io.Serializable {
 
 	public void setPaye(int paye) {
 		this.paye = paye;
+	}
+
+	public boolean isArchive() {
+		return archive;
+	}
+
+	public void setArchive(boolean archive) {
+		this.archive = archive;
 	}
 
 	public List<Rdv> getRdvs() {

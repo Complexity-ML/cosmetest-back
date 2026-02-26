@@ -8,6 +8,10 @@ import com.example.cosmetest.data.repository.VolontaireHcRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import jakarta.persistence.Column;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
+
 import java.lang.reflect.Field;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -21,6 +25,9 @@ public class VolontaireHcServiceImpl implements VolontaireHcService {
 
     private final VolontaireHcRepository volontaireHcRepository;
     private final VolontaireHcMapper volontaireHcMapper;
+
+    @PersistenceContext
+    private EntityManager entityManager;
 
     // Liste des valeurs autorisées pour les attributs de type produit/lieu d'achat
     private static final List<String> VALEURS_AUTORISEES = Arrays.asList("oui", "non", "occasionnellement",
@@ -174,23 +181,18 @@ public class VolontaireHcServiceImpl implements VolontaireHcService {
     public Map<String, Long> getStatistiquesUtilisationProduit(String produit) {
         validateProduitParameter(produit);
 
-        List<VolontaireHc> allVolontaireHcs = volontaireHcRepository.findAll();
+        String columnName = getColumnName(produit);
+        @SuppressWarnings("unchecked")
+        List<Object[]> results = entityManager.createNativeQuery(
+                "SELECT COALESCE(" + columnName + ", 'non spécifié') as val, COUNT(*) as cnt " +
+                "FROM volontaire_hc GROUP BY COALESCE(" + columnName + ", 'non spécifié')")
+                .getResultList();
 
-        // Utiliser la réflexion pour accéder au champ spécifié par 'produit'
-        return allVolontaireHcs.stream()
-                .map(volontaireHc -> {
-                    try {
-                        Field field = VolontaireHc.class.getDeclaredField(produit);
-                        field.setAccessible(true);
-                        return (String) field.get(volontaireHc);
-                    } catch (NoSuchFieldException | IllegalAccessException e) {
-                        throw new IllegalArgumentException("Produit invalide: " + produit, e);
-                    }
-                })
-                .collect(Collectors.groupingBy(
-                        // Si la valeur est null, la remplacer par "non spécifié"
-                        value -> value == null ? "non spécifié" : value,
-                        Collectors.counting()));
+        Map<String, Long> stats = new HashMap<>();
+        for (Object[] row : results) {
+            stats.put((String) row[0], ((Number) row[1]).longValue());
+        }
+        return stats;
     }
 
     @Override
@@ -200,35 +202,23 @@ public class VolontaireHcServiceImpl implements VolontaireHcService {
             throw new IllegalArgumentException("La limite doit être un nombre positif");
         }
 
-        List<VolontaireHc> allVolontaireHcs = volontaireHcRepository.findAll();
         Map<String, Long> produitsUtilisation = new HashMap<>();
 
-        // Pour chaque produit, compter le nombre de volontaires qui l'utilisent (valeur
-        // "oui")
+        // Pour chaque champ produit, faire un COUNT en base au lieu de charger toutes les lignes
         Field[] fields = VolontaireHc.class.getDeclaredFields();
-
         for (Field field : fields) {
-            field.setAccessible(true);
             String produit = field.getName();
-
-            // Ignorer le champ idVol
-            if (produit.equals("idVol")) {
+            if (produit.equals("idVol") || !field.getType().equals(String.class)) {
                 continue;
             }
 
-            long count = allVolontaireHcs.stream()
-                    .filter(volontaireHc -> {
-                        try {
-                            String valeur = (String) field.get(volontaireHc);
-                            return "oui".equals(valeur) || "regulierement".equals(valeur);
-                        } catch (IllegalAccessException e) {
-                            return false;
-                        }
-                    })
-                    .count();
+            String columnName = getColumnName(produit);
+            Number count = (Number) entityManager.createNativeQuery(
+                    "SELECT COUNT(*) FROM volontaire_hc WHERE " + columnName + " IN ('oui', 'regulierement')")
+                    .getSingleResult();
 
-            if (count > 0) {
-                produitsUtilisation.put(produit, count);
+            if (count.longValue() > 0) {
+                produitsUtilisation.put(produit, count.longValue());
             }
         }
 
@@ -247,10 +237,9 @@ public class VolontaireHcServiceImpl implements VolontaireHcService {
     @Override
     @Transactional(readOnly = true)
     public Map<String, Long> getLieuxAchatPreferences() {
-        List<VolontaireHc> allVolontaireHcs = volontaireHcRepository.findAll();
         Map<String, Long> lieuxAchatPreferences = new HashMap<>();
 
-        // Liste des champs pour les lieux d'achat
+        // 4 COUNT en base au lieu de charger toute la table
         List<String> lieuxAchat = Arrays.asList(
                 "achatGrandesSurfaces",
                 "achatInstitutParfumerie",
@@ -258,26 +247,13 @@ public class VolontaireHcServiceImpl implements VolontaireHcService {
                 "achatPharmacieParapharmacie");
 
         for (String lieu : lieuxAchat) {
-            try {
-                Field field = VolontaireHc.class.getDeclaredField(lieu);
-                field.setAccessible(true);
+            String columnName = getColumnName(lieu);
+            Number count = (Number) entityManager.createNativeQuery(
+                    "SELECT COUNT(*) FROM volontaire_hc WHERE " + columnName + " IN ('oui', 'regulierement')")
+                    .getSingleResult();
 
-                long count = allVolontaireHcs.stream()
-                        .filter(volontaireHc -> {
-                            try {
-                            String valeur = (String) field.get(volontaireHc);
-                                return "oui".equals(valeur) || "regulierement".equals(valeur);
-                            } catch (IllegalAccessException e) {
-                                return false;
-                            }
-                        })
-                        .count();
-
-                if (count > 0) {
-                    lieuxAchatPreferences.put(lieu, count);
-                }
-            } catch (NoSuchFieldException e) {
-                throw new IllegalArgumentException("Lieu d'achat invalide: " + lieu, e);
+            if (count.longValue() > 0) {
+                lieuxAchatPreferences.put(lieu, count.longValue());
             }
         }
 
@@ -397,6 +373,25 @@ public class VolontaireHcServiceImpl implements VolontaireHcService {
      * @param lieuAchat le lieu d'achat à valider
      * @throws IllegalArgumentException si le lieu d'achat est invalide
      */
+    /**
+     * Résout le nom de colonne SQL à partir du nom de champ Java.
+     * Utilise l'annotation @Column si présente, sinon convertit camelCase en snake_case.
+     * Le champ est validé par validateProduitParameter() en amont (pas d'injection possible).
+     */
+    private String getColumnName(String fieldName) {
+        try {
+            Field field = VolontaireHc.class.getDeclaredField(fieldName);
+            Column columnAnnotation = field.getAnnotation(Column.class);
+            if (columnAnnotation != null && !columnAnnotation.name().isEmpty()) {
+                return columnAnnotation.name();
+            }
+        } catch (NoSuchFieldException e) {
+            // Ne devrait pas arriver car validateProduitParameter vérifie avant
+        }
+        // Fallback: camelCase → snake_case
+        return fieldName.replaceAll("([a-z])([A-Z])", "$1_$2").toLowerCase();
+    }
+
     private void validateLieuAchatParameter(String lieuAchat) {
         if (lieuAchat == null || lieuAchat.trim().isEmpty()) {
             throw new IllegalArgumentException("Le lieu d'achat ne peut pas être vide");

@@ -1,6 +1,7 @@
 package com.example.cosmetest.data.repository;
 
 import com.example.cosmetest.domain.model.Etude;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -26,6 +27,16 @@ import java.util.stream.Collectors;
  */
 @Repository
 public interface EtudeRepository extends JpaRepository<Etude, Integer> {
+
+        /**
+         * Trouve toutes les études non archivées
+         */
+        List<Etude> findByArchiveFalse();
+
+        /**
+         * Trouve toutes les études non archivées avec pagination
+         */
+        Page<Etude> findByArchiveFalse(Pageable pageable);
 
         /**
          * Trouve une étude par sa référence
@@ -404,6 +415,15 @@ public interface EtudeRepository extends JpaRepository<Etude, Integer> {
                 return getChargeTravailParJourAsMap(dateDebut, dateFin);
         }
         // Ajouter juste cette méthode simple dans EtudeRepository.java
+
+        /**
+         * Trouve les études auxquelles un volontaire participe (via ses RDV)
+         * Remplace le pattern N+1 (1 query RDV + N queries Etude) par un seul JOIN
+         */
+        @Query("SELECT DISTINCT e FROM Etude e " +
+                        "INNER JOIN Rdv r ON r.id.idEtude = e.idEtude " +
+                        "WHERE r.idVolontaire = :idVolontaire")
+        List<Etude> findEtudesByVolontaireId(@Param("idVolontaire") Integer idVolontaire);
 
         /**
          * Récupère les dates avec RDV pour une étude (format d'affichage simple)

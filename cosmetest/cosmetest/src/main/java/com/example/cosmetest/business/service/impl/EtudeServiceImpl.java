@@ -55,14 +55,14 @@ public class EtudeServiceImpl implements EtudeService {
 
     @Override
     public List<EtudeDTO> getAllEtudes() {
-        return etudeRepository.findAll().stream()
+        return etudeRepository.findByArchiveFalse().stream()
                 .map(etudeMapper::toDto)
                 .collect(Collectors.toList());
     }
 
     @Override
     public Page<EtudeDTO> getAllEtudesPaginated(Pageable pageable) {
-        return etudeRepository.findAll(pageable)
+        return etudeRepository.findByArchiveFalse(pageable)
                 .map(etudeMapper::toDto);
     }
 
@@ -175,8 +175,9 @@ public class EtudeServiceImpl implements EtudeService {
         Etude etude = etudeRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Étude introuvable - ID : " + id));
 
-        // Déclenche la suppression en cascade des RDV
-        etudeRepository.delete(etude);
+        // Soft-delete : archiver au lieu de supprimer définitivement
+        etude.setArchive(true);
+        etudeRepository.save(etude);
     }
 
     @Override
@@ -368,28 +369,17 @@ public class EtudeServiceImpl implements EtudeService {
      * Récupère toutes les études auxquelles un volontaire participe
      */
     @Override
+    @Transactional(readOnly = true)
     public List<EtudeDTO> getEtudesByVolontaire(Integer idVolontaire) {
         if (idVolontaire == null) {
             return new ArrayList<>();
         }
 
         try {
-            // Récupérer tous les RDVs du volontaire
-            List<RdvDTO> rdvs = rdvService.getRdvsByIdVolontaire(idVolontaire);
-
-            // Extraire les IDs d'études uniques
-            Set<Integer> etudeIds = rdvs.stream()
-                    .map(rdv -> rdv.getIdEtude())
-                    .filter(Objects::nonNull)
-                    .collect(Collectors.toSet());
-
-            // Récupérer les études correspondantes
-            List<EtudeDTO> etudes = new ArrayList<>();
-            for (Integer etudeId : etudeIds) {
-                getEtudeById(etudeId).ifPresent(etudes::add);
-            }
-
-            return etudes;
+            // Une seule requête JOIN au lieu du pattern N+1
+            return etudeRepository.findEtudesByVolontaireId(idVolontaire).stream()
+                    .map(etudeMapper::toDto)
+                    .collect(Collectors.toList());
         } catch (Exception e) {
             logger.error("Erreur lors de la récupération des études pour le volontaire " + idVolontaire, e);
             return new ArrayList<>();
