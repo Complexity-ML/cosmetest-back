@@ -73,9 +73,9 @@ public class VolontaireServiceImpl implements VolontaireService {
             List<Volontaire> volontaires = null;
             try {
                 volontaires = volontaireRepository.findByArchive(false);
-                System.out.println("Repository a retourné " + volontaires.size() + " volontaires");
+                logger.debug("Repository a retourné {} volontaires", volontaires.size());
             } catch (Exception e) {
-                System.err.println("Erreur lors de la récupération des volontaires: " + e);
+                logger.error("Erreur lors de la récupération des volontaires", e);
                 e.printStackTrace();
                 throw e;
             }
@@ -89,16 +89,16 @@ public class VolontaireServiceImpl implements VolontaireService {
                     VolontaireDTO dto = volontaireMapper.toDTO(volontaire);
                     result.add(dto);
                 }
-                System.out.println("Conversion en DTOs réussie");
+                logger.debug("Conversion en DTOs réussie");
             } catch (Exception e) {
-                System.err.println("Erreur lors de la conversion des volontaires: " + e);
+                logger.error("Erreur lors de la conversion des volontaires", e);
                 e.printStackTrace();
                 throw e;
             }
 
             return result;
         } catch (Exception e) {
-            System.err.println("Erreur générale dans getAllActiveVolontaires: " + e);
+            logger.error("Erreur générale dans getAllActiveVolontaires", e);
             e.printStackTrace();
             throw e;
         }

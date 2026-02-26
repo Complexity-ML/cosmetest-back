@@ -18,12 +18,17 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.util.Arrays;
 import java.util.List;
 
 @Configuration
 @EnableWebSecurity
 public class SecurityConfig {
+
+    private static final Logger logger = LoggerFactory.getLogger(SecurityConfig.class);
 
     @Autowired
     private JwtAuthenticationFilter jwtAuthenticationFilter;
@@ -72,7 +77,7 @@ public class SecurityConfig {
             // 2) Authentification via JWT (headers/cookies)
             .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
-        System.out.println("SecurityFilterChain configured with JWT authentication and exception handling");
+        logger.info("SecurityFilterChain configured with JWT authentication and exception handling");
         return http.build();
     }
 

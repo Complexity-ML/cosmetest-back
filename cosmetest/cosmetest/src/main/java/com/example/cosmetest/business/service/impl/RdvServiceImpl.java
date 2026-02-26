@@ -22,6 +22,9 @@ import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
 import com.example.cosmetest.business.service.EtudeService;
 import com.example.cosmetest.domain.model.Etude;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.sql.Date;
 import java.util.ArrayList;
 import java.util.List;
@@ -35,6 +38,8 @@ import java.util.stream.Collectors;
  */
 @Service
 public class RdvServiceImpl implements RdvService {
+
+    private static final Logger logger = LoggerFactory.getLogger(RdvServiceImpl.class);
 
     private final RdvRepository rdvRepository;
     private final RdvMapper rdvMapper;
@@ -251,8 +256,7 @@ public class RdvServiceImpl implements RdvService {
             return dtoList;
         } catch (Exception e) {
             // Log the error
-            System.err.println("Error in getUpcomingRdvs: " + e.getMessage());
-            e.printStackTrace();
+            logger.error("Erreur dans getUpcomingRdvs: {}", e.getMessage(), e);
             // Return empty list rather than failing
             return new ArrayList<>();
         }
@@ -425,8 +429,7 @@ public class RdvServiceImpl implements RdvService {
         List<RdvDTO> createdRdvs = new ArrayList<>();
         List<String> errors = new ArrayList<>();
 
-        // Logs pour debugging
-        System.out.println("🚀 Début création batch de " + rdvDTOs.size() + " RDV");
+        logger.info("Début création batch de {} RDV", rdvDTOs.size());
 
         // Pré-charger l'étude une seule fois (optimisation)
         Integer idEtude = rdvDTOs.get(0).getIdEtude();
@@ -488,20 +491,20 @@ public class RdvServiceImpl implements RdvService {
                 RdvDTO createdDTO = convertToDTO(savedRdv);
                 createdRdvs.add(createdDTO);
 
-                System.out.println("✅ RDV " + (i + 1) + "/" + rdvDTOs.size() + " créé avec ID: " + idRdv);
+                logger.debug("RDV {}/{} créé avec ID: {}", i + 1, rdvDTOs.size(), idRdv);
 
             } catch (Exception e) {
                 String errorMsg = "Erreur création RDV " + (i + 1) + ": " + e.getMessage();
-                System.err.println("❌ " + errorMsg);
+                logger.error(errorMsg);
                 errors.add(errorMsg);
                 // Continue avec les autres RDV même si un échoue
             }
         }
 
-        System.out.println("📊 Batch terminé : " + createdRdvs.size() + " créés sur " + rdvDTOs.size() + " demandés");
+        logger.info("Batch terminé : {} créés sur {} demandés", createdRdvs.size(), rdvDTOs.size());
 
         if (!errors.isEmpty()) {
-            System.err.println("⚠️ Erreurs rencontrées : " + errors);
+            logger.warn("Erreurs rencontrées dans le batch : {}", errors);
         }
 
         return createdRdvs;

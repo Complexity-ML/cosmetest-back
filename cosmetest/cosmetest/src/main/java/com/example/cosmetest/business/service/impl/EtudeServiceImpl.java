@@ -204,11 +204,11 @@ public class EtudeServiceImpl implements EtudeService {
     public List<EtudeDTO> getCurrentEtudes() {
         LocalDate today = LocalDate.now();
 
-        System.out.println("🔍 Recherche des études actives pour la date : " + today);
+        logger.debug("Recherche des études actives pour la date : {}", today);
 
         List<Etude> activeEtudes = etudeRepository.findActiveEtudesAtDate(today);
 
-        System.out.println(" Nombre d'études actives trouvées : " + activeEtudes.size());
+        logger.debug("Nombre d'études actives trouvées : {}", activeEtudes.size());
 
         return activeEtudes.stream()
                 .map(etudeMapper::toDto)
@@ -311,9 +311,7 @@ public class EtudeServiceImpl implements EtudeService {
 
     @Override
     public List<EtudeDTO> suggestEtudes(String query, int limit) {
-        // Log de débogage
-        System.out.println("Recherche de suggestions pour : " + query);
-        System.out.println("Limite : " + limit);
+        logger.debug("Recherche de suggestions pour : {}, limite : {}", query, limit);
 
         // Vérification des paramètres
         if (query == null || query.trim().isEmpty()) {
@@ -327,8 +325,7 @@ public class EtudeServiceImpl implements EtudeService {
                     query.trim(),
                     limitedPageable);
 
-            // Log du nombre de résultats
-            System.out.println("Nombre de suggestions trouvées : " + suggestions.size());
+            logger.debug("Nombre de suggestions trouvées : {}", suggestions.size());
 
             // Conversion en DTOs en utilisant le mapper existant
             return suggestions.stream()
@@ -336,9 +333,7 @@ public class EtudeServiceImpl implements EtudeService {
                     .collect(Collectors.toList());
 
         } catch (Exception e) {
-            // Log détaillé de l'erreur
-            System.err.println("Erreur lors de la recherche de suggestions : " + e.getMessage());
-            e.printStackTrace();
+            logger.error("Erreur lors de la recherche de suggestions : {}", e.getMessage(), e);
             return Collections.emptyList();
         }
     }

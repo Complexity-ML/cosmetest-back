@@ -7,6 +7,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
+import org.slf4j.LoggerFactory;
 
 import java.time.format.DateTimeFormatter;
 import java.util.Locale;
@@ -501,9 +502,8 @@ public interface EtudeRepository extends JpaRepository<Etude, Integer> {
 
                 } catch (Exception e) {
                         // En cas d'erreur, retourner une liste vide
-                        // Note: Le logger doit être défini au niveau de la classe d'implémentation
-                        System.err.println("Erreur lors de la récupération des dates RDV pour l'étude " + idEtude + ": "
-                                        + e.getMessage());
+                        LoggerFactory.getLogger(EtudeRepository.class)
+                                        .error("Erreur lors de la récupération des dates RDV pour l'étude {}", idEtude, e);
                         return new ArrayList<>();
                 }
         }

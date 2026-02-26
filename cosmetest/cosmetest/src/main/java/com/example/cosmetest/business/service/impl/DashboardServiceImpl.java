@@ -12,12 +12,17 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 // Ajouter l'import manquant en haut du fichier
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.time.LocalDate;
 import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
 public class DashboardServiceImpl implements DashboardService {
+
+    private static final Logger logger = LoggerFactory.getLogger(DashboardServiceImpl.class);
 
     @Autowired
     private VolontaireService volontaireService;
@@ -149,8 +154,7 @@ public class DashboardServiceImpl implements DashboardService {
             }
         } catch (Exception e) {
             // Log the exception
-            System.err.println("Error in getRecentActivities: " + e.getMessage());
-            e.printStackTrace();
+            logger.error("Error in getRecentActivities", e);
         }
 
         return activities;

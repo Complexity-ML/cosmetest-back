@@ -11,6 +11,9 @@ import org.springframework.data.domain.*;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.sql.Date;
 import java.text.SimpleDateFormat;
 import java.util.*;
@@ -22,6 +25,8 @@ import java.util.*;
 @RestController
 @RequestMapping("/api/rdvs")
 public class RdvController {
+
+    private static final Logger logger = LoggerFactory.getLogger(RdvController.class);
 
     @Autowired
     private RdvService rdvService;
@@ -391,8 +396,7 @@ public class RdvController {
             return ResponseEntity.ok(response);
         } catch (Exception e) {
             // Log détaillé de l'erreur
-            System.err.println("Erreur lors de la récupération des études:");
-            e.printStackTrace();
+            logger.error("Erreur lors de la récupération des études", e);
 
             return ResponseEntity.ok(new PaginatedResponse<>(
                     new ArrayList<>(),
@@ -424,9 +428,8 @@ public class RdvController {
                 createdRdvs.add(created);
             } catch (Exception e) {
                 String errorMsg = "Erreur lors de la création du RDV sans volontaire: " + e.getMessage();
-                System.err.println(errorMsg);
+                logger.error("Erreur lors de la création du RDV sans volontaire", e);
                 errors.add(errorMsg);
-                e.printStackTrace();
             }
         }
         else {
@@ -456,9 +459,8 @@ public class RdvController {
                 }
             } catch (Exception e) {
                 String errorMsg = "Erreur lors de la création du RDV: " + e.getMessage();
-                System.err.println(errorMsg);
+                logger.error("Erreur lors de la création du RDV", e);
                 errors.add(errorMsg);
-                e.printStackTrace();
             }
         }
 
@@ -499,13 +501,12 @@ public class RdvController {
             List<RdvDTO> batchResult = rdvService.createRdvsBatch(rdvDTOs);
             createdRdvs.addAll(batchResult);
 
-            System.out.println("✅ Batch création réussie : " + createdRdvs.size() + " RDV créés sur " + totalToCreate + " demandés");
+            logger.info("Batch création réussie : {} RDV créés sur {} demandés", createdRdvs.size(), totalToCreate);
 
         } catch (Exception e) {
             String errorMsg = "Erreur lors de la création batch : " + e.getMessage();
-            System.err.println("❌ " + errorMsg);
+            logger.error("Erreur lors de la création batch", e);
             errors.add(errorMsg);
-            e.printStackTrace();
         }
 
         response.put("created", createdRdvs.size());
@@ -516,8 +517,7 @@ public class RdvController {
             response.put("errors", errors);
         }
 
-        // Log du résultat final
-        System.out.println("📊 Résultat batch final : " + createdRdvs.size() + " créés / " + totalToCreate + " demandés");
+        logger.info("Résultat batch final : {} créés / {} demandés", createdRdvs.size(), totalToCreate);
 
         return ResponseEntity.ok(response);
     }
@@ -538,7 +538,7 @@ public class RdvController {
             // 1. Récupérer les informations de l'étude actuelle
             Optional<EtudeDTO> currentStudyOpt = etudeService.getEtudeById(idEtude);
             if (!currentStudyOpt.isPresent()) {
-                System.err.println("Étude non trouvée: " + idEtude);
+                logger.error("Étude non trouvée: {}", idEtude);
                 return false;
             }
 
@@ -574,17 +574,15 @@ public class RdvController {
                 if (currentStartDate.compareTo(studyEndDate) <= 0 &&
                         currentEndDate.compareTo(studyStartDate) >= 0) {
                     // Périodes qui se chevauchent trouvées
-                    System.out.println("Chevauchement détecté entre l'étude " + idEtude +
-                            " (" + currentStartDate + " - " + currentEndDate + ") et l'étude " +
-                            study.getIdEtude() + " (" + studyStartDate + " - " + studyEndDate + ")");
+                    logger.info("Chevauchement détecté entre l'étude {} ({} - {}) et l'étude {} ({} - {})",
+                            idEtude, currentStartDate, currentEndDate, study.getIdEtude(), studyStartDate, studyEndDate);
                     return true;
                 }
             }
 
             return false; // Pas de chevauchement
         } catch (Exception e) {
-            System.err.println("Erreur lors de la vérification des chevauchements d'études: " + e.getMessage());
-            e.printStackTrace();
+            logger.error("Erreur lors de la vérification des chevauchements d'études", e);
             return false; // En cas d'erreur, on permet la création
         }
     }

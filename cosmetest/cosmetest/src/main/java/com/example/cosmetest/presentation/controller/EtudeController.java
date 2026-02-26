@@ -12,6 +12,9 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.sql.Date;
 import java.util.List;
 import java.util.Map;
@@ -24,6 +27,8 @@ import java.util.Optional;
 @RestController
 @RequestMapping("/api/etudes")
 public class EtudeController {
+
+    private static final Logger logger = LoggerFactory.getLogger(EtudeController.class);
 
     private final EtudeService etudeService;
 
@@ -278,7 +283,7 @@ public class EtudeController {
                     "paye", paye));
 
         } catch (Exception e) {
-            System.err.println("Erreur mise à jour statut PAYE pour l'étude " + id + ": " + e.getMessage());
+            logger.error("Erreur mise à jour statut PAYE pour l'étude {}", id, e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(Map.of(
                             "message", "Erreur lors de la mise à jour du statut PAYE",
