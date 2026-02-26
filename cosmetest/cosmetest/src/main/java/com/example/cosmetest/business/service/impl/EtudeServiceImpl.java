@@ -142,13 +142,25 @@ public class EtudeServiceImpl implements EtudeService {
         // Validation des données
         validateEtudeData(etudeDTO);
 
-        // Vérification de l'unicité de la référence pour une nouvelle étude
-        if (etudeDTO.getIdEtude() == null && isRefAlreadyUsed(etudeDTO.getRef())) {
-            throw new IllegalArgumentException("La référence " + etudeDTO.getRef() + " est déjà utilisée");
-        }
+        Etude etude;
 
-        // Conversion en entité
-        Etude etude = etudeMapper.toEntity(etudeDTO);
+        if (etudeDTO.getIdEtude() != null) {
+            // UPDATE : charger l'entité existante et mettre à jour ses champs
+            // Cela préserve les collections (etudeVolontaires, rdvs) et évite
+            // que orphanRemoval=true ne supprime toutes les associations
+            Optional<Etude> existingOpt = etudeRepository.findById(etudeDTO.getIdEtude());
+            if (existingOpt.isPresent()) {
+                etude = etudeMapper.updateEntityFromDto(etudeDTO, existingOpt.get());
+            } else {
+                etude = etudeMapper.toEntity(etudeDTO);
+            }
+        } else {
+            // CREATE : nouvelle étude
+            if (isRefAlreadyUsed(etudeDTO.getRef())) {
+                throw new IllegalArgumentException("La référence " + etudeDTO.getRef() + " est déjà utilisée");
+            }
+            etude = etudeMapper.toEntity(etudeDTO);
+        }
 
         // Sauvegarde
         Etude savedEtude = etudeRepository.save(etude);
