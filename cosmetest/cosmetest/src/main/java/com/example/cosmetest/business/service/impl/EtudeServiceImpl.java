@@ -1,7 +1,6 @@
 package com.example.cosmetest.business.service.impl;
 
 import com.example.cosmetest.business.dto.EtudeDTO;
-import com.example.cosmetest.business.dto.RdvDTO;
 import com.example.cosmetest.business.mapper.EtudeMapper;
 import com.example.cosmetest.business.service.EtudeService;
 import com.example.cosmetest.data.repository.EtudeRepository;

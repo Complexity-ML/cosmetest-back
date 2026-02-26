@@ -88,7 +88,7 @@ class EtudeServiceImplTest {
         // Given
         List<Etude> etudes = Arrays.asList(testEtude1, testEtude2);
 
-        when(etudeRepository.findAll()).thenReturn(etudes);
+        when(etudeRepository.findByArchiveFalse()).thenReturn(etudes);
         when(etudeMapper.toDto(testEtude1)).thenReturn(testEtudeDTO1);
         when(etudeMapper.toDto(testEtude2)).thenReturn(testEtudeDTO2);
 
@@ -100,7 +100,7 @@ class EtudeServiceImplTest {
         assertThat(result).hasSize(2);
         assertThat(result).containsExactly(testEtudeDTO1, testEtudeDTO2);
 
-        verify(etudeRepository, times(1)).findAll();
+        verify(etudeRepository, times(1)).findByArchiveFalse();
         verify(etudeMapper, times(1)).toDto(testEtude1);
         verify(etudeMapper, times(1)).toDto(testEtude2);
     }
@@ -109,7 +109,7 @@ class EtudeServiceImplTest {
     @DisplayName("getAllEtudes() - Liste vide")
     void testGetAllEtudes_EmptyList() {
         // Given
-        when(etudeRepository.findAll()).thenReturn(Arrays.asList());
+        when(etudeRepository.findByArchiveFalse()).thenReturn(Arrays.asList());
 
         // When
         List<EtudeDTO> result = etudeService.getAllEtudes();
@@ -118,7 +118,7 @@ class EtudeServiceImplTest {
         assertThat(result).isNotNull();
         assertThat(result).isEmpty();
 
-        verify(etudeRepository, times(1)).findAll();
+        verify(etudeRepository, times(1)).findByArchiveFalse();
         verify(etudeMapper, never()).toDto(any());
     }
 
@@ -132,7 +132,7 @@ class EtudeServiceImplTest {
         List<Etude> etudes = Arrays.asList(testEtude1, testEtude2);
         Page<Etude> etudesPage = new PageImpl<>(etudes, pageable, 2);
 
-        when(etudeRepository.findAll(pageable)).thenReturn(etudesPage);
+        when(etudeRepository.findByArchiveFalse(pageable)).thenReturn(etudesPage);
         when(etudeMapper.toDto(testEtude1)).thenReturn(testEtudeDTO1);
         when(etudeMapper.toDto(testEtude2)).thenReturn(testEtudeDTO2);
 
@@ -144,7 +144,7 @@ class EtudeServiceImplTest {
         assertThat(result.getContent()).hasSize(2);
         assertThat(result.getTotalElements()).isEqualTo(2);
 
-        verify(etudeRepository, times(1)).findAll(pageable);
+        verify(etudeRepository, times(1)).findByArchiveFalse(pageable);
     }
 
     // ===== TESTS GET ETUDE BY ID =====
@@ -504,14 +504,14 @@ class EtudeServiceImplTest {
     @DisplayName("getAllEtudes() - Exception dans le repository")
     void testGetAllEtudes_RepositoryException() {
         // Given
-        when(etudeRepository.findAll()).thenThrow(new RuntimeException("Database error"));
+        when(etudeRepository.findByArchiveFalse()).thenThrow(new RuntimeException("Database error"));
 
         // When/Then
         assertThatThrownBy(() -> etudeService.getAllEtudes())
                 .isInstanceOf(RuntimeException.class)
                 .hasMessageContaining("Database error");
 
-        verify(etudeRepository, times(1)).findAll();
+        verify(etudeRepository, times(1)).findByArchiveFalse();
         verify(etudeMapper, never()).toDto(any());
     }
 }
