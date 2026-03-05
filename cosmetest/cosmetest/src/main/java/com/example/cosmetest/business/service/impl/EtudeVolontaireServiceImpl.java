@@ -527,6 +527,17 @@ public class EtudeVolontaireServiceImpl implements EtudeVolontaireService {
         }
     }
 
+    @Override
+    @Transactional
+    public int deleteByEtudeAndVolontaire(int idEtude, int idVolontaire) {
+        log.info("Suppression associations pour étude={} et volontaire={}", idEtude, idVolontaire);
+        validatePositiveId(idEtude, "idEtude");
+        validatePositiveId(idVolontaire, "idVolontaire");
+        int deleted = etudeVolontaireRepository.deleteByIdEtudeAndIdVolontaire(idEtude, idVolontaire);
+        log.info("{} association(s) supprimée(s)", deleted);
+        return deleted;
+    }
+
     private void checkNumSujetUniqueness(int idEtude, int numSujet, int idVolontaire) {
         if (numSujet <= 0)
             return; // Les numéros <= 0 ne sont pas soumis à l'unicité

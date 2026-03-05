@@ -198,4 +198,14 @@ public interface EtudeVolontaireService {
      * Mettre à jour l'ID du volontaire (peut être null pour désassigner)
      */
     EtudeVolontaireDTO updateVolontaire(EtudeVolontaireId id, Integer nouveauVolontaireId);
+
+    /**
+     * Supprime toutes les associations d'un volontaire dans une étude
+     * (sans nécessiter la clé composite complète)
+     *
+     * @param idEtude      Identifiant de l'étude
+     * @param idVolontaire Identifiant du volontaire
+     * @return Nombre d'associations supprimées
+     */
+    int deleteByEtudeAndVolontaire(int idEtude, int idVolontaire);
 }

@@ -242,8 +242,29 @@ public class EtudeVolontaireController {
         }
     }
 
-    // Ajoutez cet endpoint dans votre EtudeVolontaireController.java
-    // Dans la section "ENDPOINTS DE MODIFICATION"
+    /**
+     * Supprime toutes les associations d'un volontaire dans une étude
+     * (sans nécessiter la clé composite complète - plus robuste)
+     */
+    @DeleteMapping("/delete-by-etude-volontaire")
+    public ResponseEntity<ApiResponse<Map<String, Object>>> deleteByEtudeAndVolontaire(
+            @RequestParam int idEtude,
+            @RequestParam int idVolontaire) {
+        try {
+            int deleted = etudeVolontaireService.deleteByEtudeAndVolontaire(idEtude, idVolontaire);
+            Map<String, Object> result = Map.of(
+                    "idEtude", idEtude,
+                    "idVolontaire", idVolontaire,
+                    "deleted", deleted);
+            return ResponseEntity.ok(ApiResponse.success(result, deleted + " association(s) supprimée(s)"));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest()
+                    .body(ApiResponse.error("Paramètres invalides", e.getMessage()));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(ApiResponse.error("Erreur lors de la suppression", e.getMessage()));
+        }
+    }
 
     @PatchMapping("/update-paye")
     public ResponseEntity<ApiResponse<EtudeVolontaireDTO>> updatePaye(

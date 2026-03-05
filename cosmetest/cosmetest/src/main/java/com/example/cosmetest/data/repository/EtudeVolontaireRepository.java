@@ -103,6 +103,16 @@ public interface EtudeVolontaireRepository extends JpaRepository<EtudeVolontaire
     boolean existsByIdEtudeAndIdVolontaire(@Param("idEtude") int idEtude, @Param("idVolontaire") int idVolontaire);
 
     /**
+     * Supprime toutes les associations pour un volontaire dans une étude
+     * (indépendant de la clé composite complète)
+     */
+    @Modifying
+    @Transactional
+    @Query(value = "DELETE FROM etude_volontaire WHERE id_etude = :idEtude AND id_volontaire = :idVolontaire",
+            nativeQuery = true)
+    int deleteByIdEtudeAndIdVolontaire(@Param("idEtude") int idEtude, @Param("idVolontaire") int idVolontaire);
+
+    /**
      * Récupère l'indemnité volontaire (IV) la plus fréquente pour une étude donnée
      * @param idEtude Identifiant de l'étude
      * @return Valeur de l'IV la plus fréquente ou null si aucune association
