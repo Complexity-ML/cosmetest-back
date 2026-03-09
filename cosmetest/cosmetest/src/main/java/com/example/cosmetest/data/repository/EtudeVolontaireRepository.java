@@ -183,19 +183,28 @@ public interface EtudeVolontaireRepository extends JpaRepository<EtudeVolontaire
      */
     @Query(value = """
         SELECT
-            ev.id_etude AS idEtude,
+            sub.id_etude AS idEtude,
             COUNT(*) AS total,
-            SUM(CASE WHEN ev.paye = 1 THEN 1 ELSE 0 END) AS payes,
-            SUM(CASE WHEN ev.paye = 0 OR ev.paye IS NULL THEN 1 ELSE 0 END) AS nonPayes,
-            SUM(CASE WHEN ev.paye = 2 THEN 1 ELSE 0 END) AS enAttente,
-            SUM(CASE WHEN a.id_etude IS NOT NULL THEN 1 ELSE 0 END) AS annules,
-            COALESCE(SUM(ev.iv), 0) AS montantTotal,
-            COALESCE(SUM(CASE WHEN ev.paye = 1 THEN ev.iv ELSE 0 END), 0) AS montantPaye,
-            COALESCE(SUM(CASE WHEN a.id_etude IS NOT NULL THEN ev.iv ELSE 0 END), 0) AS montantAnnules
-        FROM etude_volontaire ev
-        LEFT JOIN annulation a ON a.id_etude = ev.id_etude AND a.id_vol = ev.id_volontaire
-        WHERE (:idEtude IS NULL OR ev.id_etude = :idEtude)
-        GROUP BY ev.id_etude
+            SUM(CASE WHEN sub.paye = 1 THEN 1 ELSE 0 END) AS payes,
+            SUM(CASE WHEN sub.paye = 0 OR sub.paye IS NULL THEN 1 ELSE 0 END) AS nonPayes,
+            SUM(CASE WHEN sub.paye = 2 THEN 1 ELSE 0 END) AS enAttente,
+            SUM(CASE WHEN sub.is_annule = 1 THEN 1 ELSE 0 END) AS annules,
+            COALESCE(SUM(sub.iv), 0) AS montantTotal,
+            COALESCE(SUM(CASE WHEN sub.paye = 1 THEN sub.iv ELSE 0 END), 0) AS montantPaye,
+            COALESCE(SUM(CASE WHEN sub.is_annule = 1 THEN sub.iv ELSE 0 END), 0) AS montantAnnules
+        FROM (
+            SELECT
+                ev.id_etude,
+                ev.id_volontaire,
+                MIN(ev.paye) AS paye,
+                MAX(ev.iv) AS iv,
+                MAX(CASE WHEN a.id_etude IS NOT NULL THEN 1 ELSE 0 END) AS is_annule
+            FROM etude_volontaire ev
+            LEFT JOIN annulation a ON a.id_etude = ev.id_etude AND a.id_vol = ev.id_volontaire
+            WHERE (:idEtude IS NULL OR ev.id_etude = :idEtude)
+            GROUP BY ev.id_etude, ev.id_volontaire
+        ) sub
+        GROUP BY sub.id_etude
     """, nativeQuery = true)
     List<Object[]> fetchEtudePaiementSummaries(@Param("idEtude") Integer idEtude);
 }
