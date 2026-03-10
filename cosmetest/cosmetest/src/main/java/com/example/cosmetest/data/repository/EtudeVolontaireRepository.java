@@ -185,12 +185,12 @@ public interface EtudeVolontaireRepository extends JpaRepository<EtudeVolontaire
         SELECT
             sub.id_etude AS idEtude,
             COUNT(*) AS total,
-            SUM(CASE WHEN sub.paye = 1 THEN 1 ELSE 0 END) AS payes,
-            SUM(CASE WHEN sub.paye = 0 OR sub.paye IS NULL THEN 1 ELSE 0 END) AS nonPayes,
-            SUM(CASE WHEN sub.paye = 2 THEN 1 ELSE 0 END) AS enAttente,
+            SUM(CASE WHEN sub.is_annule = 0 AND sub.paye = 1 THEN 1 ELSE 0 END) AS payes,
+            SUM(CASE WHEN sub.is_annule = 0 AND (sub.paye = 0 OR sub.paye IS NULL) THEN 1 ELSE 0 END) AS nonPayes,
+            SUM(CASE WHEN sub.is_annule = 0 AND sub.paye = 2 THEN 1 ELSE 0 END) AS enAttente,
             SUM(CASE WHEN sub.is_annule = 1 THEN 1 ELSE 0 END) AS annules,
-            COALESCE(SUM(sub.iv), 0) AS montantTotal,
-            COALESCE(SUM(CASE WHEN sub.paye = 1 THEN sub.iv ELSE 0 END), 0) AS montantPaye,
+            COALESCE(SUM(CASE WHEN sub.is_annule = 0 THEN sub.iv ELSE 0 END), 0) AS montantTotal,
+            COALESCE(SUM(CASE WHEN sub.is_annule = 0 AND sub.paye = 1 THEN sub.iv ELSE 0 END), 0) AS montantPaye,
             COALESCE(SUM(CASE WHEN sub.is_annule = 1 THEN sub.iv ELSE 0 END), 0) AS montantAnnules
         FROM (
             SELECT
