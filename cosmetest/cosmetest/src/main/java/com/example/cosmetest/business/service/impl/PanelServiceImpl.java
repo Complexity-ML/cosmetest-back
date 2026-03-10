@@ -246,8 +246,8 @@ public class PanelServiceImpl implements PanelService {
         // Validation du phototype (si fourni)
         if (panelDTO.getPhototype() != null && !panelDTO.getPhototype().trim().isEmpty()) {
             String phototype = panelDTO.getPhototype().trim();
-            if (!phototype.matches("^[1-6]$|^I$|^II$|^III$|^IV$|^V$|^VI$")) {
-                throw new IllegalArgumentException("Le phototype doit être entre 1 et 6 ou I et VI");
+            if (!phototype.matches("^(Phototype [1-6]|[1-6])$")) {
+                throw new IllegalArgumentException("Le phototype doit être au format 'Phototype 1' à 'Phototype 6'");
             }
         }
     }

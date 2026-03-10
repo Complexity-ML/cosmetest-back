@@ -342,7 +342,7 @@ class VolontaireServiceImplTest {
         List<Volontaire> volontaires = Arrays.asList(testVolontaire1);
         Page<Volontaire> volontairesPage = new PageImpl<>(volontaires, pageable, 1);
 
-        when(volontaireRepository.findByFullTextSearch(searchTerm, pageable)).thenReturn(volontairesPage);
+        when(volontaireRepository.findByFullTextSearchNative(searchTerm, pageable)).thenReturn(volontairesPage);
         when(volontaireMapper.toDTO(testVolontaire1)).thenReturn(testVolontaireDTO1);
 
         // When
@@ -353,7 +353,7 @@ class VolontaireServiceImplTest {
         assertThat(result.getContent()).hasSize(1);
         assertThat(result.getTotalElements()).isEqualTo(1);
 
-        verify(volontaireRepository, times(1)).findByFullTextSearch(searchTerm, pageable);
+        verify(volontaireRepository, times(1)).findByFullTextSearchNative(searchTerm, pageable);
     }
 
     @Test
@@ -378,7 +378,7 @@ class VolontaireServiceImplTest {
         assertThat(result.getContent()).hasSize(2);
 
         verify(volontaireRepository, times(1)).findAll(pageable);
-        verify(volontaireRepository, never()).findByFullTextSearch(anyString(), any());
+        verify(volontaireRepository, never()).findByFullTextSearchNative(anyString(), any());
     }
 
     @Test
@@ -387,13 +387,13 @@ class VolontaireServiceImplTest {
         // Given
         String keyword = "Dupont%_[]^";
         Pageable pageable = PageRequest.of(0, 10);
-        String cleanedKeyword = "Dupont";
+        String cleanedKeyword = "Dupont\\%\\_";
         String searchTerm = "%" + cleanedKeyword + "%";
         
         List<Volontaire> volontaires = Arrays.asList(testVolontaire1);
         Page<Volontaire> volontairesPage = new PageImpl<>(volontaires, pageable, 1);
 
-        when(volontaireRepository.findByFullTextSearch(searchTerm, pageable)).thenReturn(volontairesPage);
+        when(volontaireRepository.findByFullTextSearchNative(searchTerm, pageable)).thenReturn(volontairesPage);
         when(volontaireMapper.toDTO(testVolontaire1)).thenReturn(testVolontaireDTO1);
 
         // When
@@ -401,7 +401,7 @@ class VolontaireServiceImplTest {
 
         // Then
         assertThat(result).isNotNull();
-        verify(volontaireRepository, times(1)).findByFullTextSearch(searchTerm, pageable);
+        verify(volontaireRepository, times(1)).findByFullTextSearchNative(searchTerm, pageable);
     }
 
     // ===== TESTS SEARCH WITHOUT PAGINATION =====

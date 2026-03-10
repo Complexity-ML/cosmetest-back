@@ -149,15 +149,18 @@ public class VolontaireServiceImpl implements VolontaireService {
             return volontaireRepository.findAll(pageable).map(volontaireMapper::toDTO);
         }
 
-        // Nettoyer le mot-clé pour éviter les injections SQL
+        // Échapper les caractères spéciaux SQL LIKE (au lieu de les supprimer)
         String cleanKeyword = keyword.trim()
-                .replaceAll("[%_\\[\\]^]", ""); // Enlever les caractères spéciaux SQL
+                .replace("\\", "\\\\")
+                .replace("%", "\\%")
+                .replace("_", "\\_")
+                .replaceAll("[\\[\\]^]", "");
 
         // Ajouter les wildcards pour la recherche partielle
         String searchTerm = "%" + cleanKeyword + "%";
 
-        // Utiliser la méthode du repository qui exploite l'index fulltext
-        Page<Volontaire> volontairesPage = volontaireRepository.findByFullTextSearch(searchTerm, pageable);
+        // Utiliser la requête native (MySQL gère nativement l'escape \ dans LIKE)
+        Page<Volontaire> volontairesPage = volontaireRepository.findByFullTextSearchNative(searchTerm, pageable);
 
         // Convertir les entités en DTOs
         return volontairesPage.map(volontaireMapper::toDTO);
