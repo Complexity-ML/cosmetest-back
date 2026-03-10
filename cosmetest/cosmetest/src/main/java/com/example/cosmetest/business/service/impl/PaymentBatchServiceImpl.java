@@ -102,11 +102,13 @@ public class PaymentBatchServiceImpl implements PaymentBatchService {
         result.setErrorCount(errors);
 
         // Mettre à jour le statut PAYE de l'étude (0 ou 2)
+        // Re-charger les associations depuis la DB pour avoir les valeurs à jour
         try {
-            boolean allPaid = associations.stream()
+            List<EtudeVolontaireDTO> refreshed = etudeVolontaireService.getEtudeVolontairesByEtude(idEtude);
+            boolean allPaid = refreshed != null && !refreshed.isEmpty() && refreshed.stream()
                     .filter(dto -> !cancelledVolunteers.contains(dto.getIdVolontaire()))
-                    .allMatch(dto -> dto.getPaye() == 1 || // déjà payé
-                            (dto.getPaye() != 1 && dto.getIdVolontaire() == 0)); // tolérer ID=0 si besoin
+                    .filter(dto -> dto.getIv() > 0) // Ignorer IV=0
+                    .allMatch(dto -> dto.getPaye() == 1);
 
             etudeService.updatePayeStatus(idEtude, allPaid ? 2 : 0);
         } catch (Exception e) {
