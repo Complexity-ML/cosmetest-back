@@ -163,7 +163,7 @@ public class VolontaireDetailDTO extends VolontaireDTO {
     private Integer notesYeux;
     private Integer notesLevres;
     private Integer notesTeint;
-    private Integer notesCynetique;
+    private Integer notesCinetique;
 
     // Constructeurs
     public VolontaireDetailDTO() {
@@ -1140,12 +1140,12 @@ public class VolontaireDetailDTO extends VolontaireDTO {
         this.notesTeint = notesTeint;
     }
 
-    public Integer getNotesCynetique() {
-        return notesCynetique;
+    public Integer getNotesCinetique() {
+        return notesCinetique;
     }
 
-    public void setNotesCynetique(Integer notesCynetique) {
-        this.notesCynetique = notesCynetique;
+    public void setNotesCinetique(Integer notesCinetique) {
+        this.notesCinetique = notesCinetique;
     }
 
 }

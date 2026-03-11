@@ -254,7 +254,7 @@ public class VolontaireMapper {
         dto.setNotesYeux(volontaire.getNotesYeux());
         dto.setNotesLevres(volontaire.getNotesLevres());
         dto.setNotesTeint(volontaire.getNotesTeint());
-        dto.setNotesCynetique(volontaire.getNotesCynetique());
+        dto.setNotesCinetique(volontaire.getNotesCinetique());
 
         return dto;
     }
@@ -473,7 +473,7 @@ public class VolontaireMapper {
         volontaire.setNotesYeux(dto.getNotesYeux());
         volontaire.setNotesLevres(dto.getNotesLevres());
         volontaire.setNotesTeint(dto.getNotesTeint());
-        volontaire.setNotesCynetique(dto.getNotesCynetique());
+        volontaire.setNotesCinetique(dto.getNotesCinetique());
 
         return volontaire;
     }
@@ -861,8 +861,8 @@ public class VolontaireMapper {
             entity.setNotesLevres(dto.getNotesLevres());
         if (dto.getNotesTeint() != null)
             entity.setNotesTeint(dto.getNotesTeint());
-        if (dto.getNotesCynetique() != null)
-            entity.setNotesCynetique(dto.getNotesCynetique());
+        if (dto.getNotesCinetique() != null)
+            entity.setNotesCinetique(dto.getNotesCinetique());
 
         return entity;
     }

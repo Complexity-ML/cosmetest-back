@@ -439,8 +439,8 @@ public class Volontaire implements java.io.Serializable {
 	private Integer notesLevres;
 	@Column(name = "notes_teint", columnDefinition = "TINYINT" + " DEFAULT 4")
 	private Integer notesTeint;
-	@Column(name = "notes_cynetique", columnDefinition = "TINYINT" + " DEFAULT 4")
-	private Integer notesCynetique;
+	@Column(name = "notes_cinetique", columnDefinition = "TINYINT" + " DEFAULT 4")
+	private Integer notesCinetique;
 
 	@OneToMany(mappedBy = "volontaire", cascade = {CascadeType.PERSIST, CascadeType.MERGE})
 	private List<EtudeVolontaire> etudeVolontaires = new ArrayList<>();
@@ -489,7 +489,7 @@ public class Volontaire implements java.io.Serializable {
 			String bouffeeChaleurMenaupose, Integer poids, Integer taille, String sousEthnie, Date dateI, String levres,
 			String yeux, String cernesVasculaires, String cils, String nbCigarettesJour, String caracteristiqueSourcils,
 			long hauteurSiege, String mapyeux, String maplevres, String mapsourcils, Integer notes, Integer notesYeux,
-			Integer notesLevres, Integer notesSourcils, Integer notesTeint, Integer notesCynetique) {
+			Integer notesLevres, Integer notesSourcils, Integer notesTeint, Integer notesCinetique) {
 		this.titreVol = titreVol;
 		this.nomVol = nomVol;
 		this.prenomVol = prenomVol;
@@ -631,7 +631,7 @@ public class Volontaire implements java.io.Serializable {
 		this.notesYeux = notesYeux;
 		this.notesLevres = notesLevres;
 		this.notesTeint = notesTeint;
-		this.notesCynetique = notesCynetique;
+		this.notesCinetique = notesCinetique;
 	}
 
 	public Integer getIdVol() {
@@ -1790,12 +1790,12 @@ public class Volontaire implements java.io.Serializable {
 		this.notesTeint = notesTeint;
 	}
 
-	public Integer getNotesCynetique() {
-		return notesCynetique;
+	public Integer getNotesCinetique() {
+		return notesCinetique;
 	}
 
-	public void setNotesCynetique(Integer notesCynetique) {
-		this.notesCynetique = notesCynetique;
+	public void setNotesCinetique(Integer notesCinetique) {
+		this.notesCinetique = notesCinetique;
 	}
 
 	public List<EtudeVolontaire> getEtudeVolontaires() {
