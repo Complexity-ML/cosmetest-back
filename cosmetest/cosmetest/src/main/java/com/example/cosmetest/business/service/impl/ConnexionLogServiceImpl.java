@@ -3,9 +3,9 @@ package com.example.cosmetest.business.service.impl;
 import com.example.cosmetest.business.service.ConnexionLogService;
 import com.example.cosmetest.data.repository.ConnexionLogRepository;
 import com.example.cosmetest.domain.model.ConnexionLog;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
-
-import java.util.List;
 
 @Service
 public class ConnexionLogServiceImpl implements ConnexionLogService {
@@ -22,7 +22,7 @@ public class ConnexionLogServiceImpl implements ConnexionLogService {
     }
 
     @Override
-    public List<ConnexionLog> findAll() {
-        return repository.findAllByOrderByCreatedAtDesc();
+    public Page<ConnexionLog> findAll(int page, int size) {
+        return repository.findAllByOrderByCreatedAtDesc(PageRequest.of(page, size));
     }
 }

@@ -9,10 +9,15 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -64,27 +69,30 @@ class ConnexionLogServiceImplTest {
     // ─── findAll() ────────────────────────────────────────────────────────────
 
     @Test
-    @DisplayName("findAll() - doit retourner la liste du repository triée par date desc")
-    void findAll_shouldReturnRepositoryList() {
+    @DisplayName("findAll() - doit retourner la page du repository triée par date desc")
+    void findAll_shouldReturnRepositoryPage() {
         ConnexionLog log1 = new ConnexionLog("alice", true, "127.0.0.1");
         ConnexionLog log2 = new ConnexionLog("bob", false, "10.0.0.2");
-        when(repository.findAllByOrderByCreatedAtDesc()).thenReturn(List.of(log1, log2));
+        Page<ConnexionLog> page = new PageImpl<>(List.of(log1, log2), PageRequest.of(0, 50), 2);
+        when(repository.findAllByOrderByCreatedAtDesc(any(Pageable.class))).thenReturn(page);
 
-        List<ConnexionLog> result = service.findAll();
+        Page<ConnexionLog> result = service.findAll(0, 50);
 
-        assertThat(result).hasSize(2);
-        assertThat(result.get(0).getLogin()).isEqualTo("alice");
-        assertThat(result.get(1).getLogin()).isEqualTo("bob");
-        verify(repository).findAllByOrderByCreatedAtDesc();
+        assertThat(result.getContent()).hasSize(2);
+        assertThat(result.getContent().get(0).getLogin()).isEqualTo("alice");
+        assertThat(result.getContent().get(1).getLogin()).isEqualTo("bob");
+        verify(repository).findAllByOrderByCreatedAtDesc(PageRequest.of(0, 50));
     }
 
     @Test
-    @DisplayName("findAll() - doit retourner une liste vide si aucun log")
-    void findAll_shouldReturnEmptyListWhenNoLogs() {
-        when(repository.findAllByOrderByCreatedAtDesc()).thenReturn(List.of());
+    @DisplayName("findAll() - doit retourner une page vide si aucun log")
+    void findAll_shouldReturnEmptyPageWhenNoLogs() {
+        Page<ConnexionLog> empty = new PageImpl<>(List.of(), PageRequest.of(0, 50), 0);
+        when(repository.findAllByOrderByCreatedAtDesc(any(Pageable.class))).thenReturn(empty);
 
-        List<ConnexionLog> result = service.findAll();
+        Page<ConnexionLog> result = service.findAll(0, 50);
 
-        assertThat(result).isEmpty();
+        assertThat(result.getContent()).isEmpty();
+        assertThat(result.getTotalElements()).isZero();
     }
 }
