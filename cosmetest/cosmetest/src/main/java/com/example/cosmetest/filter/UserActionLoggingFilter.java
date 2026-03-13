@@ -35,7 +35,7 @@ public class UserActionLoggingFilter implements Filter {
         String path = httpRequest.getRequestURI();
         String method = httpRequest.getMethod();
 
-        logger.info("Utilisateur : {}, a accédé à : {}, méthode : {}", currentUser, path, method);
+        logger.debug("Utilisateur : {}, a accédé à : {}, méthode : {}", currentUser, path, method);
 
         try {
             chain.doFilter(request, response);

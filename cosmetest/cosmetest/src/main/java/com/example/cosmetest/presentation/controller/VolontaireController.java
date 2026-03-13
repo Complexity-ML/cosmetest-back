@@ -66,7 +66,7 @@ public class VolontaireController {
             @RequestParam(defaultValue = "false") boolean includeArchived,
             @RequestParam(required = false) String search) {
 
-        logger.info("Récupération des volontaires : page={}, size={}, includeArchived={}, search={}",
+        logger.debug("Récupération des volontaires : page={}, size={}, includeArchived={}, search={}",
                 page, size, includeArchived, search);
 
         Page<VolontaireDTO> volontaires = volontaireService.getVolontairesPaginated(page, size, includeArchived,
@@ -105,7 +105,7 @@ public class VolontaireController {
     public ResponseEntity<List<VolontaireDTO>> getAllVolontairesForMatching(
             @RequestParam(defaultValue = "false") boolean includeArchived) {
 
-        logger.info("Récupération de tous les volontaires pour matching : includeArchived={}", includeArchived);
+        logger.debug("Récupération de tous les volontaires pour matching : includeArchived={}", includeArchived);
 
         List<VolontaireDTO> volontaires;
 
@@ -144,10 +144,10 @@ public class VolontaireController {
     @GetMapping("/{id}")
     @Transactional(readOnly = true, isolation = Isolation.READ_COMMITTED)
     public ResponseEntity<?> getVolontaireById(@PathVariable Integer id) {
-        logger.info("Recherche du volontaire avec l'ID: {}", id);
+        logger.debug("Recherche du volontaire avec l'ID: {}", id);
 
         if (id == null) {
-            logger.error("ID de volontaire invalide: null");
+            logger.warn("ID de volontaire invalide: null");
             return ResponseEntity.badRequest().build();
         }
 
@@ -180,16 +180,16 @@ public class VolontaireController {
     @GetMapping("/details/{id}")
     @Transactional(readOnly = true, isolation = Isolation.READ_COMMITTED)
     public ResponseEntity<VolontaireDetailDTO> getVolontaireDetailById(@PathVariable Integer id) {
-        logger.info("Recherche des détails du volontaire avec l'ID: {}", id);
+        logger.debug("Recherche des détails du volontaire avec l'ID: {}", id);
 
         if (id == null) {
-            logger.error("ID de volontaire invalide: null");
+            logger.warn("ID de volontaire invalide: null");
             return ResponseEntity.badRequest().build();
         }
 
         return volontaireService.getVolontaireDetailById(id)
                 .map(volontaireDetail -> {
-                    logger.info("Détails du volontaire trouvés avec l'ID: {}", id);
+                    logger.debug("Détails du volontaire trouvés avec l'ID: {}", id);
                     return ResponseEntity.ok(volontaireDetail);
                 })
                 .orElseGet(() -> {
@@ -234,7 +234,7 @@ public class VolontaireController {
         // Vérifie si volontaireId est défini lorsque c'est un objet détaillé pour un
         // volontaire existant
         if (volontaireDetailDTO.getVolontaireId() != null) {
-            logger.info("Vérification de l'existence du volontaire avec l'ID: {}",
+            logger.debug("Vérification de l'existence du volontaire avec l'ID: {}",
                     volontaireDetailDTO.getVolontaireId());
         }
 
@@ -262,7 +262,7 @@ public class VolontaireController {
         logger.info("Mise à jour du volontaire avec l'ID: {}", id);
 
         if (id == null) {
-            logger.error("ID de volontaire invalide: null");
+            logger.warn("ID de volontaire invalide: null");
             return ResponseEntity.badRequest().build();
         }
 
@@ -297,7 +297,7 @@ public class VolontaireController {
         logger.info("Mise à jour des détails du volontaire avec l'ID: {}", id);
 
         if (id == null) {
-            logger.error("ID de volontaire invalide: null");
+            logger.warn("ID de volontaire invalide: null");
             return ResponseEntity.badRequest().build();
         }
 
@@ -330,7 +330,7 @@ public class VolontaireController {
         logger.info("Archivage du volontaire avec l'ID: {}", id);
 
         if (id == null) {
-            logger.error("ID de volontaire invalide: null");
+            logger.warn("ID de volontaire invalide: null");
             return ResponseEntity.badRequest().build();
         }
 
@@ -357,7 +357,7 @@ public class VolontaireController {
         logger.info("Désarchivage du volontaire avec l'ID: {}", id);
 
         if (id == null) {
-            logger.error("ID de volontaire invalide: null");
+            logger.warn("ID de volontaire invalide: null");
             return ResponseEntity.badRequest().build();
         }
 
@@ -384,7 +384,7 @@ public class VolontaireController {
         logger.info("Suppression du volontaire avec l'ID: {}", id);
 
         if (id == null) {
-            logger.error("ID de volontaire invalide: null");
+            logger.warn("ID de volontaire invalide: null");
             return ResponseEntity.badRequest().build();
         }
 
@@ -544,7 +544,7 @@ public class VolontaireController {
         logger.info("Récupération de la photo de type '{}' pour le volontaire avec l'ID: {}", type, id);
 
         if (id == null) {
-            logger.error("ID de volontaire invalide: null");
+            logger.warn("ID de volontaire invalide: null");
             return ResponseEntity.badRequest().build();
         }
 
@@ -576,7 +576,7 @@ public class VolontaireController {
         logger.info("Récupération de toutes les photos pour le volontaire avec l'ID: {}", id);
 
         if (id == null) {
-            logger.error("ID de volontaire invalide: null");
+            logger.warn("ID de volontaire invalide: null");
             return ResponseEntity.badRequest().build();
         }
 
@@ -623,7 +623,7 @@ public class VolontaireController {
         logger.info("Récupération de l'image de type '{}' pour le volontaire avec l'ID: {}", type, id);
 
         if (id == null) {
-            logger.error("ID de volontaire invalide: null");
+            logger.warn("ID de volontaire invalide: null");
             return ResponseEntity.badRequest().build();
         }
 
@@ -714,7 +714,7 @@ public class VolontaireController {
         logger.info("Récupération de la miniature de type '{}' pour le volontaire avec l'ID: {}", type, id);
 
         if (id == null) {
-            logger.error("ID de volontaire invalide: null");
+            logger.warn("ID de volontaire invalide: null");
             return ResponseEntity.badRequest().build();
         }
 

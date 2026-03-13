@@ -51,7 +51,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 try {
                     // Vérifier d'abord si le token est expiré
                     if (jwtTokenUtil.isTokenExpired(token)) {
-                        logger.info("Token expiré détecté - renvoi 401");
+                        logger.warn("Token expiré détecté - renvoi 401");
                         sendUnauthorizedResponse(response, "Token expired");
                         return;
                     }
@@ -101,7 +101,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                         }
                     }
                 } catch (ExpiredJwtException e) {
-                    logger.info("Token JWT expiré: {}", e.getMessage());
+                    logger.warn("Token JWT expiré: {}", e.getMessage());
                     sendUnauthorizedResponse(response, "Token expired");
                     return;
                 } catch (JwtException e) {
@@ -132,21 +132,19 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private String extractJwtFromRequest(HttpServletRequest request) {
         // 1. Essayer d'abord les headers Authorization (React Native)
         String bearerToken = request.getHeader("Authorization");
-        logger.debug("Header Authorization: {}", bearerToken != null ? "présent" : "absent");
-        
         if (StringUtils.hasText(bearerToken) && bearerToken.startsWith("Bearer ")) {
-            logger.debug("Token trouvé dans les headers Authorization (mobile)");
+            logger.debug("JWT source: headers Authorization (mobile)");
             return bearerToken.substring(7); // Enlever "Bearer "
         }
-        
+
         // 2. Si pas trouvé, essayer les cookies (React Web)
         String cookieToken = getJwtFromCookies(request);
         if (cookieToken != null) {
-            logger.debug("Token trouvé dans les cookies (web)");
+            logger.debug("JWT source: cookies (web)");
             return cookieToken;
         }
-        
-        logger.debug("Aucun token trouvé ni dans les headers ni dans les cookies");
+
+        logger.debug("JWT source: absent");
         return null;
     }
 
