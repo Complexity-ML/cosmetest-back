@@ -217,7 +217,7 @@ public class EtudeController {
         EtudeDTO createdEtude = etudeService.saveEtude(etudeDTO);
         String user = SecurityContextHolder.getContext().getAuthentication().getName();
         String ip = request.getRemoteAddr();
-        auditLogService.log(user, AuditLog.Action.CREATE, "ETUDE", createdEtude.getIdEtude().toString(), null, ip);
+        auditLogService.log(user, AuditLog.Action.CREATE, "ETUDE", createdEtude.getIdEtude().toString(), createdEtude.getRef(), ip);
         return new ResponseEntity<>(createdEtude, HttpStatus.CREATED);
     }
 
@@ -252,7 +252,7 @@ public class EtudeController {
 
         String user = SecurityContextHolder.getContext().getAuthentication().getName();
         String ip = request.getRemoteAddr();
-        auditLogService.log(user, AuditLog.Action.UPDATE, "ETUDE", id.toString(), null, ip);
+        auditLogService.log(user, AuditLog.Action.UPDATE, "ETUDE", id.toString(), updatedEtude.getRef(), ip);
 
         return ResponseEntity.ok(updatedEtude);
     }
@@ -294,7 +294,7 @@ public class EtudeController {
             // Audit log
             String user = SecurityContextHolder.getContext().getAuthentication().getName();
             String ip = request.getRemoteAddr();
-            auditLogService.log(user, AuditLog.Action.PAYE, "ETUDE", id.toString(), null, ip);
+            auditLogService.log(user, AuditLog.Action.PAYE, "ETUDE", id.toString(), existingEtude.get().getRef(), ip);
 
             // Réponse de succès
             return ResponseEntity.ok(Map.of(
@@ -322,14 +322,15 @@ public class EtudeController {
     public ResponseEntity<Void> deleteEtude(@PathVariable Integer id,
             HttpServletRequest request) {
         // Vérifier que l'étude existe
-        if (!etudeService.getEtudeById(id).isPresent()) {
+        Optional<EtudeDTO> etudeToDelete = etudeService.getEtudeById(id);
+        if (!etudeToDelete.isPresent()) {
             return ResponseEntity.notFound().build();
         }
 
         etudeService.deleteEtude(id);
         String user = SecurityContextHolder.getContext().getAuthentication().getName();
         String ip = request.getRemoteAddr();
-        auditLogService.log(user, AuditLog.Action.DELETE, "ETUDE", id.toString(), null, ip);
+        auditLogService.log(user, AuditLog.Action.DELETE, "ETUDE", id.toString(), etudeToDelete.get().getRef(), ip);
         return ResponseEntity.noContent().build();
     }
 

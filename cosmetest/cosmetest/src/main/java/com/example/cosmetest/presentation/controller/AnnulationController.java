@@ -153,7 +153,7 @@ public class AnnulationController {
         String utilisateur = SecurityContextHolder.getContext().getAuthentication().getName();
         auditLogService.log(utilisateur, AuditLog.Action.ANNULATION, "ANNULATION",
                 createdAnnulation.getIdAnnuler() != null ? createdAnnulation.getIdAnnuler().toString() : null,
-                null, request.getRemoteAddr());
+                "volontaire:" + createdAnnulation.getIdVol() + " etude:" + createdAnnulation.getIdEtude(), request.getRemoteAddr());
         return new ResponseEntity<>(createdAnnulation, HttpStatus.CREATED);
     }
 
@@ -187,7 +187,7 @@ public class AnnulationController {
 
         String utilisateur = SecurityContextHolder.getContext().getAuthentication().getName();
         auditLogService.log(utilisateur, AuditLog.Action.UPDATE, "ANNULATION",
-                id.toString(), null, request.getRemoteAddr());
+                id.toString(), "volontaire:" + annulationDTO.getIdVol() + " etude:" + annulationDTO.getIdEtude(), request.getRemoteAddr());
 
         return ResponseEntity.ok(updatedAnnulation);
     }
@@ -209,7 +209,7 @@ public class AnnulationController {
 
         String utilisateur = SecurityContextHolder.getContext().getAuthentication().getName();
         auditLogService.log(utilisateur, AuditLog.Action.DELETE, "ANNULATION",
-                id.toString(), null, request.getRemoteAddr());
+                id.toString(), "id:" + id, request.getRemoteAddr());
 
         return ResponseEntity.noContent().build();
     }

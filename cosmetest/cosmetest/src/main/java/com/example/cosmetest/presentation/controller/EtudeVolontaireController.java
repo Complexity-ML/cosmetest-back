@@ -140,7 +140,7 @@ public class EtudeVolontaireController {
             String utilisateur = SecurityContextHolder.getContext().getAuthentication().getName();
             String entiteId = created.getIdEtude() + "-" + created.getIdGroupe() + "-" + created.getIdVolontaire();
             auditLogService.log(utilisateur, AuditLog.Action.ASSIGN, "ETUDE_VOLONTAIRE",
-                    entiteId, null, request.getRemoteAddr());
+                    entiteId, "volontaire:" + created.getIdVolontaire() + " etude:" + created.getIdEtude(), request.getRemoteAddr());
             return ResponseEntity.status(HttpStatus.CREATED)
                     .body(ApiResponse.success(created, "Association créée avec succès"));
         } catch (IllegalArgumentException e) {
@@ -275,7 +275,7 @@ public class EtudeVolontaireController {
             etudeVolontaireService.deleteEtudeVolontaire(id);
             String utilisateur = SecurityContextHolder.getContext().getAuthentication().getName();
             auditLogService.log(utilisateur, AuditLog.Action.UNASSIGN, "ETUDE_VOLONTAIRE",
-                    idEtude + "-" + idGroupe + "-" + idVolontaire, null, request.getRemoteAddr());
+                    idEtude + "-" + idGroupe + "-" + idVolontaire, "volontaire:" + idVolontaire + " etude:" + idEtude, request.getRemoteAddr());
             return ResponseEntity.ok(ApiResponse.success(null, "Association supprimée avec succès"));
         } catch (IllegalArgumentException e) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
@@ -299,7 +299,7 @@ public class EtudeVolontaireController {
             int deleted = etudeVolontaireService.deleteByEtudeAndVolontaire(idEtude, idVolontaire);
             String utilisateur = SecurityContextHolder.getContext().getAuthentication().getName();
             auditLogService.log(utilisateur, AuditLog.Action.UNASSIGN, "ETUDE_VOLONTAIRE",
-                    idEtude + "-" + idVolontaire, null, request.getRemoteAddr());
+                    idEtude + "-" + idVolontaire, "volontaire:" + idVolontaire + " etude:" + idEtude, request.getRemoteAddr());
             Map<String, Object> result = Map.of(
                     "idEtude", idEtude,
                     "idVolontaire", idVolontaire,
@@ -336,7 +336,7 @@ public class EtudeVolontaireController {
         if (response.getStatusCode().is2xxSuccessful()) {
             String utilisateur = SecurityContextHolder.getContext().getAuthentication().getName();
             auditLogService.log(utilisateur, AuditLog.Action.PAYE, "ETUDE_VOLONTAIRE",
-                    idEtude + "-" + idGroupe + "-" + idVolontaire, null, request.getRemoteAddr());
+                    idEtude + "-" + idGroupe + "-" + idVolontaire, "volontaire:" + idVolontaire + " etude:" + idEtude, request.getRemoteAddr());
         }
         return response;
     }

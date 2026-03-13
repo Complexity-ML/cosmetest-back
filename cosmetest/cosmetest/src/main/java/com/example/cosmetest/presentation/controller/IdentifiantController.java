@@ -81,7 +81,7 @@ public class IdentifiantController {
             String utilisateur = SecurityContextHolder.getContext().getAuthentication().getName();
             auditLogService.log(utilisateur, AuditLog.Action.CREATE, "IDENTIFIANT",
                     createdIdentifiant.getIdIdentifiant() != null ? createdIdentifiant.getIdIdentifiant().toString() : null,
-                    null, request.getRemoteAddr());
+                    createdIdentifiant.getIdentifiant(), request.getRemoteAddr());
             return ResponseEntity.status(HttpStatus.CREATED).body(createdIdentifiant);
         } catch (IllegalArgumentException e) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, e.getMessage());
@@ -101,7 +101,7 @@ public class IdentifiantController {
             return identifiantService.updateIdentifiant(id, identifiantDTO)
                     .map(updated -> {
                         String utilisateur = SecurityContextHolder.getContext().getAuthentication().getName();
-                        auditLogService.log(utilisateur, AuditLog.Action.UPDATE, "IDENTIFIANT", id.toString(), null, request.getRemoteAddr());
+                        auditLogService.log(utilisateur, AuditLog.Action.UPDATE, "IDENTIFIANT", id.toString(), updated.getIdentifiant(), request.getRemoteAddr());
                         return ResponseEntity.ok(updated);
                     })
                     .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Identifiant non trouvé avec l'ID: " + id));
@@ -120,7 +120,7 @@ public class IdentifiantController {
     public ResponseEntity<Void> deleteIdentifiant(@PathVariable Integer id, HttpServletRequest request) {
         if (identifiantService.deleteIdentifiant(id)) {
             String utilisateur = SecurityContextHolder.getContext().getAuthentication().getName();
-            auditLogService.log(utilisateur, AuditLog.Action.DELETE, "IDENTIFIANT", id.toString(), null, request.getRemoteAddr());
+            auditLogService.log(utilisateur, AuditLog.Action.DELETE, "IDENTIFIANT", id.toString(), "id:" + id, request.getRemoteAddr());
             return ResponseEntity.noContent().build();
         } else {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Identifiant non trouvé avec l'ID: " + id);

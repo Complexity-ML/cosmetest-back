@@ -78,7 +78,7 @@ public class GroupeController {
             String utilisateur = SecurityContextHolder.getContext().getAuthentication().getName();
             auditLogService.log(utilisateur, AuditLog.Action.CREATE, "GROUPE",
                     createdGroupe.getIdGroupe() != null ? createdGroupe.getIdGroupe().toString() : null,
-                    null, request.getRemoteAddr());
+                    createdGroupe.getIntitule(), request.getRemoteAddr());
             return ResponseEntity.status(HttpStatus.CREATED).body(createdGroupe);
         } catch (IllegalArgumentException e) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, e.getMessage());
@@ -98,7 +98,7 @@ public class GroupeController {
             return groupeService.updateGroupe(id, groupeDTO)
                     .map(updated -> {
                         String utilisateur = SecurityContextHolder.getContext().getAuthentication().getName();
-                        auditLogService.log(utilisateur, AuditLog.Action.UPDATE, "GROUPE", id.toString(), null, request.getRemoteAddr());
+                        auditLogService.log(utilisateur, AuditLog.Action.UPDATE, "GROUPE", id.toString(), updated.getIntitule(), request.getRemoteAddr());
                         return ResponseEntity.ok(updated);
                     })
                     .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Groupe non trouvé avec l'ID: " + id));
@@ -117,7 +117,7 @@ public class GroupeController {
     public ResponseEntity<Void> deleteGroupe(@PathVariable Integer id, HttpServletRequest request) {
         if (groupeService.deleteGroupe(id)) {
             String utilisateur = SecurityContextHolder.getContext().getAuthentication().getName();
-            auditLogService.log(utilisateur, AuditLog.Action.DELETE, "GROUPE", id.toString(), null, request.getRemoteAddr());
+            auditLogService.log(utilisateur, AuditLog.Action.DELETE, "GROUPE", id.toString(), "id:" + id, request.getRemoteAddr());
             return ResponseEntity.noContent().build();
         } else {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Groupe non trouvé avec l'ID: " + id);

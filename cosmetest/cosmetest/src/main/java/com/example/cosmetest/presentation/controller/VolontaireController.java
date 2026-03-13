@@ -221,7 +221,7 @@ public class VolontaireController {
             logger.info("Volontaire créé avec l'ID: {}", createdVolontaire.getVolontaireId());
             String user = SecurityContextHolder.getContext().getAuthentication().getName();
             String ip = request.getRemoteAddr();
-            auditLogService.log(user, AuditLog.Action.CREATE, "VOLONTAIRE", createdVolontaire.getVolontaireId().toString(), null, ip);
+            auditLogService.log(user, AuditLog.Action.CREATE, "VOLONTAIRE", createdVolontaire.getVolontaireId().toString(), createdVolontaire.getNomVol() + " " + createdVolontaire.getPrenomVol(), ip);
             return ResponseEntity.status(HttpStatus.CREATED).body(createdVolontaire);
         } catch (IllegalArgumentException e) {
             logger.error("Erreur lors de la création du volontaire: {}", e.getMessage());
@@ -254,7 +254,7 @@ public class VolontaireController {
             logger.info("Volontaire détaillé créé avec l'ID: {}", createdVolontaire.getVolontaireId());
             String user = SecurityContextHolder.getContext().getAuthentication().getName();
             String ip = request.getRemoteAddr();
-            auditLogService.log(user, AuditLog.Action.CREATE, "VOLONTAIRE", createdVolontaire.getVolontaireId().toString(), null, ip);
+            auditLogService.log(user, AuditLog.Action.CREATE, "VOLONTAIRE", createdVolontaire.getVolontaireId().toString(), createdVolontaire.getNomVol() + " " + createdVolontaire.getPrenomVol(), ip);
             return ResponseEntity.status(HttpStatus.CREATED).body(createdVolontaire);
         } catch (IllegalArgumentException e) {
             logger.error("Erreur lors de la création du volontaire détaillé: {}", e.getMessage());
@@ -287,7 +287,7 @@ public class VolontaireController {
                         logger.info("Volontaire mis à jour avec l'ID: {}", id);
                         String user = SecurityContextHolder.getContext().getAuthentication().getName();
                         String ip = request.getRemoteAddr();
-                        auditLogService.log(user, AuditLog.Action.UPDATE, "VOLONTAIRE", id.toString(), null, ip);
+                        auditLogService.log(user, AuditLog.Action.UPDATE, "VOLONTAIRE", id.toString(), updatedVolontaire.getNomVol() + " " + updatedVolontaire.getPrenomVol(), ip);
                         return ResponseEntity.ok(updatedVolontaire);
                     })
                     .orElseGet(() -> {
@@ -326,7 +326,7 @@ public class VolontaireController {
                         logger.info("Détails du volontaire mis à jour avec l'ID: {}", id);
                         String user = SecurityContextHolder.getContext().getAuthentication().getName();
                         String ip = request.getRemoteAddr();
-                        auditLogService.log(user, AuditLog.Action.UPDATE, "VOLONTAIRE", id.toString(), null, ip);
+                        auditLogService.log(user, AuditLog.Action.UPDATE, "VOLONTAIRE", id.toString(), updatedDetail.getNomVol() + " " + updatedDetail.getPrenomVol(), ip);
                         return ResponseEntity.ok(updatedDetail);
                     })
                     .orElseGet(() -> {
@@ -362,7 +362,7 @@ public class VolontaireController {
                     logger.info("Volontaire archivé avec l'ID: {}", id);
                     String user = SecurityContextHolder.getContext().getAuthentication().getName();
                     String ip = request.getRemoteAddr();
-                    auditLogService.log(user, AuditLog.Action.ARCHIVE, "VOLONTAIRE", id.toString(), null, ip);
+                    auditLogService.log(user, AuditLog.Action.ARCHIVE, "VOLONTAIRE", id.toString(), archivedVolontaire.getNomVol() + " " + archivedVolontaire.getPrenomVol(), ip);
                     return ResponseEntity.ok(archivedVolontaire);
                 })
                 .orElseGet(() -> {
@@ -393,7 +393,7 @@ public class VolontaireController {
                     logger.info("Volontaire désarchivé avec l'ID: {}", id);
                     String user = SecurityContextHolder.getContext().getAuthentication().getName();
                     String ip = request.getRemoteAddr();
-                    auditLogService.log(user, AuditLog.Action.UNARCHIVE, "VOLONTAIRE", id.toString(), null, ip);
+                    auditLogService.log(user, AuditLog.Action.UNARCHIVE, "VOLONTAIRE", id.toString(), unarchivedVolontaire.getNomVol() + " " + unarchivedVolontaire.getPrenomVol(), ip);
                     return ResponseEntity.ok(unarchivedVolontaire);
                 })
                 .orElseGet(() -> {
@@ -423,7 +423,7 @@ public class VolontaireController {
             logger.info("Volontaire supprimé avec l'ID: {}", id);
             String user = SecurityContextHolder.getContext().getAuthentication().getName();
             String ip = request.getRemoteAddr();
-            auditLogService.log(user, AuditLog.Action.DELETE, "VOLONTAIRE", id.toString(), null, ip);
+            auditLogService.log(user, AuditLog.Action.DELETE, "VOLONTAIRE", id.toString(), "id:" + id, ip);
             return ResponseEntity.noContent().build();
         } else {
             logger.warn("Volontaire non trouvé pour la suppression avec l'ID: {}", id);

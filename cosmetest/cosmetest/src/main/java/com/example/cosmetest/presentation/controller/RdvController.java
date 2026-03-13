@@ -234,7 +234,7 @@ public class RdvController {
         rdvService.updateRdv(rdvDTO);
 
         String utilisateur = SecurityContextHolder.getContext().getAuthentication().getName();
-        auditLogService.log(utilisateur, AuditLog.Action.UPDATE, "RDV", idRdv.toString(), null, request.getRemoteAddr());
+        auditLogService.log(utilisateur, AuditLog.Action.UPDATE, "RDV", idRdv.toString(), rdvDTO.getDate() != null ? rdvDTO.getDate().toString() : "id:" + idRdv, request.getRemoteAddr());
 
         Map<String, Object> response = new HashMap<>();
         response.put("success", true);
@@ -257,7 +257,7 @@ public class RdvController {
         rdvService.deleteRdv(rdvId);
 
         String utilisateur = SecurityContextHolder.getContext().getAuthentication().getName();
-        auditLogService.log(utilisateur, AuditLog.Action.DELETE, "RDV", idRdv.toString(), null, request.getRemoteAddr());
+        auditLogService.log(utilisateur, AuditLog.Action.DELETE, "RDV", idRdv.toString(), "id:" + idRdv, request.getRemoteAddr());
 
         return ResponseEntity.ok().build();
     }
@@ -487,7 +487,8 @@ public class RdvController {
         if (!createdRdvs.isEmpty()) {
             String utilisateur = SecurityContextHolder.getContext().getAuthentication().getName();
             String entiteId = createdRdvs.get(0).getIdRdv() != null ? createdRdvs.get(0).getIdRdv().toString() : null;
-            auditLogService.log(utilisateur, AuditLog.Action.CREATE, "RDV", entiteId, null, request.getRemoteAddr());
+            String rdvDate = createdRdvs.get(0).getDate() != null ? createdRdvs.get(0).getDate().toString() : "id:" + entiteId;
+            auditLogService.log(utilisateur, AuditLog.Action.CREATE, "RDV", entiteId, rdvDate, request.getRemoteAddr());
         }
 
         Map<String, Object> response = new HashMap<>();
