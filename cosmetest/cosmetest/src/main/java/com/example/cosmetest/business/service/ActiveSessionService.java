@@ -96,9 +96,10 @@ public class ActiveSessionService {
 
     /** Returns sessions active within the last ACTIVE_TTL_SECONDS, sorted by loginTime */
     public List<Map<String, Object>> getActiveSessions() {
-
+        Instant cutoff = Instant.now().minusSeconds(ACTIVE_TTL_SECONDS);
         List<Map<String, Object>> result = new ArrayList<>();
         sessions.forEach((login, info) -> {
+            if (info.lastActivity.isBefore(cutoff)) return; // skip expired (scheduler will evict)
             long durationSeconds = Instant.now().getEpochSecond() - info.loginTime.getEpochSecond();
             long idleSeconds = Instant.now().getEpochSecond() - info.lastActivity.getEpochSecond();
             result.add(Map.of(

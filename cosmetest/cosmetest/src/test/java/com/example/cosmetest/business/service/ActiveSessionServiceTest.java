@@ -240,15 +240,15 @@ class ActiveSessionServiceTest {
     }
 
     @Test
-    @DisplayName("getActiveSessions() - déclenche l'éviction des sessions expirées avant de retourner")
-    void getActiveSessions_shouldEvictStaleBeforeReturning() throws Exception {
+    @DisplayName("getActiveSessions() - filtre les sessions expirées sans les évincer (l'éviction est réservée au scheduler)")
+    void getActiveSessions_shouldFilterStaleWithoutEvicting() throws Exception {
         service.register("stale");
         setLastActivity(getSessions().get("stale"), Instant.now().minusSeconds(11 * 60));
 
         List<Map<String, Object>> result = service.getActiveSessions();
 
         assertThat(result).isEmpty();
-        verify(sessionHistoryRepository).save(any(SessionHistory.class));
+        verify(sessionHistoryRepository, never()).save(any(SessionHistory.class));
     }
 
     // ─── countActive() ────────────────────────────────────────────────────────
