@@ -1,5 +1,6 @@
 package com.example.cosmetest.presentation.controller;
 
+import com.example.cosmetest.business.service.ActiveSessionService;
 import com.example.cosmetest.business.service.ConnexionLogService;
 import com.example.cosmetest.domain.model.ConnexionLog;
 import org.springframework.data.domain.Page;
@@ -7,6 +8,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
@@ -16,9 +18,11 @@ import java.util.stream.Collectors;
 public class ConnexionController {
 
     private final ConnexionLogService connexionLogService;
+    private final ActiveSessionService activeSessionService;
 
-    public ConnexionController(ConnexionLogService connexionLogService) {
+    public ConnexionController(ConnexionLogService connexionLogService, ActiveSessionService activeSessionService) {
         this.connexionLogService = connexionLogService;
+        this.activeSessionService = activeSessionService;
     }
 
     @GetMapping
@@ -43,6 +47,16 @@ public class ConnexionController {
             "totalPages", result.getTotalPages(),
             "page", result.getNumber(),
             "size", result.getSize()
+        ));
+    }
+
+    @GetMapping("/active")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<Map<String, Object>> getActiveSessions() {
+        List<Map<String, Object>> sessions = activeSessionService.getActiveSessions();
+        return ResponseEntity.ok(Map.of(
+            "sessions", sessions,
+            "count", sessions.size()
         ));
     }
 }

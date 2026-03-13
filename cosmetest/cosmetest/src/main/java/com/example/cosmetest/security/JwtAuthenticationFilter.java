@@ -1,5 +1,6 @@
 package com.example.cosmetest.security;
 
+import com.example.cosmetest.business.service.ActiveSessionService;
 import com.example.cosmetest.business.service.CustomUserDetailsService;
 import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.JwtException;
@@ -29,6 +30,9 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     @Autowired
     private CustomUserDetailsService userDetailsService;
+
+    @Autowired
+    private ActiveSessionService activeSessionService;
 
     // Environnement: pour marquer le cookie Secure en prod
     private final boolean isProd = !"dev".equals(
@@ -70,6 +74,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                                             userDetails, null, userDetails.getAuthorities());
 
                             SecurityContextHolder.getContext().setAuthentication(authentication);
+                            activeSessionService.heartbeat(username);
                             logger.debug("Authentification réussie pour l'utilisateur: {}", username);
 
                             // Sliding refresh: si le token expire bientôt, émettre un nouveau token

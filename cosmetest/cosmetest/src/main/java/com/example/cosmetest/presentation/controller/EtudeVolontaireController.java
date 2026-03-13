@@ -4,6 +4,7 @@ import com.example.cosmetest.business.dto.EtudeVolontaireDTO;
 import com.example.cosmetest.business.dto.GroupeDTO;
 import com.example.cosmetest.business.dto.RdvDTO;
 import com.example.cosmetest.business.service.AuditLogService;
+import com.example.cosmetest.business.service.EtudeService;
 import com.example.cosmetest.business.service.EtudeVolontaireService;
 import com.example.cosmetest.business.service.GroupeService;
 import com.example.cosmetest.business.service.RdvService;
@@ -35,16 +36,25 @@ public class EtudeVolontaireController {
     private final EtudeVolontaireService etudeVolontaireService;
     private final RdvService rdvService;
     private final GroupeService groupeService;
+    private final EtudeService etudeService;
     private final AuditLogService auditLogService;
 
     public EtudeVolontaireController(EtudeVolontaireService etudeVolontaireService,
                                      RdvService rdvService,
                                      GroupeService groupeService,
+                                     EtudeService etudeService,
                                      AuditLogService auditLogService) {
         this.etudeVolontaireService = etudeVolontaireService;
         this.rdvService = rdvService;
         this.groupeService = groupeService;
+        this.etudeService = etudeService;
         this.auditLogService = auditLogService;
+    }
+
+    private String evDetails(int idEtude, int idGroupe, int idVolontaire, String action) {
+        String etudeRef = etudeService.getEtudeById(idEtude).map(e -> e.getRef() + "(#" + idEtude + ")").orElse("#" + idEtude);
+        String groupeLib = groupeService.getGroupeById(idGroupe).map(g -> g.getIntitule() + "(#" + idGroupe + ")").orElse("#" + idGroupe);
+        return "vol:#" + idVolontaire + " etude:" + etudeRef + " groupe:" + groupeLib + (action != null ? " | " + action : "");
     }
 
     // ===============================
@@ -140,7 +150,7 @@ public class EtudeVolontaireController {
             String utilisateur = SecurityContextHolder.getContext().getAuthentication().getName();
             String entiteId = created.getIdEtude() + "-" + created.getIdGroupe() + "-" + created.getIdVolontaire();
             auditLogService.log(utilisateur, AuditLog.Action.ASSIGN, "ETUDE_VOLONTAIRE",
-                    entiteId, "volontaire:" + created.getIdVolontaire() + " etude:" + created.getIdEtude(), request.getRemoteAddr());
+                    entiteId, evDetails(created.getIdEtude(), created.getIdGroupe(), created.getIdVolontaire(), null), request.getRemoteAddr());
             return ResponseEntity.status(HttpStatus.CREATED)
                     .body(ApiResponse.success(created, "Association créée avec succès"));
         } catch (IllegalArgumentException e) {
@@ -174,7 +184,7 @@ public class EtudeVolontaireController {
         if (response.getStatusCode().is2xxSuccessful()) {
             String utilisateur = SecurityContextHolder.getContext().getAuthentication().getName();
             auditLogService.log(utilisateur, AuditLog.Action.UPDATE, "ETUDE_VOLONTAIRE",
-                    idEtude + "-" + idGroupe + "-" + idVolontaire, "volontaire update", request.getRemoteAddr());
+                    idEtude + "-" + idGroupe + "-" + idVolontaire, evDetails(idEtude, idGroupe, idVolontaire, "volontaire update"), request.getRemoteAddr());
         }
         return response;
     }
@@ -201,7 +211,7 @@ public class EtudeVolontaireController {
         if (response.getStatusCode().is2xxSuccessful()) {
             String utilisateur = SecurityContextHolder.getContext().getAuthentication().getName();
             auditLogService.log(utilisateur, AuditLog.Action.UPDATE, "ETUDE_VOLONTAIRE",
-                    idEtude + "-" + idGroupe + "-" + idVolontaire, "statut update", request.getRemoteAddr());
+                    idEtude + "-" + idGroupe + "-" + idVolontaire, evDetails(idEtude, idGroupe, idVolontaire, "statut update"), request.getRemoteAddr());
         }
         return response;
     }
@@ -228,7 +238,7 @@ public class EtudeVolontaireController {
         if (response.getStatusCode().is2xxSuccessful()) {
             String utilisateur = SecurityContextHolder.getContext().getAuthentication().getName();
             auditLogService.log(utilisateur, AuditLog.Action.UPDATE, "ETUDE_VOLONTAIRE",
-                    idEtude + "-" + idGroupe + "-" + idVolontaire, "numsujet update", request.getRemoteAddr());
+                    idEtude + "-" + idGroupe + "-" + idVolontaire, evDetails(idEtude, idGroupe, idVolontaire, "numsujet update"), request.getRemoteAddr());
         }
         return response;
     }
@@ -255,7 +265,7 @@ public class EtudeVolontaireController {
         if (response.getStatusCode().is2xxSuccessful()) {
             String utilisateur = SecurityContextHolder.getContext().getAuthentication().getName();
             auditLogService.log(utilisateur, AuditLog.Action.UPDATE, "ETUDE_VOLONTAIRE",
-                    idEtude + "-" + idGroupe + "-" + idVolontaire, "iv update", request.getRemoteAddr());
+                    idEtude + "-" + idGroupe + "-" + idVolontaire, evDetails(idEtude, idGroupe, idVolontaire, "iv update"), request.getRemoteAddr());
         }
         return response;
     }
@@ -275,7 +285,7 @@ public class EtudeVolontaireController {
             etudeVolontaireService.deleteEtudeVolontaire(id);
             String utilisateur = SecurityContextHolder.getContext().getAuthentication().getName();
             auditLogService.log(utilisateur, AuditLog.Action.UNASSIGN, "ETUDE_VOLONTAIRE",
-                    idEtude + "-" + idGroupe + "-" + idVolontaire, "volontaire:" + idVolontaire + " etude:" + idEtude, request.getRemoteAddr());
+                    idEtude + "-" + idGroupe + "-" + idVolontaire, evDetails(idEtude, idGroupe, idVolontaire, null), request.getRemoteAddr());
             return ResponseEntity.ok(ApiResponse.success(null, "Association supprimée avec succès"));
         } catch (IllegalArgumentException e) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
@@ -299,7 +309,7 @@ public class EtudeVolontaireController {
             int deleted = etudeVolontaireService.deleteByEtudeAndVolontaire(idEtude, idVolontaire);
             String utilisateur = SecurityContextHolder.getContext().getAuthentication().getName();
             auditLogService.log(utilisateur, AuditLog.Action.UNASSIGN, "ETUDE_VOLONTAIRE",
-                    idEtude + "-" + idVolontaire, "volontaire:" + idVolontaire + " etude:" + idEtude, request.getRemoteAddr());
+                    idEtude + "-" + idVolontaire, "vol:#" + idVolontaire + " etude:" + etudeService.getEtudeById(idEtude).map(e -> e.getRef() + "(#" + idEtude + ")").orElse("#" + idEtude), request.getRemoteAddr());
             Map<String, Object> result = Map.of(
                     "idEtude", idEtude,
                     "idVolontaire", idVolontaire,
@@ -336,7 +346,7 @@ public class EtudeVolontaireController {
         if (response.getStatusCode().is2xxSuccessful()) {
             String utilisateur = SecurityContextHolder.getContext().getAuthentication().getName();
             auditLogService.log(utilisateur, AuditLog.Action.PAYE, "ETUDE_VOLONTAIRE",
-                    idEtude + "-" + idGroupe + "-" + idVolontaire, "volontaire:" + idVolontaire + " etude:" + idEtude, request.getRemoteAddr());
+                    idEtude + "-" + idGroupe + "-" + idVolontaire, evDetails(idEtude, idGroupe, idVolontaire, null), request.getRemoteAddr());
         }
         return response;
     }

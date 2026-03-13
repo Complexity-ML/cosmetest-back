@@ -5,6 +5,7 @@ import java.util.HashMap;
 
 import com.example.cosmetest.presentation.request.LoginRequest;
 import com.example.cosmetest.presentation.response.JwtResponse;
+import com.example.cosmetest.business.service.ActiveSessionService;
 import com.example.cosmetest.business.service.AuthService;
 import com.example.cosmetest.business.service.ConnexionLogService;
 
@@ -26,6 +27,7 @@ public class AuthController {
     private final AuthService authService;
     private final AuthenticationManager authenticationManager;
     private final ConnexionLogService connexionLogService;
+    private final ActiveSessionService activeSessionService;
 
     // Déterminer si on est en production (HTTPS) ou en dev (HTTP)
     private final boolean isProduction = !"dev".equals(
@@ -34,10 +36,12 @@ public class AuthController {
 
     public AuthController(AuthService authService,
                           AuthenticationManager authenticationManager,
-                          ConnexionLogService connexionLogService) {
+                          ConnexionLogService connexionLogService,
+                          ActiveSessionService activeSessionService) {
         this.authService = authService;
         this.authenticationManager = authenticationManager;
         this.connexionLogService = connexionLogService;
+        this.activeSessionService = activeSessionService;
     }
 
     /**
@@ -106,6 +110,7 @@ public class AuthController {
             // 6) Ajouter le token dans la réponse JSON (pour applications mobiles)
             String username = authService.getUsernameFromToken(jwt);
             connexionLogService.log(loginRequest.getLogin(), true, ip);
+            activeSessionService.register(loginRequest.getLogin());
             JwtResponse jwtResponse = new JwtResponse(jwt, username);
 
             return ResponseEntity.ok(jwtResponse);
@@ -121,14 +126,12 @@ public class AuthController {
     }
 
     @PostMapping("/api/auth/logout")
-    public ResponseEntity<?> logoutUser(HttpServletResponse response) {
-        // 1) Générer un Set-Cookie pour expirer le précédent
-        String cookieValue = buildCookieValue(null, 0); // Expire immédiatement
-
-        // 2) Fixer l'en-tête
+    public ResponseEntity<?> logoutUser(HttpServletResponse response, Authentication authentication) {
+        if (authentication != null) {
+            activeSessionService.unregister(authentication.getName());
+        }
+        String cookieValue = buildCookieValue(null, 0);
         response.setHeader("Set-Cookie", cookieValue);
-
-        // 3) Retourner la confirmation
         return ResponseEntity.ok("Déconnexion réussie");
     }
 
