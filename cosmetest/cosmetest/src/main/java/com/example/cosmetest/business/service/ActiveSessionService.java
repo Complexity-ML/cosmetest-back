@@ -29,12 +29,10 @@ public class ActiveSessionService {
 
     private static class SessionInfo {
         final Instant loginTime;
-        volatile Instant lastActivity;   // any request — used for timeout eviction
-        volatile Instant lastUserAction; // real user actions only — used for idle display
+        volatile Instant lastUserAction; // real user actions only — used for idle display and eviction
 
         SessionInfo(Instant loginTime) {
             this.loginTime = loginTime;
-            this.lastActivity = loginTime;
             this.lastUserAction = loginTime;
         }
     }
@@ -51,24 +49,18 @@ public class ActiveSessionService {
         sessions.put(login, new SessionInfo(Instant.now()));
     }
 
-    /** Called on real user requests — updates both lastActivity and lastUserAction */
+    /** Called on real user requests — updates lastUserAction */
     public void heartbeat(String login) {
         sessions.compute(login, (k, existing) -> {
             if (existing == null) return new SessionInfo(Instant.now());
-            Instant now = Instant.now();
-            existing.lastActivity = now;
-            existing.lastUserAction = now;
+            existing.lastUserAction = Instant.now();
             return existing;
         });
     }
 
-    /** Called on background/monitoring requests — keeps session alive but does NOT reset idle display */
+    /** Called on background/monitoring requests — session stays alive in memory but idle is not reset */
     public void backgroundHeartbeat(String login) {
-        sessions.compute(login, (k, existing) -> {
-            if (existing == null) return new SessionInfo(Instant.now());
-            existing.lastActivity = Instant.now();
-            return existing;
-        });
+        sessions.computeIfAbsent(login, k -> new SessionInfo(Instant.now()));
     }
 
     /** Called on logout — persists the session history record */
@@ -90,7 +82,7 @@ public class ActiveSessionService {
     public void evictTimedOutSessions() {
         Instant cutoff = Instant.now().minusSeconds(ACTIVE_TTL_SECONDS);
         sessions.forEach((login, info) -> {
-            if (info.lastActivity.isBefore(cutoff)) {
+            if (info.lastUserAction.isBefore(cutoff)) {
                 if (sessions.remove(login, info)) { // atomic: only removes if value still matches
                     try {
                         sessionHistoryRepository.save(
@@ -109,7 +101,7 @@ public class ActiveSessionService {
         Instant cutoff = Instant.now().minusSeconds(ACTIVE_TTL_SECONDS);
         List<Map<String, Object>> result = new ArrayList<>();
         sessions.forEach((login, info) -> {
-            if (info.lastActivity.isBefore(cutoff)) return; // skip expired (scheduler will evict)
+            if (info.lastUserAction.isBefore(cutoff)) return; // skip expired (scheduler will evict)
             long durationSeconds = Instant.now().getEpochSecond() - info.loginTime.getEpochSecond();
             long idleSeconds = Instant.now().getEpochSecond() - info.lastUserAction.getEpochSecond();
             result.add(Map.of(
@@ -125,6 +117,6 @@ public class ActiveSessionService {
 
     public int countActive() {
         Instant cutoff = Instant.now().minusSeconds(ACTIVE_TTL_SECONDS);
-        return (int) sessions.values().stream().filter(s -> !s.lastActivity.isBefore(cutoff)).count();
+        return (int) sessions.values().stream().filter(s -> !s.lastUserAction.isBefore(cutoff)).count();
     }
 }
