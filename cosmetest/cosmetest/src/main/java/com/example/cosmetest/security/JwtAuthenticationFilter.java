@@ -74,8 +74,10 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                                             userDetails, null, userDetails.getAuthorities());
 
                             SecurityContextHolder.getContext().setAuthentication(authentication);
-                            // Ne pas compter les endpoints de monitoring comme activité utilisateur
-                            if (!isMonitoringRequest(request)) {
+                            if (isMonitoringRequest(request)) {
+                                // Background poll: keep session alive but don't reset idle display
+                                activeSessionService.backgroundHeartbeat(username);
+                            } else {
                                 activeSessionService.heartbeat(username);
                             }
                             logger.debug("Authentification réussie pour l'utilisateur: {}", username);
@@ -138,7 +140,10 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
      * Les endpoints /connexions/* mettent à jour la session de l'admin qui les consulte.
      */
     private boolean isMonitoringRequest(HttpServletRequest request) {
-        return request.getRequestURI().startsWith("/api/auth/validate");
+        String uri = request.getRequestURI();
+        return uri.startsWith("/api/auth/validate")
+            || uri.startsWith("/api/connexions/active")
+            || uri.startsWith("/api/connexions/session-history");
     }
 
     /**
