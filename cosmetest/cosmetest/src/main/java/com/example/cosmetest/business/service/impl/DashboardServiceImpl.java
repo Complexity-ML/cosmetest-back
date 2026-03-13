@@ -130,8 +130,10 @@ public class DashboardServiceImpl implements DashboardService {
                     // Comme getCreatedBy n'existe pas, utilisez une valeur par défaut
                     activity.setUser("Système");
 
-                    // Comme getEtude().getRef() n'existe pas, utilisez directement l'ID de l'étude
-                    activity.setDescription("a planifié un RDV pour l'étude #" + r.getIdEtude());
+                    String etudeRef = etudeService.getEtudeById(r.getIdEtude())
+                            .map(EtudeDTO::getRef)
+                            .orElse("#" + r.getIdEtude());
+                    activity.setDescription("a planifié un RDV pour l'étude " + etudeRef);
 
                     activities.add(activity);
                 }
