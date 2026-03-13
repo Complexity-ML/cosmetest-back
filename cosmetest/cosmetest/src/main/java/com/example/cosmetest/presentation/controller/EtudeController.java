@@ -1,8 +1,11 @@
 package com.example.cosmetest.presentation.controller;
 
 import com.example.cosmetest.business.dto.EtudeDTO;
+import com.example.cosmetest.business.service.AuditLogService;
 import com.example.cosmetest.business.service.EtudeService;
+import com.example.cosmetest.domain.model.AuditLog;
 
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -10,6 +13,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import org.slf4j.Logger;
@@ -31,9 +35,11 @@ public class EtudeController {
     private static final Logger logger = LoggerFactory.getLogger(EtudeController.class);
 
     private final EtudeService etudeService;
+    private final AuditLogService auditLogService;
 
-    public EtudeController(EtudeService etudeService) {
+    public EtudeController(EtudeService etudeService, AuditLogService auditLogService) {
         this.etudeService = etudeService;
+        this.auditLogService = auditLogService;
     }
 
     /**
@@ -206,8 +212,12 @@ public class EtudeController {
      * @return Étude créée
      */
     @PostMapping
-    public ResponseEntity<EtudeDTO> createEtude(@RequestBody EtudeDTO etudeDTO) {
+    public ResponseEntity<EtudeDTO> createEtude(@RequestBody EtudeDTO etudeDTO,
+            HttpServletRequest request) {
         EtudeDTO createdEtude = etudeService.saveEtude(etudeDTO);
+        String user = SecurityContextHolder.getContext().getAuthentication().getName();
+        String ip = request.getRemoteAddr();
+        auditLogService.log(user, AuditLog.Action.CREATE, "ETUDE", createdEtude.getIdEtude().toString(), null, ip);
         return new ResponseEntity<>(createdEtude, HttpStatus.CREATED);
     }
 
@@ -221,7 +231,8 @@ public class EtudeController {
     @PutMapping("/{id}")
     public ResponseEntity<EtudeDTO> updateEtude(
             @PathVariable Integer id,
-            @RequestBody EtudeDTO etudeDTO) {
+            @RequestBody EtudeDTO etudeDTO,
+            HttpServletRequest request) {
 
         // Vérifier que l'ID dans le chemin correspond à l'ID dans le DTO
         if (etudeDTO.getIdEtude() != null && !etudeDTO.getIdEtude().equals(id)) {
@@ -239,6 +250,10 @@ public class EtudeController {
         // Sauvegarder les modifications
         EtudeDTO updatedEtude = etudeService.saveEtude(etudeDTO);
 
+        String user = SecurityContextHolder.getContext().getAuthentication().getName();
+        String ip = request.getRemoteAddr();
+        auditLogService.log(user, AuditLog.Action.UPDATE, "ETUDE", id.toString(), null, ip);
+
         return ResponseEntity.ok(updatedEtude);
     }
 
@@ -252,7 +267,8 @@ public class EtudeController {
     @PatchMapping("/{id}/paye")
     public ResponseEntity<?> updatePayeStatus(
             @PathVariable Integer id,
-            @RequestBody Integer paye) {
+            @RequestBody Integer paye,
+            HttpServletRequest request) {
 
         try {
             // Validation du statut PAYE
@@ -274,6 +290,11 @@ public class EtudeController {
                 return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                         .body(Map.of("message", "Erreur lors de la mise à jour du statut PAYE"));
             }
+
+            // Audit log
+            String user = SecurityContextHolder.getContext().getAuthentication().getName();
+            String ip = request.getRemoteAddr();
+            auditLogService.log(user, AuditLog.Action.PAYE, "ETUDE", id.toString(), null, ip);
 
             // Réponse de succès
             return ResponseEntity.ok(Map.of(
@@ -298,13 +319,17 @@ public class EtudeController {
      * @return Réponse vide avec statut 204
      */
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteEtude(@PathVariable Integer id) {
+    public ResponseEntity<Void> deleteEtude(@PathVariable Integer id,
+            HttpServletRequest request) {
         // Vérifier que l'étude existe
         if (!etudeService.getEtudeById(id).isPresent()) {
             return ResponseEntity.notFound().build();
         }
 
         etudeService.deleteEtude(id);
+        String user = SecurityContextHolder.getContext().getAuthentication().getName();
+        String ip = request.getRemoteAddr();
+        auditLogService.log(user, AuditLog.Action.DELETE, "ETUDE", id.toString(), null, ip);
         return ResponseEntity.noContent().build();
     }
 

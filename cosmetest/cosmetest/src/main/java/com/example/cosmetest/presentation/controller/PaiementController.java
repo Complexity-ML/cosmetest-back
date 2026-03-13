@@ -1,10 +1,14 @@
 package com.example.cosmetest.presentation.controller;
 import com.example.cosmetest.business.dto.PaiementEtudeSummaryDTO;
 import com.example.cosmetest.business.dto.PaymentBatchResultDTO;
+import com.example.cosmetest.business.service.AuditLogService;
 import com.example.cosmetest.business.service.PaiementStatsService;
 import com.example.cosmetest.business.service.PaymentBatchService;
+import com.example.cosmetest.domain.model.AuditLog;
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -24,11 +28,14 @@ public class PaiementController {
 
     private final PaymentBatchService paymentBatchService;
     private final PaiementStatsService paiementStatsService;
+    private final AuditLogService auditLogService;
 
     public PaiementController(PaymentBatchService paymentBatchService,
-                              PaiementStatsService paiementStatsService) {
+                              PaiementStatsService paiementStatsService,
+                              AuditLogService auditLogService) {
         this.paymentBatchService = paymentBatchService;
         this.paiementStatsService = paiementStatsService;
+        this.auditLogService = auditLogService;
     }
 
     /**
@@ -55,9 +62,12 @@ public class PaiementController {
      * Marque comme payés tous les paiements non payés d'une étude, en excluant les volontaires annulés.
      */
     @PostMapping("/etudes/{idEtude}/mark-all-paid")
-    public ResponseEntity<?> markAllAsPaid(@PathVariable int idEtude) {
+    public ResponseEntity<?> markAllAsPaid(@PathVariable int idEtude, HttpServletRequest request) {
         try {
             PaymentBatchResultDTO result = paymentBatchService.markAllAsPaid(idEtude);
+            String utilisateur = SecurityContextHolder.getContext().getAuthentication().getName();
+            auditLogService.log(utilisateur, AuditLog.Action.PAYE, "PAIEMENT",
+                    String.valueOf(idEtude), result.toString(), request.getRemoteAddr());
             return ResponseEntity.ok(result);
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().body(

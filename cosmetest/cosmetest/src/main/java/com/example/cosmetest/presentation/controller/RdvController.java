@@ -4,11 +4,15 @@ import com.example.cosmetest.business.dto.EtudeDTO;
 import com.example.cosmetest.business.dto.RdvDTO;
 import com.example.cosmetest.domain.model.RdvId;
 import com.example.cosmetest.business.dto.PaginatedResponse;
+import com.example.cosmetest.business.service.AuditLogService;
 import com.example.cosmetest.business.service.EtudeService;
 import com.example.cosmetest.business.service.RdvService;
+import com.example.cosmetest.domain.model.AuditLog;
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.*;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import org.slf4j.Logger;
@@ -33,6 +37,9 @@ public class RdvController {
 
     @Autowired
     private EtudeService etudeService;
+
+    @Autowired
+    private AuditLogService auditLogService;
 
 
     /**
@@ -171,17 +178,21 @@ public class RdvController {
             @PathVariable Integer idEtude,
             @PathVariable Integer idRdv,
             //@PathVariable Integer sequence,
-            @RequestParam String nouvelEtat) {
-    
+            @RequestParam String nouvelEtat,
+            HttpServletRequest request) {
+
         RdvId rdvId = new RdvId(idEtude, idRdv);
         Optional<RdvDTO> rdvOpt = rdvService.getRdvById(rdvId);
-    
+
         if (rdvOpt.isEmpty()) {
             return ResponseEntity.notFound().build();
         }
-    
+
         rdvService.updateRdvEtat(rdvId, nouvelEtat);
-    
+
+        String utilisateur = SecurityContextHolder.getContext().getAuthentication().getName();
+        auditLogService.log(utilisateur, AuditLog.Action.UPDATE, "RDV", idRdv.toString(), "etat: " + nouvelEtat, request.getRemoteAddr());
+
         // Récupérer le RDV mis à jour
         rdvOpt = rdvService.getRdvById(rdvId);
         return ResponseEntity.ok(rdvOpt.get());
@@ -193,7 +204,8 @@ public class RdvController {
     @PutMapping("/{idEtude}/{idRdv}")
     public ResponseEntity<?> updateRdv(@PathVariable Integer idEtude,
                                        @PathVariable Integer idRdv,
-                                       @RequestBody RdvDTO rdvDTO) {
+                                       @RequestBody RdvDTO rdvDTO,
+                                       HttpServletRequest request) {
         // Ensure IDs in path match those in the DTO
         rdvDTO.setIdEtude(idEtude);
         rdvDTO.setIdRdv(idRdv);
@@ -221,6 +233,9 @@ public class RdvController {
 
         rdvService.updateRdv(rdvDTO);
 
+        String utilisateur = SecurityContextHolder.getContext().getAuthentication().getName();
+        auditLogService.log(utilisateur, AuditLog.Action.UPDATE, "RDV", idRdv.toString(), null, request.getRemoteAddr());
+
         Map<String, Object> response = new HashMap<>();
         response.put("success", true);
         if (!warnings.isEmpty()) {
@@ -235,10 +250,15 @@ public class RdvController {
     @DeleteMapping("/{idEtude}/{idRdv}")
     public ResponseEntity<Void> delete(
             @PathVariable Integer idEtude,
-            @PathVariable Integer idRdv) {
+            @PathVariable Integer idRdv,
+            HttpServletRequest request) {
 
         RdvId rdvId = new RdvId(idEtude, idRdv);
         rdvService.deleteRdv(rdvId);
+
+        String utilisateur = SecurityContextHolder.getContext().getAuthentication().getName();
+        auditLogService.log(utilisateur, AuditLog.Action.DELETE, "RDV", idRdv.toString(), null, request.getRemoteAddr());
+
         return ResponseEntity.ok().build();
     }
 
@@ -412,7 +432,7 @@ public class RdvController {
      * Crée un ou plusieurs rendez-vous avec vérification de chevauchement des périodes d'études
      */
     @PostMapping
-    public ResponseEntity<Map<String, Object>> create(@RequestBody RdvDTO rdvDTO) {
+    public ResponseEntity<Map<String, Object>> create(@RequestBody RdvDTO rdvDTO, HttpServletRequest request) {
         List<RdvDTO> createdRdvs = new ArrayList<>();
         List<String> errors = new ArrayList<>();
         int totalToCreate = 1;
@@ -464,6 +484,12 @@ public class RdvController {
             }
         }
 
+        if (!createdRdvs.isEmpty()) {
+            String utilisateur = SecurityContextHolder.getContext().getAuthentication().getName();
+            String entiteId = createdRdvs.get(0).getIdRdv() != null ? createdRdvs.get(0).getIdRdv().toString() : null;
+            auditLogService.log(utilisateur, AuditLog.Action.CREATE, "RDV", entiteId, null, request.getRemoteAddr());
+        }
+
         Map<String, Object> response = new HashMap<>();
         response.put("created", createdRdvs.size());
         response.put("total", totalToCreate);
@@ -481,7 +507,7 @@ public class RdvController {
      * Optimisé pour les créations en masse depuis l'interface de création batch
      */
     @PostMapping("/batch")
-    public ResponseEntity<Map<String, Object>> createBatch(@RequestBody List<RdvDTO> rdvDTOs) {
+    public ResponseEntity<Map<String, Object>> createBatch(@RequestBody List<RdvDTO> rdvDTOs, HttpServletRequest request) {
         List<RdvDTO> createdRdvs = new ArrayList<>();
         List<String> errors = new ArrayList<>();
         int totalToCreate = rdvDTOs.size();
@@ -502,6 +528,9 @@ public class RdvController {
             createdRdvs.addAll(batchResult);
 
             logger.info("Batch création réussie : {} RDV créés sur {} demandés", createdRdvs.size(), totalToCreate);
+
+            String utilisateur = SecurityContextHolder.getContext().getAuthentication().getName();
+            auditLogService.log(utilisateur, AuditLog.Action.CREATE, "RDV", null, "batch: " + batchResult.size() + " créés", request.getRemoteAddr());
 
         } catch (Exception e) {
             String errorMsg = "Erreur lors de la création batch : " + e.getMessage();

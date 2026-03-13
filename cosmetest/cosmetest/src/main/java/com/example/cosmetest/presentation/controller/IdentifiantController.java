@@ -1,12 +1,16 @@
 package com.example.cosmetest.presentation.controller;
 
 import com.example.cosmetest.business.dto.IdentifiantDTO;
+import com.example.cosmetest.business.service.AuditLogService;
 import com.example.cosmetest.business.service.IdentifiantService;
+import com.example.cosmetest.domain.model.AuditLog;
 import com.example.cosmetest.presentation.request.ChangerMotDePasseRequest;
 import com.example.cosmetest.presentation.request.LoginRequest;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -20,9 +24,11 @@ import java.util.List;
 public class IdentifiantController {
 
     private final IdentifiantService identifiantService;
+    private final AuditLogService auditLogService;
 
-    public IdentifiantController(IdentifiantService identifiantService) {
+    public IdentifiantController(IdentifiantService identifiantService, AuditLogService auditLogService) {
         this.identifiantService = identifiantService;
+        this.auditLogService = auditLogService;
     }
 
     /**
@@ -69,9 +75,13 @@ public class IdentifiantController {
      * @return l'identifiant créé (sans mot de passe)
      */
     @PostMapping
-    public ResponseEntity<IdentifiantDTO> createIdentifiant(@Valid @RequestBody IdentifiantDTO identifiantDTO) {
+    public ResponseEntity<IdentifiantDTO> createIdentifiant(@Valid @RequestBody IdentifiantDTO identifiantDTO, HttpServletRequest request) {
         try {
             IdentifiantDTO createdIdentifiant = identifiantService.createIdentifiant(identifiantDTO);
+            String utilisateur = SecurityContextHolder.getContext().getAuthentication().getName();
+            auditLogService.log(utilisateur, AuditLog.Action.CREATE, "IDENTIFIANT",
+                    createdIdentifiant.getIdIdentifiant() != null ? createdIdentifiant.getIdIdentifiant().toString() : null,
+                    null, request.getRemoteAddr());
             return ResponseEntity.status(HttpStatus.CREATED).body(createdIdentifiant);
         } catch (IllegalArgumentException e) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, e.getMessage());
@@ -86,10 +96,14 @@ public class IdentifiantController {
      * @return l'identifiant mis à jour (sans mot de passe)
      */
     @PutMapping("/{id}")
-    public ResponseEntity<IdentifiantDTO> updateIdentifiant(@PathVariable Integer id, @Valid @RequestBody IdentifiantDTO identifiantDTO) {
+    public ResponseEntity<IdentifiantDTO> updateIdentifiant(@PathVariable Integer id, @Valid @RequestBody IdentifiantDTO identifiantDTO, HttpServletRequest request) {
         try {
             return identifiantService.updateIdentifiant(id, identifiantDTO)
-                    .map(ResponseEntity::ok)
+                    .map(updated -> {
+                        String utilisateur = SecurityContextHolder.getContext().getAuthentication().getName();
+                        auditLogService.log(utilisateur, AuditLog.Action.UPDATE, "IDENTIFIANT", id.toString(), null, request.getRemoteAddr());
+                        return ResponseEntity.ok(updated);
+                    })
                     .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Identifiant non trouvé avec l'ID: " + id));
         } catch (IllegalArgumentException e) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, e.getMessage());
@@ -103,8 +117,10 @@ public class IdentifiantController {
      * @return statut de la suppression
      */
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteIdentifiant(@PathVariable Integer id) {
+    public ResponseEntity<Void> deleteIdentifiant(@PathVariable Integer id, HttpServletRequest request) {
         if (identifiantService.deleteIdentifiant(id)) {
+            String utilisateur = SecurityContextHolder.getContext().getAuthentication().getName();
+            auditLogService.log(utilisateur, AuditLog.Action.DELETE, "IDENTIFIANT", id.toString(), null, request.getRemoteAddr());
             return ResponseEntity.noContent().build();
         } else {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Identifiant non trouvé avec l'ID: " + id);
@@ -119,10 +135,12 @@ public class IdentifiantController {
      * @return statut du changement
      */
     @PostMapping("/{id}/changer-mot-de-passe")
-    public ResponseEntity<Void> changerMotDePasse(@PathVariable Integer id, @Valid @RequestBody ChangerMotDePasseRequest request) {
+    public ResponseEntity<Void> changerMotDePasse(@PathVariable Integer id, @Valid @RequestBody ChangerMotDePasseRequest changeRequest, HttpServletRequest request) {
         try {
-            boolean success = identifiantService.changerMotDePasse(id, request.getAncienMotDePasse(), request.getNouveauMotDePasse());
+            boolean success = identifiantService.changerMotDePasse(id, changeRequest.getAncienMotDePasse(), changeRequest.getNouveauMotDePasse());
             if (success) {
+                String utilisateur = SecurityContextHolder.getContext().getAuthentication().getName();
+                auditLogService.log(utilisateur, AuditLog.Action.UPDATE, "IDENTIFIANT", id.toString(), "changement mot de passe", request.getRemoteAddr());
                 return ResponseEntity.ok().build();
             } else {
                 throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Échec du changement de mot de passe, ancien mot de passe incorrect");

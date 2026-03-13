@@ -1,13 +1,17 @@
 package com.example.cosmetest.presentation.controller;
 
 import com.example.cosmetest.business.dto.GroupeDTO;
+import com.example.cosmetest.business.service.AuditLogService;
 import com.example.cosmetest.business.service.GroupeService;
+import com.example.cosmetest.domain.model.AuditLog;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
-import jakarta.validation.Valid;
 import java.util.List;
 
 /**
@@ -18,9 +22,11 @@ import java.util.List;
 public class GroupeController {
 
     private final GroupeService groupeService;
+    private final AuditLogService auditLogService;
 
-    public GroupeController(GroupeService groupeService) {
+    public GroupeController(GroupeService groupeService, AuditLogService auditLogService) {
         this.groupeService = groupeService;
+        this.auditLogService = auditLogService;
     }
 
     /**
@@ -66,9 +72,13 @@ public class GroupeController {
      * @return le groupe créé
      */
     @PostMapping
-    public ResponseEntity<GroupeDTO> createGroupe(@Valid @RequestBody GroupeDTO groupeDTO) {
+    public ResponseEntity<GroupeDTO> createGroupe(@Valid @RequestBody GroupeDTO groupeDTO, HttpServletRequest request) {
         try {
             GroupeDTO createdGroupe = groupeService.createGroupe(groupeDTO);
+            String utilisateur = SecurityContextHolder.getContext().getAuthentication().getName();
+            auditLogService.log(utilisateur, AuditLog.Action.CREATE, "GROUPE",
+                    createdGroupe.getIdGroupe() != null ? createdGroupe.getIdGroupe().toString() : null,
+                    null, request.getRemoteAddr());
             return ResponseEntity.status(HttpStatus.CREATED).body(createdGroupe);
         } catch (IllegalArgumentException e) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, e.getMessage());
@@ -83,10 +93,14 @@ public class GroupeController {
      * @return le groupe mis à jour
      */
     @PutMapping("/{id}")
-    public ResponseEntity<GroupeDTO> updateGroupe(@PathVariable Integer id, @Valid @RequestBody GroupeDTO groupeDTO) {
+    public ResponseEntity<GroupeDTO> updateGroupe(@PathVariable Integer id, @Valid @RequestBody GroupeDTO groupeDTO, HttpServletRequest request) {
         try {
             return groupeService.updateGroupe(id, groupeDTO)
-                    .map(ResponseEntity::ok)
+                    .map(updated -> {
+                        String utilisateur = SecurityContextHolder.getContext().getAuthentication().getName();
+                        auditLogService.log(utilisateur, AuditLog.Action.UPDATE, "GROUPE", id.toString(), null, request.getRemoteAddr());
+                        return ResponseEntity.ok(updated);
+                    })
                     .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Groupe non trouvé avec l'ID: " + id));
         } catch (IllegalArgumentException e) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, e.getMessage());
@@ -100,8 +114,10 @@ public class GroupeController {
      * @return statut de la suppression
      */
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteGroupe(@PathVariable Integer id) {
+    public ResponseEntity<Void> deleteGroupe(@PathVariable Integer id, HttpServletRequest request) {
         if (groupeService.deleteGroupe(id)) {
+            String utilisateur = SecurityContextHolder.getContext().getAuthentication().getName();
+            auditLogService.log(utilisateur, AuditLog.Action.DELETE, "GROUPE", id.toString(), null, request.getRemoteAddr());
             return ResponseEntity.noContent().build();
         } else {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Groupe non trouvé avec l'ID: " + id);

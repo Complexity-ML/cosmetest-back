@@ -2,13 +2,17 @@ package com.example.cosmetest.presentation.controller;
 
 import com.example.cosmetest.business.dto.AnnulationDTO;
 import com.example.cosmetest.business.service.AnnulationService;
+import com.example.cosmetest.business.service.AuditLogService;
+import com.example.cosmetest.domain.model.AuditLog;
 
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -23,9 +27,12 @@ import java.util.Optional;
 public class AnnulationController {
 
     private final AnnulationService annulationService;
+    private final AuditLogService auditLogService;
 
-    public AnnulationController(AnnulationService annulationService) {
+    public AnnulationController(AnnulationService annulationService,
+                                AuditLogService auditLogService) {
         this.annulationService = annulationService;
+        this.auditLogService = auditLogService;
     }
 
     /**
@@ -140,8 +147,13 @@ public class AnnulationController {
      * @return Annulation créée
      */
     @PostMapping
-    public ResponseEntity<AnnulationDTO> createAnnulation(@RequestBody AnnulationDTO annulationDTO) {
+    public ResponseEntity<AnnulationDTO> createAnnulation(@RequestBody AnnulationDTO annulationDTO,
+                                                          HttpServletRequest request) {
         AnnulationDTO createdAnnulation = annulationService.saveAnnulation(annulationDTO);
+        String utilisateur = SecurityContextHolder.getContext().getAuthentication().getName();
+        auditLogService.log(utilisateur, AuditLog.Action.ANNULATION, "ANNULATION",
+                createdAnnulation.getIdAnnuler() != null ? createdAnnulation.getIdAnnuler().toString() : null,
+                null, request.getRemoteAddr());
         return new ResponseEntity<>(createdAnnulation, HttpStatus.CREATED);
     }
 
@@ -154,7 +166,8 @@ public class AnnulationController {
     @PutMapping("/{id}")
     public ResponseEntity<AnnulationDTO> updateAnnulation(
             @PathVariable Integer id,
-            @RequestBody AnnulationDTO annulationDTO) {
+            @RequestBody AnnulationDTO annulationDTO,
+            HttpServletRequest request) {
 
         // Vérifier que l'ID dans le chemin correspond à l'ID dans le DTO
         if (annulationDTO.getIdAnnuler() != null && !annulationDTO.getIdAnnuler().equals(id)) {
@@ -172,6 +185,10 @@ public class AnnulationController {
         // Sauvegarder les modifications
         AnnulationDTO updatedAnnulation = annulationService.saveAnnulation(annulationDTO);
 
+        String utilisateur = SecurityContextHolder.getContext().getAuthentication().getName();
+        auditLogService.log(utilisateur, AuditLog.Action.UPDATE, "ANNULATION",
+                id.toString(), null, request.getRemoteAddr());
+
         return ResponseEntity.ok(updatedAnnulation);
     }
 
@@ -181,13 +198,19 @@ public class AnnulationController {
      * @return Réponse vide avec statut 204
      */
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteAnnulation(@PathVariable Integer id) {
+    public ResponseEntity<Void> deleteAnnulation(@PathVariable Integer id,
+                                                 HttpServletRequest request) {
         // Vérifier que l'annulation existe
         if (!annulationService.getAnnulationById(id).isPresent()) {
             return ResponseEntity.notFound().build();
         }
 
         annulationService.deleteAnnulation(id);
+
+        String utilisateur = SecurityContextHolder.getContext().getAuthentication().getName();
+        auditLogService.log(utilisateur, AuditLog.Action.DELETE, "ANNULATION",
+                id.toString(), null, request.getRemoteAddr());
+
         return ResponseEntity.noContent().build();
     }
 

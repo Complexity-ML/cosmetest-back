@@ -2,9 +2,12 @@ package com.example.cosmetest.presentation.controller;
 
 import com.example.cosmetest.business.dto.VolontaireDTO;
 import com.example.cosmetest.business.dto.VolontaireDetailDTO;
+import com.example.cosmetest.business.service.AuditLogService;
 import com.example.cosmetest.business.service.VolontaireService;
+import com.example.cosmetest.domain.model.AuditLog;
 import com.example.cosmetest.domain.model.Volontaire;
 import com.example.cosmetest.utils.ReflectionUtils;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
@@ -34,6 +37,7 @@ import java.util.stream.Collectors;
 import org.springframework.http.CacheControl;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -48,9 +52,11 @@ public class VolontaireController {
 
     private static final Logger logger = LoggerFactory.getLogger(VolontaireController.class);
     private final VolontaireService volontaireService;
+    private final AuditLogService auditLogService;
 
-    public VolontaireController(VolontaireService volontaireService) {
+    public VolontaireController(VolontaireService volontaireService, AuditLogService auditLogService) {
         this.volontaireService = volontaireService;
+        this.auditLogService = auditLogService;
     }
 
     /**
@@ -207,11 +213,15 @@ public class VolontaireController {
      */
     @PostMapping
     @Transactional
-    public ResponseEntity<VolontaireDTO> createVolontaire(@Valid @RequestBody VolontaireDTO volontaireDTO) {
+    public ResponseEntity<VolontaireDTO> createVolontaire(@Valid @RequestBody VolontaireDTO volontaireDTO,
+            HttpServletRequest request) {
         logger.info("Création d'un nouveau volontaire");
         try {
             VolontaireDTO createdVolontaire = volontaireService.createVolontaire(volontaireDTO);
             logger.info("Volontaire créé avec l'ID: {}", createdVolontaire.getVolontaireId());
+            String user = SecurityContextHolder.getContext().getAuthentication().getName();
+            String ip = request.getRemoteAddr();
+            auditLogService.log(user, AuditLog.Action.CREATE, "VOLONTAIRE", createdVolontaire.getVolontaireId().toString(), null, ip);
             return ResponseEntity.status(HttpStatus.CREATED).body(createdVolontaire);
         } catch (IllegalArgumentException e) {
             logger.error("Erreur lors de la création du volontaire: {}", e.getMessage());
@@ -228,7 +238,8 @@ public class VolontaireController {
     @PostMapping("/details")
     @Transactional
     public ResponseEntity<VolontaireDetailDTO> createVolontaireDetail(
-            @Valid @RequestBody VolontaireDetailDTO volontaireDetailDTO) {
+            @Valid @RequestBody VolontaireDetailDTO volontaireDetailDTO,
+            HttpServletRequest request) {
         logger.info("Création d'un nouveau volontaire détaillé");
 
         // Vérifie si volontaireId est défini lorsque c'est un objet détaillé pour un
@@ -241,6 +252,9 @@ public class VolontaireController {
         try {
             VolontaireDetailDTO createdVolontaire = volontaireService.createVolontaireDetail(volontaireDetailDTO);
             logger.info("Volontaire détaillé créé avec l'ID: {}", createdVolontaire.getVolontaireId());
+            String user = SecurityContextHolder.getContext().getAuthentication().getName();
+            String ip = request.getRemoteAddr();
+            auditLogService.log(user, AuditLog.Action.CREATE, "VOLONTAIRE", createdVolontaire.getVolontaireId().toString(), null, ip);
             return ResponseEntity.status(HttpStatus.CREATED).body(createdVolontaire);
         } catch (IllegalArgumentException e) {
             logger.error("Erreur lors de la création du volontaire détaillé: {}", e.getMessage());
@@ -258,7 +272,8 @@ public class VolontaireController {
     @PutMapping("/{id}")
     @Transactional
     public ResponseEntity<VolontaireDTO> updateVolontaire(@PathVariable Integer id,
-            @Valid @RequestBody VolontaireDTO volontaireDTO) {
+            @Valid @RequestBody VolontaireDTO volontaireDTO,
+            HttpServletRequest request) {
         logger.info("Mise à jour du volontaire avec l'ID: {}", id);
 
         if (id == null) {
@@ -270,6 +285,9 @@ public class VolontaireController {
             return volontaireService.updateVolontaire(id, volontaireDTO)
                     .map(updatedVolontaire -> {
                         logger.info("Volontaire mis à jour avec l'ID: {}", id);
+                        String user = SecurityContextHolder.getContext().getAuthentication().getName();
+                        String ip = request.getRemoteAddr();
+                        auditLogService.log(user, AuditLog.Action.UPDATE, "VOLONTAIRE", id.toString(), null, ip);
                         return ResponseEntity.ok(updatedVolontaire);
                     })
                     .orElseGet(() -> {
@@ -293,7 +311,8 @@ public class VolontaireController {
     @PutMapping("/details/{id}")
     @Transactional
     public ResponseEntity<VolontaireDetailDTO> updateVolontaireDetail(@PathVariable Integer id,
-            @Valid @RequestBody VolontaireDetailDTO volontaireDetailDTO) {
+            @Valid @RequestBody VolontaireDetailDTO volontaireDetailDTO,
+            HttpServletRequest request) {
         logger.info("Mise à jour des détails du volontaire avec l'ID: {}", id);
 
         if (id == null) {
@@ -305,6 +324,9 @@ public class VolontaireController {
             return volontaireService.updateVolontaireDetail(id, volontaireDetailDTO)
                     .map(updatedDetail -> {
                         logger.info("Détails du volontaire mis à jour avec l'ID: {}", id);
+                        String user = SecurityContextHolder.getContext().getAuthentication().getName();
+                        String ip = request.getRemoteAddr();
+                        auditLogService.log(user, AuditLog.Action.UPDATE, "VOLONTAIRE", id.toString(), null, ip);
                         return ResponseEntity.ok(updatedDetail);
                     })
                     .orElseGet(() -> {
@@ -326,7 +348,8 @@ public class VolontaireController {
      */
     @PutMapping("/{id}/archive")
     @Transactional
-    public ResponseEntity<VolontaireDTO> archiveVolontaire(@PathVariable Integer id) {
+    public ResponseEntity<VolontaireDTO> archiveVolontaire(@PathVariable Integer id,
+            HttpServletRequest request) {
         logger.info("Archivage du volontaire avec l'ID: {}", id);
 
         if (id == null) {
@@ -337,6 +360,9 @@ public class VolontaireController {
         return volontaireService.toggleArchiveVolontaire(id, true)
                 .map(archivedVolontaire -> {
                     logger.info("Volontaire archivé avec l'ID: {}", id);
+                    String user = SecurityContextHolder.getContext().getAuthentication().getName();
+                    String ip = request.getRemoteAddr();
+                    auditLogService.log(user, AuditLog.Action.ARCHIVE, "VOLONTAIRE", id.toString(), null, ip);
                     return ResponseEntity.ok(archivedVolontaire);
                 })
                 .orElseGet(() -> {
@@ -353,7 +379,8 @@ public class VolontaireController {
      */
     @PutMapping("/{id}/unarchive")
     @Transactional
-    public ResponseEntity<VolontaireDTO> unarchiveVolontaire(@PathVariable Integer id) {
+    public ResponseEntity<VolontaireDTO> unarchiveVolontaire(@PathVariable Integer id,
+            HttpServletRequest request) {
         logger.info("Désarchivage du volontaire avec l'ID: {}", id);
 
         if (id == null) {
@@ -364,6 +391,9 @@ public class VolontaireController {
         return volontaireService.toggleArchiveVolontaire(id, false)
                 .map(unarchivedVolontaire -> {
                     logger.info("Volontaire désarchivé avec l'ID: {}", id);
+                    String user = SecurityContextHolder.getContext().getAuthentication().getName();
+                    String ip = request.getRemoteAddr();
+                    auditLogService.log(user, AuditLog.Action.UNARCHIVE, "VOLONTAIRE", id.toString(), null, ip);
                     return ResponseEntity.ok(unarchivedVolontaire);
                 })
                 .orElseGet(() -> {
@@ -380,7 +410,8 @@ public class VolontaireController {
      */
     @DeleteMapping("/{id}")
     @Transactional
-    public ResponseEntity<Void> deleteVolontaire(@PathVariable Integer id) {
+    public ResponseEntity<Void> deleteVolontaire(@PathVariable Integer id,
+            HttpServletRequest request) {
         logger.info("Suppression du volontaire avec l'ID: {}", id);
 
         if (id == null) {
@@ -390,6 +421,9 @@ public class VolontaireController {
 
         if (volontaireService.deleteVolontaire(id)) {
             logger.info("Volontaire supprimé avec l'ID: {}", id);
+            String user = SecurityContextHolder.getContext().getAuthentication().getName();
+            String ip = request.getRemoteAddr();
+            auditLogService.log(user, AuditLog.Action.DELETE, "VOLONTAIRE", id.toString(), null, ip);
             return ResponseEntity.noContent().build();
         } else {
             logger.warn("Volontaire non trouvé pour la suppression avec l'ID: {}", id);

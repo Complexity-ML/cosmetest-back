@@ -3,16 +3,20 @@ package com.example.cosmetest.presentation.controller;
 import com.example.cosmetest.business.dto.EtudeVolontaireDTO;
 import com.example.cosmetest.business.dto.GroupeDTO;
 import com.example.cosmetest.business.dto.RdvDTO;
+import com.example.cosmetest.business.service.AuditLogService;
 import com.example.cosmetest.business.service.EtudeVolontaireService;
 import com.example.cosmetest.business.service.GroupeService;
 import com.example.cosmetest.business.service.RdvService;
+import com.example.cosmetest.domain.model.AuditLog;
 import com.example.cosmetest.domain.model.EtudeVolontaireId;
 
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import jakarta.validation.Valid;
@@ -31,13 +35,16 @@ public class EtudeVolontaireController {
     private final EtudeVolontaireService etudeVolontaireService;
     private final RdvService rdvService;
     private final GroupeService groupeService;
+    private final AuditLogService auditLogService;
 
     public EtudeVolontaireController(EtudeVolontaireService etudeVolontaireService,
                                      RdvService rdvService,
-                                     GroupeService groupeService) {
+                                     GroupeService groupeService,
+                                     AuditLogService auditLogService) {
         this.etudeVolontaireService = etudeVolontaireService;
         this.rdvService = rdvService;
         this.groupeService = groupeService;
+        this.auditLogService = auditLogService;
     }
 
     // ===============================
@@ -126,9 +133,14 @@ public class EtudeVolontaireController {
 
     @PostMapping
     public ResponseEntity<ApiResponse<EtudeVolontaireDTO>> createEtudeVolontaire(
-            @Valid @RequestBody EtudeVolontaireDTO etudeVolontaireDTO) {
+            @Valid @RequestBody EtudeVolontaireDTO etudeVolontaireDTO,
+            HttpServletRequest request) {
         try {
             EtudeVolontaireDTO created = etudeVolontaireService.saveEtudeVolontaire(etudeVolontaireDTO);
+            String utilisateur = SecurityContextHolder.getContext().getAuthentication().getName();
+            String entiteId = created.getIdEtude() + "-" + created.getIdGroupe() + "-" + created.getIdVolontaire();
+            auditLogService.log(utilisateur, AuditLog.Action.ASSIGN, "ETUDE_VOLONTAIRE",
+                    entiteId, null, request.getRemoteAddr());
             return ResponseEntity.status(HttpStatus.CREATED)
                     .body(ApiResponse.success(created, "Association créée avec succès"));
         } catch (IllegalArgumentException e) {
@@ -149,15 +161,22 @@ public class EtudeVolontaireController {
             @RequestParam int numsujet,
             @RequestParam int paye,
             @RequestParam String statut,
-            @RequestParam(required = false) Integer nouveauVolontaireId) { //  Peut être null
+            @RequestParam(required = false) Integer nouveauVolontaireId, //  Peut être null
+            HttpServletRequest request) {
 
-        return handleUpdateOperation(
+        ResponseEntity<ApiResponse<EtudeVolontaireDTO>> response = handleUpdateOperation(
                 () -> {
                     EtudeVolontaireId id = new EtudeVolontaireId(idEtude, idGroupe, idVolontaire, iv, numsujet, paye,
                             statut);
                     return etudeVolontaireService.updateVolontaire(id, nouveauVolontaireId);
                 },
                 "Volontaire mis à jour avec succès");
+        if (response.getStatusCode().is2xxSuccessful()) {
+            String utilisateur = SecurityContextHolder.getContext().getAuthentication().getName();
+            auditLogService.log(utilisateur, AuditLog.Action.UPDATE, "ETUDE_VOLONTAIRE",
+                    idEtude + "-" + idGroupe + "-" + idVolontaire, "volontaire update", request.getRemoteAddr());
+        }
+        return response;
     }
 
     @PatchMapping("/update-statut")
@@ -169,15 +188,22 @@ public class EtudeVolontaireController {
             @RequestParam int numsujet,
             @RequestParam int paye,
             @RequestParam String statut,
-            @RequestParam String nouveauStatut) {
+            @RequestParam String nouveauStatut,
+            HttpServletRequest request) {
 
-        return handleUpdateOperation(
+        ResponseEntity<ApiResponse<EtudeVolontaireDTO>> response = handleUpdateOperation(
                 () -> {
                     EtudeVolontaireId id = new EtudeVolontaireId(idEtude, idGroupe, idVolontaire, iv, numsujet, paye,
                             statut);
                     return etudeVolontaireService.updateStatut(id, nouveauStatut);
                 },
                 "Statut mis à jour avec succès");
+        if (response.getStatusCode().is2xxSuccessful()) {
+            String utilisateur = SecurityContextHolder.getContext().getAuthentication().getName();
+            auditLogService.log(utilisateur, AuditLog.Action.UPDATE, "ETUDE_VOLONTAIRE",
+                    idEtude + "-" + idGroupe + "-" + idVolontaire, "statut update", request.getRemoteAddr());
+        }
+        return response;
     }
 
     @PatchMapping("/update-numsujet")
@@ -189,15 +215,22 @@ public class EtudeVolontaireController {
             @RequestParam int numsujet,
             @RequestParam int paye,
             @RequestParam String statut,
-            @RequestParam int nouveauNumSujet) {
+            @RequestParam int nouveauNumSujet,
+            HttpServletRequest request) {
 
-        return handleUpdateOperation(
+        ResponseEntity<ApiResponse<EtudeVolontaireDTO>> response = handleUpdateOperation(
                 () -> {
                     EtudeVolontaireId id = new EtudeVolontaireId(idEtude, idGroupe, idVolontaire, iv, numsujet, paye,
                             statut);
                     return etudeVolontaireService.updateNumSujet(id, nouveauNumSujet);
                 },
                 "Numéro de sujet mis à jour avec succès");
+        if (response.getStatusCode().is2xxSuccessful()) {
+            String utilisateur = SecurityContextHolder.getContext().getAuthentication().getName();
+            auditLogService.log(utilisateur, AuditLog.Action.UPDATE, "ETUDE_VOLONTAIRE",
+                    idEtude + "-" + idGroupe + "-" + idVolontaire, "numsujet update", request.getRemoteAddr());
+        }
+        return response;
     }
 
     @PatchMapping("/update-iv")
@@ -209,15 +242,22 @@ public class EtudeVolontaireController {
             @RequestParam int numsujet,
             @RequestParam int paye,
             @RequestParam String statut,
-            @RequestParam int nouvelIV) {
+            @RequestParam int nouvelIV,
+            HttpServletRequest request) {
 
-        return handleUpdateOperation(
+        ResponseEntity<ApiResponse<EtudeVolontaireDTO>> response = handleUpdateOperation(
                 () -> {
                     EtudeVolontaireId id = new EtudeVolontaireId(idEtude, idGroupe, idVolontaire, iv, numsujet, paye,
                             statut);
                     return etudeVolontaireService.updateIV(id, nouvelIV);
                 },
                 "Indemnité mise à jour avec succès");
+        if (response.getStatusCode().is2xxSuccessful()) {
+            String utilisateur = SecurityContextHolder.getContext().getAuthentication().getName();
+            auditLogService.log(utilisateur, AuditLog.Action.UPDATE, "ETUDE_VOLONTAIRE",
+                    idEtude + "-" + idGroupe + "-" + idVolontaire, "iv update", request.getRemoteAddr());
+        }
+        return response;
     }
 
     @DeleteMapping("/delete")
@@ -228,10 +268,14 @@ public class EtudeVolontaireController {
             @RequestParam int iv,
             @RequestParam int numsujet,
             @RequestParam int paye,
-            @RequestParam String statut) {
+            @RequestParam String statut,
+            HttpServletRequest request) {
         try {
             EtudeVolontaireId id = new EtudeVolontaireId(idEtude, idGroupe, idVolontaire, iv, numsujet, paye, statut);
             etudeVolontaireService.deleteEtudeVolontaire(id);
+            String utilisateur = SecurityContextHolder.getContext().getAuthentication().getName();
+            auditLogService.log(utilisateur, AuditLog.Action.UNASSIGN, "ETUDE_VOLONTAIRE",
+                    idEtude + "-" + idGroupe + "-" + idVolontaire, null, request.getRemoteAddr());
             return ResponseEntity.ok(ApiResponse.success(null, "Association supprimée avec succès"));
         } catch (IllegalArgumentException e) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
@@ -249,9 +293,13 @@ public class EtudeVolontaireController {
     @DeleteMapping("/delete-by-etude-volontaire")
     public ResponseEntity<ApiResponse<Map<String, Object>>> deleteByEtudeAndVolontaire(
             @RequestParam int idEtude,
-            @RequestParam int idVolontaire) {
+            @RequestParam int idVolontaire,
+            HttpServletRequest request) {
         try {
             int deleted = etudeVolontaireService.deleteByEtudeAndVolontaire(idEtude, idVolontaire);
+            String utilisateur = SecurityContextHolder.getContext().getAuthentication().getName();
+            auditLogService.log(utilisateur, AuditLog.Action.UNASSIGN, "ETUDE_VOLONTAIRE",
+                    idEtude + "-" + idVolontaire, null, request.getRemoteAddr());
             Map<String, Object> result = Map.of(
                     "idEtude", idEtude,
                     "idVolontaire", idVolontaire,
@@ -275,15 +323,22 @@ public class EtudeVolontaireController {
             @RequestParam int numsujet,
             @RequestParam int paye,
             @RequestParam String statut,
-            @RequestParam int nouveauPaye) {
+            @RequestParam int nouveauPaye,
+            HttpServletRequest request) {
 
-        return handleUpdateOperation(
+        ResponseEntity<ApiResponse<EtudeVolontaireDTO>> response = handleUpdateOperation(
                 () -> {
                     EtudeVolontaireId id = new EtudeVolontaireId(idEtude, idGroupe, idVolontaire, iv, numsujet, paye,
                             statut);
                     return etudeVolontaireService.updatePaye(id, nouveauPaye);
                 },
                 "Statut de paiement mis à jour avec succès");
+        if (response.getStatusCode().is2xxSuccessful()) {
+            String utilisateur = SecurityContextHolder.getContext().getAuthentication().getName();
+            auditLogService.log(utilisateur, AuditLog.Action.PAYE, "ETUDE_VOLONTAIRE",
+                    idEtude + "-" + idGroupe + "-" + idVolontaire, null, request.getRemoteAddr());
+        }
+        return response;
     }
 
     // Ajoutez aussi cet endpoint si vous l'utilisez dans votre React :
