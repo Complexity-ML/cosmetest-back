@@ -83,7 +83,7 @@ public class ActiveSessionService {
             if (e.getValue().lastActivity.isBefore(cutoff)) {
                 try {
                     sessionHistoryRepository.save(
-                        new SessionHistory(e.getKey(), e.getValue().loginTime, e.getValue().lastActivity, "TIMEOUT")
+                        new SessionHistory(e.getKey(), e.getValue().loginTime, Instant.now(), "TIMEOUT")
                     );
                 } catch (Exception ex) {
                     logger.error("Échec de persistance du timeout pour '{}': {}", e.getKey(), ex.getMessage());
