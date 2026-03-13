@@ -539,23 +539,23 @@ public class CalendrierServiceImpl implements CalendrierService {
     private List<CalendrierDTO.EtudeCalendrierDTO> recupererEtudesPeriode(LocalDate dateDebut, LocalDate dateFin,
             boolean inclureEtudesSansRdv) {
 
-        logger.debug("🔍 Récupération études période {} à {}", dateDebut, dateFin);
+        logger.debug(" Récupération études période {} à {}", dateDebut, dateFin);
 
         // 1. Récupérer toutes les études actives dans la période
         List<Etude> etudes = etudeRepository.findEtudesActivesEntreDates(dateDebut, dateFin);
-        logger.debug("📚 {} études trouvées dans la période", etudes.size());
+        logger.debug(" {} études trouvées dans la période", etudes.size());
 
         // 2. Récupérer TOUS les RDV de la période en une seule fois
         List<Rdv> rdvsPeriode = rdvRepository.findByDateBetweenWithEtudeAndVolontaireOptimized(
                 Date.valueOf(dateDebut), Date.valueOf(dateFin));
-        logger.debug("📅 {} RDV trouvés dans la période", rdvsPeriode.size());
+        logger.debug(" {} RDV trouvés dans la période", rdvsPeriode.size());
 
         // 3. Créer une map des RDV groupés par idEtude
         Map<Integer, List<Rdv>> rdvsParEtude = rdvsPeriode.stream()
                 .filter(rdv -> rdv.getId() != null && rdv.getId().getIdEtude() != null)
                 .collect(Collectors.groupingBy(rdv -> rdv.getId().getIdEtude()));
 
-        logger.debug("🗂️ RDV groupés par {} études différentes", rdvsParEtude.size());
+        logger.debug(" RDV groupés par {} études différentes", rdvsParEtude.size());
 
         // 4. Pour chaque étude, calculer ses dates effectives
         return etudes.stream()
@@ -594,7 +594,7 @@ public class CalendrierServiceImpl implements CalendrierService {
                     // *** POINT CLÉ : Calculer les dates effectives à partir des RDV ***
                     List<Rdv> rdvsEtude = rdvsParEtude.getOrDefault(etude.getIdEtude(), new ArrayList<>());
 
-                    logger.debug("📊 Étude {} (ID: {}) - {} RDV trouvés",
+                    logger.debug(" Étude {} (ID: {}) - {} RDV trouvés",
                             etude.getRef(), etude.getIdEtude(), rdvsEtude.size());
 
                     if (!rdvsEtude.isEmpty()) {
@@ -619,7 +619,7 @@ public class CalendrierServiceImpl implements CalendrierService {
                         etudeCalendrier.setDatesEffectivesAvecRdv(new ArrayList<>());
                         etudeCalendrier.setDatesAvecRdvDisplay("Aucun RDV");
 
-                        logger.debug("❌ Étude {} - Aucun RDV dans la période", etude.getRef());
+                        logger.debug(" Étude {} - Aucun RDV dans la période", etude.getRef());
                     }
 
                     // Calculer le nombre de RDV dans la période demandée
@@ -994,7 +994,7 @@ public class CalendrierServiceImpl implements CalendrierService {
 
     @Override
     public Map<String, Object> getRdvsEtudeAvecDateSelectionnee(Integer idEtude, LocalDate dateSelectionnee, int page, int taille) {
-        logger.debug("🎯 Récupération RDV étude {} avec focus sur la date {} (page {}, taille {})",
+        logger.debug(" Récupération RDV étude {} avec focus sur la date {} (page {}, taille {})",
                 idEtude, dateSelectionnee, page, taille);
 
         try {
@@ -1080,7 +1080,7 @@ public class CalendrierServiceImpl implements CalendrierService {
 
     @Override
     public Map<String, Object> getRdvsEtudeParDateSpecifique(Integer idEtude, LocalDate date) {
-        logger.debug("📅 Récupération RDV étude {} pour la date spécifique {}", idEtude, date);
+        logger.debug(" Récupération RDV étude {} pour la date spécifique {}", idEtude, date);
 
         try {
             // Récupération de l'étude

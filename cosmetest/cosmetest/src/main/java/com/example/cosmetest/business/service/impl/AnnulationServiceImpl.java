@@ -111,7 +111,7 @@ public class AnnulationServiceImpl implements AnnulationService {
     @Override
     @Transactional
     public AnnulationDTO saveAnnulation(AnnulationDTO annulationDTO) {
-        logger.debug("🔄 Début création annulation pour volontaire {} dans étude {}",
+        logger.debug(" Début création annulation pour volontaire {} dans étude {}",
             annulationDTO.getIdVol(), annulationDTO.getIdEtude());
         
         // Validation des données avant sauvegarde
@@ -122,11 +122,11 @@ public class AnnulationServiceImpl implements AnnulationService {
 
         // Sauvegarde de l'annulation
         Annulation savedAnnulation = annulationRepository.save(annulation);
-        logger.info("✅ Annulation enregistrée");
+        logger.info(" Annulation enregistrée");
 
-        // 🔥 AUTOMATIQUEMENT : Libérer tous les RDV du volontaire pour cette étude
+        //  AUTOMATIQUEMENT : Libérer tous les RDV du volontaire pour cette étude
         try {
-            logger.debug("🗓️ Libération des créneaux RDV pour volontaire {} dans étude {}...",
+            logger.debug(" Libération des créneaux RDV pour volontaire {} dans étude {}...",
                 annulationDTO.getIdVol(), annulationDTO.getIdEtude());
             
             // Récupérer tous les RDV du volontaire dans cette étude
@@ -135,7 +135,7 @@ public class AnnulationServiceImpl implements AnnulationService {
                 annulationDTO.getIdEtude()
             );
             
-            logger.debug("📋 {} RDV trouvés à libérer", rdvs.size());
+            logger.debug(" {} RDV trouvés à libérer", rdvs.size());
             
             // Mettre idVolontaire à null pour chaque RDV (libérer le créneau)
             int rdvsLiberes = 0;
@@ -143,13 +143,13 @@ public class AnnulationServiceImpl implements AnnulationService {
                 rdv.setIdVolontaire(null);
                 rdvRepository.save(rdv);
                 rdvsLiberes++;
-                logger.debug("✅ Créneau RDV {} libéré", rdv.getId());
+                logger.debug(" Créneau RDV {} libéré", rdv.getId());
             }
             
-            logger.debug("✅ {} créneaux RDV libérés avec succès", rdvsLiberes);
+            logger.debug(" {} créneaux RDV libérés avec succès", rdvsLiberes);
             
         } catch (Exception e) {
-            logger.error("❌ Erreur lors de la libération des créneaux RDV: {}", e.getMessage(), e);
+            logger.error(" Erreur lors de la libération des créneaux RDV: {}", e.getMessage(), e);
             // On ne propage pas l'erreur pour ne pas bloquer l'annulation
             // L'annulation est déjà enregistrée, c'est le plus important
         }

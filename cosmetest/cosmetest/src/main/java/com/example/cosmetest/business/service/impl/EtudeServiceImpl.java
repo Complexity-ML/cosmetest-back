@@ -470,12 +470,12 @@ public class EtudeServiceImpl implements EtudeService {
         try {
             // Validation des paramètres
             if (idEtude == null) {
-                logger.warn("❌ ID étude ne peut pas être null");
+                logger.warn(" ID étude ne peut pas être null");
                 return false;
             }
 
             if (paye == null || (paye != 0 && paye != 2)) {
-                logger.warn("❌ Statut PAYE invalide: {}. Doit être 0 ou 2", paye);
+                logger.warn(" Statut PAYE invalide: {}. Doit être 0 ou 2", paye);
                 return false;
             }
 
@@ -487,7 +487,7 @@ public class EtudeServiceImpl implements EtudeService {
 
                 // Log de l'ancienne valeur pour traçabilité
                 Integer oldPaye = etude.getPaye();
-                logger.info("🔄 Mise à jour statut PAYE étude {} : {} -> {}",
+                logger.info(" Mise à jour statut PAYE étude {} : {} -> {}",
                         idEtude, oldPaye, paye);
 
                 // Mettre à jour le statut PAYE
@@ -499,12 +499,12 @@ public class EtudeServiceImpl implements EtudeService {
                 logger.info(" Étude {} - Statut PAYE mis à jour avec succès: {}", idEtude, paye);
                 return true;
             } else {
-                logger.warn("❌ Étude {} non trouvée pour mise à jour PAYE", idEtude);
+                logger.warn(" Étude {} non trouvée pour mise à jour PAYE", idEtude);
                 return false;
             }
 
         } catch (Exception e) {
-            logger.error("❌ Erreur lors de la mise à jour du statut PAYE pour l'étude {}: {}",
+            logger.error(" Erreur lors de la mise à jour du statut PAYE pour l'étude {}: {}",
                     idEtude, e.getMessage(), e);
             return false;
         }

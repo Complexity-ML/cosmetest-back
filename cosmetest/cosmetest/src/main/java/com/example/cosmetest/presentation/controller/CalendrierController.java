@@ -110,7 +110,7 @@ public class CalendrierController {
             Map<String, Object> resultats;
             
             if (dateSelectionnee != null) {
-                // 🎯 NOUVEAU : Utiliser la méthode avec date sélectionnée
+                //  NOUVEAU : Utiliser la méthode avec date sélectionnée
                 resultats = calendrierService.getRdvsEtudeAvecDateSelectionnee(idEtude, dateSelectionnee, page, taille);
             } else {
                 // Comportement classique
