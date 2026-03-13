@@ -22,6 +22,7 @@ import java.util.stream.Collectors;
 import java.net.HttpURLConnection;
 import java.net.URI;
 import java.net.URL;
+import java.net.UnknownHostException;
 import java.nio.charset.StandardCharsets;
 import java.time.format.DateTimeFormatter;
 
@@ -724,13 +725,18 @@ public class VolontaireServiceImpl implements VolontaireService {
                         String fileName = fileVariants.get(i);
                         logger.debug("Test variante {}/{}: '{}'", i + 1, fileVariants.size(), fileName);
 
-                        if (checkPhotoExists(fileName)) {
-                            logger.debug("Photo trouvée: '{}'", fileName);
-                            Map<String, Object> result = new HashMap<>();
-                            result.put("photoUrl", photoServerUrl + fileName);
-                            result.put("fileName", fileName);
-                            result.put("exists", true);
-                            return result;
+                        try {
+                            if (checkPhotoExists(fileName)) {
+                                logger.debug("Photo trouvée: '{}'", fileName);
+                                Map<String, Object> result = new HashMap<>();
+                                result.put("photoUrl", photoServerUrl + fileName);
+                                result.put("fileName", fileName);
+                                result.put("exists", true);
+                                return result;
+                            }
+                        } catch (IllegalStateException e) {
+                            if ("PHOTO_SERVER_UNREACHABLE".equals(e.getMessage())) break;
+                            throw e;
                         }
                     }
 
@@ -812,6 +818,9 @@ public class VolontaireServiceImpl implements VolontaireService {
 
             return exists;
 
+        } catch (UnknownHostException e) {
+            logger.debug("Serveur photo inaccessible ({}), arrêt des vérifications", e.getMessage());
+            throw new IllegalStateException("PHOTO_SERVER_UNREACHABLE");
         } catch (Exception e) {
             logger.warn("Erreur lors de la vérification de '{}': {} - {}",
                     photoUrl, e.getClass().getSimpleName(), e.getMessage());
