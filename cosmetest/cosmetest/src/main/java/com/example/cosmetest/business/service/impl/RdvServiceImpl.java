@@ -429,7 +429,7 @@ public class RdvServiceImpl implements RdvService {
         List<RdvDTO> createdRdvs = new ArrayList<>();
         List<String> errors = new ArrayList<>();
 
-        logger.info("Début création batch de {} RDV", rdvDTOs.size());
+        logger.debug("Début création batch de {} RDV", rdvDTOs.size());
 
         // Pré-charger l'étude une seule fois (optimisation)
         Integer idEtude = rdvDTOs.get(0).getIdEtude();
@@ -501,7 +501,7 @@ public class RdvServiceImpl implements RdvService {
             }
         }
 
-        logger.info("Batch terminé : {} créés sur {} demandés", createdRdvs.size(), rdvDTOs.size());
+        logger.debug("Batch terminé : {} créés sur {} demandés", createdRdvs.size(), rdvDTOs.size());
 
         if (!errors.isEmpty()) {
             logger.warn("Erreurs rencontrées dans le batch : {}", errors);

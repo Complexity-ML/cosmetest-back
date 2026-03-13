@@ -538,7 +538,7 @@ public class RdvController {
             // 1. Récupérer les informations de l'étude actuelle
             Optional<EtudeDTO> currentStudyOpt = etudeService.getEtudeById(idEtude);
             if (!currentStudyOpt.isPresent()) {
-                logger.error("Étude non trouvée: {}", idEtude);
+                logger.warn("Étude non trouvée: {}", idEtude);
                 return false;
             }
 
@@ -574,7 +574,7 @@ public class RdvController {
                 if (currentStartDate.compareTo(studyEndDate) <= 0 &&
                         currentEndDate.compareTo(studyStartDate) >= 0) {
                     // Périodes qui se chevauchent trouvées
-                    logger.info("Chevauchement détecté entre l'étude {} ({} - {}) et l'étude {} ({} - {})",
+                    logger.debug("Chevauchement détecté entre l'étude {} ({} - {}) et l'étude {} ({} - {})",
                             idEtude, currentStartDate, currentEndDate, study.getIdEtude(), studyStartDate, studyEndDate);
                     return true;
                 }

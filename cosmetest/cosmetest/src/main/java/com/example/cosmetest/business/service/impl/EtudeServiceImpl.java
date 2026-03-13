@@ -470,12 +470,12 @@ public class EtudeServiceImpl implements EtudeService {
         try {
             // Validation des paramètres
             if (idEtude == null) {
-                logger.error("❌ ID étude ne peut pas être null");
+                logger.warn("❌ ID étude ne peut pas être null");
                 return false;
             }
 
             if (paye == null || (paye != 0 && paye != 2)) {
-                logger.error("❌ Statut PAYE invalide: {}. Doit être 0 ou 2", paye);
+                logger.warn("❌ Statut PAYE invalide: {}. Doit être 0 ou 2", paye);
                 return false;
             }
 
@@ -499,7 +499,7 @@ public class EtudeServiceImpl implements EtudeService {
                 logger.info(" Étude {} - Statut PAYE mis à jour avec succès: {}", idEtude, paye);
                 return true;
             } else {
-                logger.error("❌ Étude {} non trouvée pour mise à jour PAYE", idEtude);
+                logger.warn("❌ Étude {} non trouvée pour mise à jour PAYE", idEtude);
                 return false;
             }
 

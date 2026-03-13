@@ -45,7 +45,7 @@ public class PaymentBatchServiceImpl implements PaymentBatchService {
         result.setProcessedCount(associations != null ? associations.size() : 0);
 
         if (associations == null || associations.isEmpty()) {
-            log.info("Aucune association trouvée pour l'étude {}", idEtude);
+            log.warn("Aucune association trouvée pour l'étude {}", idEtude);
             etudeService.updatePayeStatus(idEtude, 0);
             return result;
         }

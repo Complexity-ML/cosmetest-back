@@ -67,7 +67,7 @@ public class VolontaireHcController {
     @Transactional(readOnly = true, isolation = Isolation.READ_COMMITTED)
     public ResponseEntity<VolontaireHcDTO> getVolontaireHcByIdVol(@PathVariable Integer idVol) {
         try {
-            logger.info("Récupération des habitudes cosmétiques pour le volontaire ID: {}", idVol);
+            logger.debug("Récupération des habitudes cosmétiques pour le volontaire ID: {}", idVol);
 
             // Approche améliorée pour gérer les cas d'erreur et les doublons
             try {
@@ -75,7 +75,7 @@ public class VolontaireHcController {
                 Optional<VolontaireHcDTO> result = volontaireHcService.getVolontaireHcByIdVol(idVol);
                 
                 if (result.isPresent()) {
-                    logger.info("Entrée trouvée via JPA pour ID: {}", idVol);
+                    logger.debug("Entrée trouvée via JPA pour ID: {}", idVol);
                     return ResponseEntity.ok(result.get());
                 } else {
                     // Si aucun résultat, on va essayer de récupérer une liste et prendre le premier
@@ -83,7 +83,7 @@ public class VolontaireHcController {
                     List<VolontaireHc> entities = volontaireHcRepository.findByIdVolIn(List.of(idVol));
                     
                     if (!entities.isEmpty()) {
-                        logger.info("Entrée(s) trouvée(s) via findByIdVolIn pour ID: {}, {} résultats", 
+                        logger.debug("Entrée(s) trouvée(s) via findByIdVolIn pour ID: {}, {} résultats",
                                   idVol, entities.size());
                         
                         // S'il y a des doublons, prenons le premier résultat
@@ -92,7 +92,7 @@ public class VolontaireHcController {
                     }
                     
                     // Si toujours rien, erreur 404
-                    logger.error("Entrée inexistante pour ID: {}", idVol);
+                    logger.warn("Entrée inexistante pour ID: {}", idVol);
                     throw new ResponseStatusException(HttpStatus.NOT_FOUND,
                             "Habitudes de consommation non trouvées pour le volontaire avec l'ID: " + idVol);
                 }
@@ -104,14 +104,14 @@ public class VolontaireHcController {
                 List<VolontaireHc> entities = volontaireHcRepository.findByIdVolIn(List.of(idVol));
                 
                 if (!entities.isEmpty()) {
-                    logger.info("Récupéré {} entrées pour ID: {}, utilisation de la première", 
+                    logger.debug("Récupéré {} entrées pour ID: {}, utilisation de la première",
                                entities.size(), idVol);
                     
                     // Prendre le premier résultat
                     VolontaireHcDTO dto = volontaireHcMapper.toDTO(entities.get(0));
                     return ResponseEntity.ok(dto);
                 } else {
-                    logger.error("Aucune entrée trouvée via liste pour ID: {}", idVol);
+                    logger.warn("Aucune entrée trouvée via liste pour ID: {}", idVol);
                     throw new ResponseStatusException(HttpStatus.NOT_FOUND,
                             "Habitudes de consommation non trouvées pour le volontaire avec l'ID: " + idVol);
                 }

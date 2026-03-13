@@ -39,14 +39,14 @@ public class CalendrierController {
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateFin,
             @RequestParam(defaultValue = "true") boolean inclureEtudesSansRdv) {
 
-        logger.info("Récupération des données calendrier du {} au {} (inclureEtudesSansRdv: {})",
+        logger.debug("Récupération des données calendrier du {} au {} (inclureEtudesSansRdv: {})",
                 dateDebut, dateFin, inclureEtudesSansRdv);
 
         try {
             CalendrierDTO donneesCalendrier = calendrierService.getDonneesCalendrierOptimisees(
                     dateDebut, dateFin, inclureEtudesSansRdv);
 
-            logger.info("Données calendrier récupérées avec succès: {} RDV, {} études",
+            logger.debug("Données calendrier récupérées avec succès: {} RDV, {} études",
                     donneesCalendrier.getRdvs().size(),
                     donneesCalendrier.getEtudes().size());
 
@@ -65,12 +65,12 @@ public class CalendrierController {
     public ResponseEntity<CalendrierDTO> getDonneesSemaine(
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateSemaine) {
 
-        logger.info("Récupération des données calendrier pour la semaine du {}", dateSemaine);
+        logger.debug("Récupération des données calendrier pour la semaine du {}", dateSemaine);
 
         try {
             CalendrierDTO donneesCalendrier = calendrierService.getDonneesSemaineOptimisees(dateSemaine);
 
-            logger.info("Données semaine récupérées: {} RDV, {} études",
+            logger.debug("Données semaine récupérées: {} RDV, {} études",
                     donneesCalendrier.getRdvs().size(),
                     donneesCalendrier.getEtudes().size());
 
@@ -99,10 +99,10 @@ public class CalendrierController {
             @RequestParam(defaultValue = "50") int taille) {
 
         if (dateSelectionnee != null) {
-            logger.info("Récupération RDV étude {} avec focus sur la date {} (page {}, taille {})",
+            logger.debug("Récupération RDV étude {} avec focus sur la date {} (page {}, taille {})",
                     idEtude, dateSelectionnee, page, taille);
         } else {
-            logger.info("Récupération RDV étude {} (page {}, taille {})",
+            logger.debug("Récupération RDV étude {} (page {}, taille {})",
                     idEtude, page, taille);
         }
 
@@ -131,15 +131,15 @@ public class CalendrierController {
 
                 if (dateSelectionnee != null) {
                     int rdvsDateSelectionnee = rdvsParCategorie.getOrDefault("selectedDate", Collections.emptyList()).size();
-                    logger.info("RDV étude récupérés: {} total (dont {} pour la date {})",
+                    logger.debug("RDV étude récupérés: {} total (dont {} pour la date {})",
                             totalRdvs, rdvsDateSelectionnee, dateSelectionnee);
                 } else {
-                    logger.info("RDV étude récupérés: {} organisés par catégorie", totalRdvs);
+                    logger.debug("RDV étude récupérés: {} organisés par catégorie", totalRdvs);
                 }
 
             } else if (rdvsObject instanceof List) {
                 totalRdvs = ((List<?>) rdvsObject).size();
-                logger.info("RDV étude récupérés: {} résultats", totalRdvs);
+                logger.debug("RDV étude récupérés: {} résultats", totalRdvs);
             }
 
             return ResponseEntity.ok(resultats);
@@ -159,7 +159,7 @@ public class CalendrierController {
             @PathVariable Integer idEtude,
             @PathVariable @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
 
-        logger.info("Récupération RDV étude {} pour la date spécifique {}", idEtude, date);
+        logger.debug("Récupération RDV étude {} pour la date spécifique {}", idEtude, date);
 
         try {
             Map<String, Object> resultats = calendrierService.getRdvsEtudeParDateSpecifique(idEtude, date);
@@ -167,7 +167,7 @@ public class CalendrierController {
             @SuppressWarnings("unchecked")
             List<CalendrierDTO.RendezVousEnrichiDTO> rdvs = (List<CalendrierDTO.RendezVousEnrichiDTO>) resultats.get("rdvs");
             
-            logger.info("RDV trouvés pour l'étude {} le {} : {} rendez-vous", 
+            logger.debug("RDV trouvés pour l'étude {} le {} : {} rendez-vous",
                     idEtude, date, rdvs != null ? rdvs.size() : 0);
 
             return ResponseEntity.ok(resultats);
@@ -186,11 +186,11 @@ public class CalendrierController {
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateDebut,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateFin) {
 
-        logger.info("Récupération des statistiques calendrier du {} au {}", dateDebut, dateFin);
+        logger.debug("Récupération des statistiques calendrier du {} au {}", dateDebut, dateFin);
 
         try {
             Map<String, Object> statistiques = calendrierService.getStatistiquesPeriode(dateDebut, dateFin);
-            logger.info("Statistiques calculées pour la période");
+            logger.debug("Statistiques calculées pour la période");
             return ResponseEntity.ok(statistiques);
 
         } catch (Exception e) {
@@ -209,7 +209,7 @@ public class CalendrierController {
             @RequestParam(defaultValue = "08:00") String heureDebut,
             @RequestParam(defaultValue = "18:00") String heureFin) {
 
-        logger.info("Recherche de créneaux libres du {} au {} entre {}h et {}h",
+        logger.debug("Recherche de créneaux libres du {} au {} entre {}h et {}h",
                 dateDebut, dateFin, heureDebut, heureFin);
 
         try {
@@ -228,7 +228,7 @@ public class CalendrierController {
      */
     @PostMapping("/precharger")
     public ResponseEntity<Map<String, String>> prechargerDonnees() {
-        logger.info("Démarrage du pré-chargement des données calendrier");
+        logger.debug("Démarrage du pré-chargement des données calendrier");
 
         try {
             calendrierService.prechargerDonneesFrequentesOptimisees();
@@ -249,7 +249,7 @@ public class CalendrierController {
      */
     @DeleteMapping("/cache")
     public ResponseEntity<Map<String, String>> invaliderCache() {
-        logger.info("Invalidation du cache calendrier");
+        logger.debug("Invalidation du cache calendrier");
 
         try {
             calendrierService.invaliderCacheCalendrier();
@@ -275,7 +275,7 @@ public class CalendrierController {
             if (datesDisplay == null) {
                 datesDisplay = "Non calculé";
             }
-            logger.info("TEST - Étude {} -> Dates RDV: '{}'", idEtude, datesDisplay);
+            logger.debug("TEST - Étude {} -> Dates RDV: '{}'", idEtude, datesDisplay);
             return ResponseEntity.ok("Étude " + idEtude + " -> " + datesDisplay);
 
         } catch (Exception e) {

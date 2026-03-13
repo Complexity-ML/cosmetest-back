@@ -329,7 +329,7 @@ public class EtudeVolontaireServiceImpl implements EtudeVolontaireService {
             return etudeVolontaireMapper.toDto(saved);
 
         } catch (IllegalArgumentException e) {
-            log.error("❌ Erreur validation lors de la mise à jour du volontaire: {}", e.getMessage());
+            log.warn("❌ Erreur validation lors de la mise à jour du volontaire: {}", e.getMessage());
             throw e;
         } catch (Exception e) {
             log.error("❌ Erreur technique lors de la mise à jour du volontaire: {}", e.getMessage(), e);
@@ -448,7 +448,7 @@ public class EtudeVolontaireServiceImpl implements EtudeVolontaireService {
             return etudeVolontaireMapper.toDto(saved);
 
         } catch (IllegalArgumentException e) {
-            log.error("❌ Erreur validation lors de {}: {}", operationDescription, e.getMessage());
+            log.warn("❌ Erreur validation lors de {}: {}", operationDescription, e.getMessage());
             throw e;
         } catch (Exception e) {
             log.error("❌ Erreur technique lors de {}: {}", operationDescription, e.getMessage(), e);
@@ -486,7 +486,7 @@ public class EtudeVolontaireServiceImpl implements EtudeVolontaireService {
             return;
         }
 
-        log.info("🏷️ Validation statut: '{}'", statutNormalise);
+        log.debug("🏷️ Validation statut: '{}'", statutNormalise);
         // Pas de validation stricte pour le moment
     }
 

@@ -111,7 +111,7 @@ public class AnnulationServiceImpl implements AnnulationService {
     @Override
     @Transactional
     public AnnulationDTO saveAnnulation(AnnulationDTO annulationDTO) {
-        logger.info("🔄 Début création annulation pour volontaire {} dans étude {}", 
+        logger.debug("🔄 Début création annulation pour volontaire {} dans étude {}",
             annulationDTO.getIdVol(), annulationDTO.getIdEtude());
         
         // Validation des données avant sauvegarde
@@ -126,7 +126,7 @@ public class AnnulationServiceImpl implements AnnulationService {
 
         // 🔥 AUTOMATIQUEMENT : Libérer tous les RDV du volontaire pour cette étude
         try {
-            logger.info("🗓️ Libération des créneaux RDV pour volontaire {} dans étude {}...", 
+            logger.debug("🗓️ Libération des créneaux RDV pour volontaire {} dans étude {}...",
                 annulationDTO.getIdVol(), annulationDTO.getIdEtude());
             
             // Récupérer tous les RDV du volontaire dans cette étude
@@ -135,7 +135,7 @@ public class AnnulationServiceImpl implements AnnulationService {
                 annulationDTO.getIdEtude()
             );
             
-            logger.info("📋 {} RDV trouvés à libérer", rdvs.size());
+            logger.debug("📋 {} RDV trouvés à libérer", rdvs.size());
             
             // Mettre idVolontaire à null pour chaque RDV (libérer le créneau)
             int rdvsLiberes = 0;
@@ -146,7 +146,7 @@ public class AnnulationServiceImpl implements AnnulationService {
                 logger.debug("✅ Créneau RDV {} libéré", rdv.getId());
             }
             
-            logger.info("✅ {} créneaux RDV libérés avec succès", rdvsLiberes);
+            logger.debug("✅ {} créneaux RDV libérés avec succès", rdvsLiberes);
             
         } catch (Exception e) {
             logger.error("❌ Erreur lors de la libération des créneaux RDV: {}", e.getMessage(), e);

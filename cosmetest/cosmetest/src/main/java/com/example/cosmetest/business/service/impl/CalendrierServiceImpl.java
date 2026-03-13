@@ -67,7 +67,7 @@ public class CalendrierServiceImpl implements CalendrierService {
             boolean inclureEtudesSansRdv) {
         long startTime = System.currentTimeMillis();
 
-        logger.info("Récupération optimisée des données calendrier du {} au {}", dateDebut, dateFin);
+        logger.debug("Récupération optimisée des données calendrier du {} au {}", dateDebut, dateFin);
 
         CalendrierDTO calendrier = new CalendrierDTO(dateDebut, dateFin);
 
@@ -92,7 +92,7 @@ public class CalendrierServiceImpl implements CalendrierService {
             meta.setDonneesCache(false); // Première génération
             calendrier.setMetaDonnees(meta);
 
-            logger.info("Données calendrier générées en {}ms: {} RDV, {} études",
+            logger.debug("Données calendrier générées en {}ms: {} RDV, {} études",
                     meta.getDureeGenerationMs(), rdvs.size(), etudes.size());
 
             return calendrier;
@@ -109,14 +109,14 @@ public class CalendrierServiceImpl implements CalendrierService {
         LocalDate debutSemaine = dateSemaine.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY));
         LocalDate finSemaine = dateSemaine.with(TemporalAdjusters.nextOrSame(DayOfWeek.SUNDAY));
 
-        logger.info("Récupération des données pour la semaine du {} au {}", debutSemaine, finSemaine);
+        logger.debug("Récupération des données pour la semaine du {} au {}", debutSemaine, finSemaine);
 
         return getDonneesCalendrierOptimisees(debutSemaine, finSemaine, true);
     }
 
     @Override
     public Map<String, Object> getRdvsEtudeAvecDetails(Integer idEtude, int page, int taille) {
-        logger.info("Récupération des RDV de l'étude {} avec pagination (page {}, taille {})",
+        logger.debug("Récupération des RDV de l'étude {} avec pagination (page {}, taille {})",
                 idEtude, page, taille);
 
         try {
@@ -173,7 +173,7 @@ public class CalendrierServiceImpl implements CalendrierService {
 
     @Override
     public Map<String, Object> getStatistiquesPeriode(LocalDate dateDebut, LocalDate dateFin) {
-        logger.info("Calcul des statistiques pour la période {} - {}", dateDebut, dateFin);
+        logger.debug("Calcul des statistiques pour la période {} - {}", dateDebut, dateFin);
 
         try {
             // Statistiques RDV
@@ -211,7 +211,7 @@ public class CalendrierServiceImpl implements CalendrierService {
     @Override
     public Map<String, Object> getCreneauxLibres(LocalDate dateDebut, LocalDate dateFin,
             String heureDebut, String heureFin) {
-        logger.info("Recherche de créneaux libres du {} au {} entre {} et {}",
+        logger.debug("Recherche de créneaux libres du {} au {} entre {} et {}",
                 dateDebut, dateFin, heureDebut, heureFin);
 
         try {
@@ -241,7 +241,7 @@ public class CalendrierServiceImpl implements CalendrierService {
     @Override
     @CacheEvict(value = { "calendrierPeriode", "calendrierSemaine" }, allEntries = true)
     public void prechargerDonneesFrequentesOptimisees() {
-        logger.info("Pré-chargement des données fréquentes du calendrier");
+        logger.debug("Pré-chargement des données fréquentes du calendrier");
 
         // Pré-charger la semaine courante
         LocalDate today = LocalDate.now();
@@ -255,13 +255,13 @@ public class CalendrierServiceImpl implements CalendrierService {
         LocalDate finMois = today.with(TemporalAdjusters.lastDayOfMonth());
         getDonneesCalendrierOptimisees(debutMois, finMois, true);
 
-        logger.info("Pré-chargement terminé");
+        logger.debug("Pré-chargement terminé");
     }
 
     @Override
     @CacheEvict(value = { "calendrierPeriode", "calendrierSemaine" }, allEntries = true)
     public void invaliderCacheCalendrier() {
-        logger.info("Invalidation du cache calendrier");
+        logger.debug("Invalidation du cache calendrier");
     }
 
     @Override
@@ -279,7 +279,7 @@ public class CalendrierServiceImpl implements CalendrierService {
 
     @Override
     public List<CalendrierDTO.RendezVousEnrichiDTO> enrichirRdvs(List<RdvDTO> rdvsNonEnrichis) {
-        logger.info("Enrichissement de {} RDV", rdvsNonEnrichis.size());
+        logger.debug("Enrichissement de {} RDV", rdvsNonEnrichis.size());
 
         try {
             // Collecter tous les IDs d'études et de volontaires uniques
@@ -316,7 +316,7 @@ public class CalendrierServiceImpl implements CalendrierService {
 
     @Override
     public Map<String, Object> getDonneesJournee(LocalDate date) {
-        logger.info("Récupération des données de la journée {}", date);
+        logger.debug("Récupération des données de la journée {}", date);
 
         CalendrierDTO donneesJournee = getDonneesCalendrierOptimisees(date, date, true);
 
@@ -331,7 +331,7 @@ public class CalendrierServiceImpl implements CalendrierService {
 
     @Override
     public List<Map<String, Object>> getConflitsPlanification(LocalDate dateDebut, LocalDate dateFin) {
-        logger.info("Détection des conflits de planification du {} au {}", dateDebut, dateFin);
+        logger.debug("Détection des conflits de planification du {} au {}", dateDebut, dateFin);
 
         try {
             List<Map<String, Object>> conflits = new ArrayList<>();
@@ -362,7 +362,7 @@ public class CalendrierServiceImpl implements CalendrierService {
                 conflits.add(chevauchementMap);
             }
 
-            logger.info("Détectés {} conflits de planification", conflits.size());
+            logger.debug("Détectés {} conflits de planification", conflits.size());
             return conflits;
 
         } catch (Exception e) {
@@ -373,7 +373,7 @@ public class CalendrierServiceImpl implements CalendrierService {
 
     @Override
     public Map<String, Object> genererRapportUtilisation(LocalDate dateDebut, LocalDate dateFin) {
-        logger.info("Génération du rapport d'utilisation du {} au {}", dateDebut, dateFin);
+        logger.debug("Génération du rapport d'utilisation du {} au {}", dateDebut, dateFin);
 
         try {
             Map<String, Object> rapport = new HashMap<>();
@@ -410,7 +410,7 @@ public class CalendrierServiceImpl implements CalendrierService {
 
     @Override
     public Map<String, Object> getTendancesUtilisation(int nombreSemaines) {
-        logger.info("Analyse des tendances sur {} semaines", nombreSemaines);
+        logger.debug("Analyse des tendances sur {} semaines", nombreSemaines);
 
         try {
             LocalDate dateDebut = LocalDate.now().minusWeeks(nombreSemaines);
@@ -539,23 +539,23 @@ public class CalendrierServiceImpl implements CalendrierService {
     private List<CalendrierDTO.EtudeCalendrierDTO> recupererEtudesPeriode(LocalDate dateDebut, LocalDate dateFin,
             boolean inclureEtudesSansRdv) {
 
-        logger.info("🔍 Récupération études période {} à {}", dateDebut, dateFin);
+        logger.debug("🔍 Récupération études période {} à {}", dateDebut, dateFin);
 
         // 1. Récupérer toutes les études actives dans la période
         List<Etude> etudes = etudeRepository.findEtudesActivesEntreDates(dateDebut, dateFin);
-        logger.info("📚 {} études trouvées dans la période", etudes.size());
+        logger.debug("📚 {} études trouvées dans la période", etudes.size());
 
         // 2. Récupérer TOUS les RDV de la période en une seule fois
         List<Rdv> rdvsPeriode = rdvRepository.findByDateBetweenWithEtudeAndVolontaireOptimized(
                 Date.valueOf(dateDebut), Date.valueOf(dateFin));
-        logger.info("📅 {} RDV trouvés dans la période", rdvsPeriode.size());
+        logger.debug("📅 {} RDV trouvés dans la période", rdvsPeriode.size());
 
         // 3. Créer une map des RDV groupés par idEtude
         Map<Integer, List<Rdv>> rdvsParEtude = rdvsPeriode.stream()
                 .filter(rdv -> rdv.getId() != null && rdv.getId().getIdEtude() != null)
                 .collect(Collectors.groupingBy(rdv -> rdv.getId().getIdEtude()));
 
-        logger.info("🗂️ RDV groupés par {} études différentes", rdvsParEtude.size());
+        logger.debug("🗂️ RDV groupés par {} études différentes", rdvsParEtude.size());
 
         // 4. Pour chaque étude, calculer ses dates effectives
         return etudes.stream()
@@ -994,7 +994,7 @@ public class CalendrierServiceImpl implements CalendrierService {
 
     @Override
     public Map<String, Object> getRdvsEtudeAvecDateSelectionnee(Integer idEtude, LocalDate dateSelectionnee, int page, int taille) {
-        logger.info("🎯 Récupération RDV étude {} avec focus sur la date {} (page {}, taille {})",
+        logger.debug("🎯 Récupération RDV étude {} avec focus sur la date {} (page {}, taille {})",
                 idEtude, dateSelectionnee, page, taille);
 
         try {
@@ -1063,7 +1063,7 @@ public class CalendrierServiceImpl implements CalendrierService {
                     "upcoming", autresRdvsParCategorie.getOrDefault("upcoming", Collections.emptyList()).size()
             ));
 
-            logger.info(" RDV étude {} organisés: {} pour {}, {} autres (past: {}, today: {}, upcoming: {})",
+            logger.debug(" RDV étude {} organisés: {} pour {}, {} autres (past: {}, today: {}, upcoming: {})",
                     idEtude, rdvsDateSelectionneeTaille, dateSelectionnee,
                     totalRdvs - rdvsDateSelectionneeTaille,
                     autresRdvsParCategorie.getOrDefault("past", Collections.emptyList()).size(),
@@ -1080,7 +1080,7 @@ public class CalendrierServiceImpl implements CalendrierService {
 
     @Override
     public Map<String, Object> getRdvsEtudeParDateSpecifique(Integer idEtude, LocalDate date) {
-        logger.info("📅 Récupération RDV étude {} pour la date spécifique {}", idEtude, date);
+        logger.debug("📅 Récupération RDV étude {} pour la date spécifique {}", idEtude, date);
 
         try {
             // Récupération de l'étude
@@ -1126,7 +1126,7 @@ public class CalendrierServiceImpl implements CalendrierService {
             resultat.put("rdvs", rdvsEnrichis);
             resultat.put("nombreRdvs", rdvsEnrichis.size());
 
-            logger.info(" {} RDV trouvés pour l'étude {} le {}", rdvsEnrichis.size(), idEtude, date);
+            logger.debug(" {} RDV trouvés pour l'étude {} le {}", rdvsEnrichis.size(), idEtude, date);
 
             return resultat;
 

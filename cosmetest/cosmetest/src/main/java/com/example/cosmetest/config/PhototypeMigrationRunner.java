@@ -53,7 +53,7 @@ public class PhototypeMigrationRunner implements CommandLineRunner {
                     to, from
                 );
                 if (updated > 0) {
-                    log.info("Migration phototype {}.{}: '{}' -> '{}' ({} lignes)", table, column, from, to, updated);
+                    log.debug("Migration phototype {}.{}: '{}' -> '{}' ({} lignes)", table, column, from, to, updated);
                     totalUpdated += updated;
                 }
             } catch (Exception e) {
@@ -61,7 +61,7 @@ public class PhototypeMigrationRunner implements CommandLineRunner {
             }
         }
         if (totalUpdated > 0) {
-            log.info("Migration phototype {}.{}: {} lignes mises à jour au total", table, column, totalUpdated);
+            log.debug("Migration phototype {}.{}: {} lignes mises à jour au total", table, column, totalUpdated);
         }
     }
 }
