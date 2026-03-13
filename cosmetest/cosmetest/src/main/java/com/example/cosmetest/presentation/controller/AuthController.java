@@ -6,6 +6,7 @@ import java.util.HashMap;
 import com.example.cosmetest.presentation.request.LoginRequest;
 import com.example.cosmetest.presentation.response.JwtResponse;
 import com.example.cosmetest.business.service.AuthService;
+import com.example.cosmetest.business.service.ConnexionLogService;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -15,6 +16,7 @@ import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 import jakarta.validation.Valid;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
 @RestController
@@ -23,6 +25,7 @@ public class AuthController {
 
     private final AuthService authService;
     private final AuthenticationManager authenticationManager;
+    private final ConnexionLogService connexionLogService;
 
     // Déterminer si on est en production (HTTPS) ou en dev (HTTP)
     private final boolean isProduction = !"dev".equals(
@@ -30,9 +33,11 @@ public class AuthController {
     );
 
     public AuthController(AuthService authService,
-                          AuthenticationManager authenticationManager) {
+                          AuthenticationManager authenticationManager,
+                          ConnexionLogService connexionLogService) {
         this.authService = authService;
         this.authenticationManager = authenticationManager;
+        this.connexionLogService = connexionLogService;
     }
 
     /**
@@ -64,7 +69,9 @@ public class AuthController {
     @PostMapping("/api/auth/login")
     public ResponseEntity<?> authenticateUser(
             @Valid @RequestBody LoginRequest loginRequest,
+            HttpServletRequest request,
             HttpServletResponse response) {
+        String ip = request.getRemoteAddr();
         try {
             // 1) Authentifier via Spring Security
             Authentication authentication = authenticationManager.authenticate(
@@ -98,11 +105,13 @@ public class AuthController {
 
             // 6) Ajouter le token dans la réponse JSON (pour applications mobiles)
             String username = authService.getUsernameFromToken(jwt);
+            connexionLogService.log(loginRequest.getLogin(), true, ip);
             JwtResponse jwtResponse = new JwtResponse(jwt, username);
 
             return ResponseEntity.ok(jwtResponse);
 
         } catch (AuthenticationException e) {
+            connexionLogService.log(loginRequest.getLogin(), false, ip);
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body("Identifiants incorrects");
         } catch (Exception e) {
