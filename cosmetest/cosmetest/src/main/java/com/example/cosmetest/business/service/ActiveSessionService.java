@@ -79,24 +79,23 @@ public class ActiveSessionService {
     @Scheduled(fixedDelay = 60_000)
     public void evictTimedOutSessions() {
         Instant cutoff = Instant.now().minusSeconds(ACTIVE_TTL_SECONDS);
-        sessions.entrySet().removeIf(e -> {
-            if (e.getValue().lastActivity.isBefore(cutoff)) {
-                try {
-                    sessionHistoryRepository.save(
-                        new SessionHistory(e.getKey(), e.getValue().loginTime, Instant.now(), "TIMEOUT")
-                    );
-                } catch (Exception ex) {
-                    logger.error("Échec de persistance du timeout pour '{}': {}", e.getKey(), ex.getMessage());
+        sessions.forEach((login, info) -> {
+            if (info.lastActivity.isBefore(cutoff)) {
+                if (sessions.remove(login, info)) { // atomic: only removes if value still matches
+                    try {
+                        sessionHistoryRepository.save(
+                            new SessionHistory(login, info.loginTime, Instant.now(), "TIMEOUT")
+                        );
+                    } catch (Exception ex) {
+                        logger.error("Échec de persistance du timeout pour '{}': {}", login, ex.getMessage());
+                    }
                 }
-                return true; // évincer quoi qu'il arrive pour éviter l'accumulation en mémoire
             }
-            return false;
         });
     }
 
     /** Returns sessions active within the last ACTIVE_TTL_SECONDS, sorted by loginTime */
     public List<Map<String, Object>> getActiveSessions() {
-        evictTimedOutSessions();
 
         List<Map<String, Object>> result = new ArrayList<>();
         sessions.forEach((login, info) -> {
