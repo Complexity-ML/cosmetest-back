@@ -1,5 +1,10 @@
 package com.example.cosmetest.business.service;
 
+import com.example.cosmetest.data.repository.SessionHistoryRepository;
+import com.example.cosmetest.domain.model.SessionHistory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
@@ -17,8 +22,10 @@ import java.util.concurrent.ConcurrentHashMap;
 @Service
 public class ActiveSessionService {
 
+    private static final Logger logger = LoggerFactory.getLogger(ActiveSessionService.class);
+
     /** A session inactive for more than this is considered expired and hidden */
-    private static final long ACTIVE_TTL_SECONDS = 30 * 60; // 30 minutes
+    private static final long ACTIVE_TTL_SECONDS = 10 * 60; // 10 minutes
 
     private static class SessionInfo {
         final Instant loginTime;
@@ -31,6 +38,11 @@ public class ActiveSessionService {
     }
 
     private final ConcurrentHashMap<String, SessionInfo> sessions = new ConcurrentHashMap<>();
+    private final SessionHistoryRepository sessionHistoryRepository;
+
+    public ActiveSessionService(SessionHistoryRepository sessionHistoryRepository) {
+        this.sessionHistoryRepository = sessionHistoryRepository;
+    }
 
     /** Called on explicit login — resets loginTime */
     public void register(String login) {
@@ -49,16 +61,42 @@ public class ActiveSessionService {
         });
     }
 
-    /** Called on logout */
+    /** Called on logout — persists the session history record */
     public void unregister(String login) {
-        sessions.remove(login);
+        SessionInfo info = sessions.remove(login);
+        if (info != null) {
+            try {
+                sessionHistoryRepository.save(
+                    new SessionHistory(login, info.loginTime, Instant.now(), "LOGOUT")
+                );
+            } catch (Exception ex) {
+                logger.error("Échec de persistance du logout pour '{}': {}", login, ex.getMessage());
+            }
+        }
+    }
+
+    /** Runs every minute — persists and removes sessions inactive for more than ACTIVE_TTL_SECONDS */
+    @Scheduled(fixedDelay = 60_000)
+    public void evictTimedOutSessions() {
+        Instant cutoff = Instant.now().minusSeconds(ACTIVE_TTL_SECONDS);
+        sessions.entrySet().removeIf(e -> {
+            if (e.getValue().lastActivity.isBefore(cutoff)) {
+                try {
+                    sessionHistoryRepository.save(
+                        new SessionHistory(e.getKey(), e.getValue().loginTime, e.getValue().lastActivity, "TIMEOUT")
+                    );
+                } catch (Exception ex) {
+                    logger.error("Échec de persistance du timeout pour '{}': {}", e.getKey(), ex.getMessage());
+                }
+                return true; // évincer quoi qu'il arrive pour éviter l'accumulation en mémoire
+            }
+            return false;
+        });
     }
 
     /** Returns sessions active within the last ACTIVE_TTL_SECONDS, sorted by loginTime */
     public List<Map<String, Object>> getActiveSessions() {
-        Instant cutoff = Instant.now().minusSeconds(ACTIVE_TTL_SECONDS);
-        // Clean up truly stale sessions
-        sessions.entrySet().removeIf(e -> e.getValue().lastActivity.isBefore(cutoff));
+        evictTimedOutSessions();
 
         List<Map<String, Object>> result = new ArrayList<>();
         sessions.forEach((login, info) -> {

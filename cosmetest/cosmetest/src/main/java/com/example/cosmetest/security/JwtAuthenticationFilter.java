@@ -74,7 +74,10 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                                             userDetails, null, userDetails.getAuthorities());
 
                             SecurityContextHolder.getContext().setAuthentication(authentication);
-                            activeSessionService.heartbeat(username);
+                            // Ne pas compter les endpoints de monitoring comme activité utilisateur
+                            if (!isMonitoringRequest(request)) {
+                                activeSessionService.heartbeat(username);
+                            }
                             logger.debug("Authentification réussie pour l'utilisateur: {}", username);
 
                             // Sliding refresh: si le token expire bientôt, émettre un nouveau token
@@ -128,6 +131,20 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
         // Continuer la chaîne de filtres
         chain.doFilter(request, response);
+    }
+
+    /**
+     * Endpoints de monitoring qui ne doivent pas réinitialiser l'activité utilisateur
+     */
+    private static final java.util.Set<String> MONITORING_URIS = java.util.Set.of(
+        "/api/connexions/active",
+        "/api/connexions/session-history",
+        "/api/auth/validate"
+    );
+
+    private boolean isMonitoringRequest(HttpServletRequest request) {
+        String uri = request.getRequestURI();
+        return MONITORING_URIS.stream().anyMatch(uri::startsWith);
     }
 
     /**
