@@ -40,7 +40,7 @@ class ActiveSessionServiceTest {
     }
 
     private void setLastActivity(Object sessionInfo, Instant instant) throws Exception {
-        Field f = sessionInfo.getClass().getDeclaredField("lastActivity");
+        Field f = sessionInfo.getClass().getDeclaredField("lastUserAction");
         f.setAccessible(true);
         f.set(sessionInfo, instant);
     }
@@ -88,7 +88,7 @@ class ActiveSessionServiceTest {
     }
 
     @Test
-    @DisplayName("heartbeat() - session existante : doit mettre à jour lastActivity")
+    @DisplayName("heartbeat() - session existante : doit mettre à jour lastUserAction")
     void heartbeat_existingSession_shouldUpdateLastActivity() throws Exception {
         service.register("alice");
         Object info = getSessions().get("alice");
@@ -98,7 +98,7 @@ class ActiveSessionServiceTest {
         service.heartbeat("alice");
         Instant after = Instant.now();
 
-        Field f = info.getClass().getDeclaredField("lastActivity");
+        Field f = info.getClass().getDeclaredField("lastUserAction");
         f.setAccessible(true);
         Instant updated = (Instant) f.get(info);
 
