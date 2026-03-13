@@ -134,17 +134,11 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     }
 
     /**
-     * Endpoints de monitoring qui ne doivent pas réinitialiser l'activité utilisateur
+     * Seul /auth/validate est exclu du heartbeat (validation de token pure, pas d'activité réelle).
+     * Les endpoints /connexions/* mettent à jour la session de l'admin qui les consulte.
      */
-    private static final java.util.Set<String> MONITORING_URIS = java.util.Set.of(
-        "/api/connexions/active",
-        "/api/connexions/session-history",
-        "/api/auth/validate"
-    );
-
     private boolean isMonitoringRequest(HttpServletRequest request) {
-        String uri = request.getRequestURI();
-        return MONITORING_URIS.stream().anyMatch(uri::startsWith);
+        return request.getRequestURI().startsWith("/api/auth/validate");
     }
 
     /**
