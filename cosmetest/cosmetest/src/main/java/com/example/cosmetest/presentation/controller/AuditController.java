@@ -7,6 +7,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import jakarta.servlet.http.HttpServletRequest;
 import java.util.Map;
 
 @RestController
@@ -55,5 +56,15 @@ public class AuditController {
             "page", result.getNumber(),
             "size", result.getSize()
         ));
+    }
+
+    @DeleteMapping("/purge")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<Map<String, Object>> purge(
+            @RequestParam String before,
+            HttpServletRequest request) {
+        java.time.LocalDateTime cutoff = java.time.LocalDate.parse(before).atStartOfDay();
+        int deleted = auditLogService.purgeOlderThan(cutoff);
+        return ResponseEntity.ok(Map.of("deleted", deleted, "before", before));
     }
 }

@@ -6,6 +6,9 @@ import com.example.cosmetest.domain.model.AuditLog;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.time.LocalDateTime;
 
 @Service
 public class AuditLogServiceImpl implements AuditLogService {
@@ -34,5 +37,11 @@ public class AuditLogServiceImpl implements AuditLogService {
     @Override
     public Page<AuditLog> findByUtilisateur(String utilisateur, int page, int size) {
         return repository.findByUtilisateurOrderByCreatedAtDesc(utilisateur, PageRequest.of(page, size));
+    }
+
+    @Override
+    @Transactional
+    public int purgeOlderThan(LocalDateTime before) {
+        return repository.deleteByCreatedAtBefore(before);
     }
 }
