@@ -82,7 +82,7 @@ public class VolontaireController {
 
     /**
      * Recherche multi-champs avec conditions AND
-     * Chaque champ filtre indépendamment (3 lettres minimum recommandé)
+     * Chaque champ filtre indépendamment (2 lettres minimum recommandé)
      */
     @GetMapping("/search/multi")
     @Transactional(readOnly = true)
