@@ -37,14 +37,14 @@ public class VolontaireMapper {
         dto.setTelDomicileVol(volontaire.getTelDomicileVol());
         dto.setTelPortableVol(volontaire.getTelPortableVol());
         dto.setEmailVol(volontaire.getEmailVol());
-        dto.setSexe(volontaire.getSexe());
+        dto.setSexe(VolontaireNormalizer.normalizeSexe(volontaire.getSexe()));
         dto.setDateNaissance(volontaire.getDateNaissance());
         dto.setArchive(volontaire.getArchive());
         dto.setCommentairesVol(volontaire.getCommentairesVol());
         dto.setEthnie(volontaire.getEthnie());
         dto.setSousEthnie(volontaire.getSousEthnie());
-        dto.setPhototype(volontaire.getPhototype());
-        dto.setTypePeauVisage(volontaire.getTypePeauVisage());
+        dto.setPhototype(VolontaireNormalizer.normalizePhototype(volontaire.getPhototype()));
+        dto.setTypePeauVisage(VolontaireNormalizer.normalizeTypePeauVisage(volontaire.getTypePeauVisage()));
         dto.setPoids(volontaire.getPoids());
         dto.setTaille(volontaire.getTaille());
 
@@ -82,14 +82,14 @@ public class VolontaireMapper {
         dto.setTelDomicileVol(volontaire.getTelDomicileVol());
         dto.setTelPortableVol(volontaire.getTelPortableVol());
         dto.setEmailVol(volontaire.getEmailVol());
-        dto.setSexe(volontaire.getSexe());
+        dto.setSexe(VolontaireNormalizer.normalizeSexe(volontaire.getSexe()));
         dto.setDateNaissance(volontaire.getDateNaissance());
         dto.setArchive(volontaire.getArchive());
         dto.setCommentairesVol(volontaire.getCommentairesVol());
         dto.setEthnie(volontaire.getEthnie());
         dto.setSousEthnie(volontaire.getSousEthnie());
-        dto.setPhototype(volontaire.getPhototype());
-        dto.setTypePeauVisage(volontaire.getTypePeauVisage());
+        dto.setPhototype(VolontaireNormalizer.normalizePhototype(volontaire.getPhototype()));
+        dto.setTypePeauVisage(VolontaireNormalizer.normalizeTypePeauVisage(volontaire.getTypePeauVisage()));
         dto.setPoids(volontaire.getPoids());
         dto.setTaille(volontaire.getTaille());
 
