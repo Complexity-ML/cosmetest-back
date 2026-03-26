@@ -197,4 +197,13 @@ public interface EtudeService {
      * @return true si la mise à jour a réussi
      */
     boolean updatePayeStatus(Integer idEtude, Integer paye);
+
+    /**
+     * Archive ou désarchive une étude
+     *
+     * @param id      ID de l'étude
+     * @param archive true pour archiver, false pour désarchiver
+     * @return L'étude mise à jour
+     */
+    Optional<EtudeDTO> toggleArchiveEtude(Integer id, boolean archive);
 }

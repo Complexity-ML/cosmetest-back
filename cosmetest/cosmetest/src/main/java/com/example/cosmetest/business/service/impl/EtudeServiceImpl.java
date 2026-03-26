@@ -509,4 +509,14 @@ public class EtudeServiceImpl implements EtudeService {
             return false;
         }
     }
+
+    @Override
+    public Optional<EtudeDTO> toggleArchiveEtude(Integer id, boolean archive) {
+        return etudeRepository.findById(id)
+                .map(etude -> {
+                    etude.setArchive(archive);
+                    Etude saved = etudeRepository.save(etude);
+                    return etudeMapper.toDto(saved);
+                });
+    }
 }

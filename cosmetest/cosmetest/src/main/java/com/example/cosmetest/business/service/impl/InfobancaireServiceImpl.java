@@ -26,8 +26,8 @@ public class InfobancaireServiceImpl implements InfobancaireService {
     // Regex pour la validation du BIC
     private static final Pattern BIC_PATTERN = Pattern.compile("^[A-Z]{4}[A-Z]{2}[A-Z0-9]{2}([A-Z0-9]{3})?$");
 
-    // Regex pour la validation de l'IBAN
-    private static final Pattern IBAN_PATTERN = Pattern.compile("^[A-Z]{2}[0-9]{2}[A-Z0-9]{4}[0-9]{7}([A-Z0-9]?){0,16}$");
+    // Regex pour la validation de l'IBAN européen (2 lettres pays + 2 chiffres contrôle + 10 à 30 alphanumériques)
+    private static final Pattern IBAN_PATTERN = Pattern.compile("^[A-Z]{2}[0-9]{2}[A-Z0-9]{10,30}$");
 
     public InfobancaireServiceImpl(InfobancaireRepository infobancaireRepository, InfobancaireMapper infobancaireMapper) {
         this.infobancaireRepository = infobancaireRepository;

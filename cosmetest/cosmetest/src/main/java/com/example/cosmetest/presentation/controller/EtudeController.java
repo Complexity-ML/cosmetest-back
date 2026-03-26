@@ -313,8 +313,40 @@ public class EtudeController {
     }
 
     /**
+     * Archive ou désarchive une étude
+     *
+     * @param id      ID de l'étude
+     * @param archive true pour archiver, false pour désarchiver
+     * @return Étude mise à jour ou 404 si non trouvée
+     */
+    @PatchMapping("/{id}/archive")
+    public ResponseEntity<EtudeDTO> toggleArchiveEtude(
+            @PathVariable Integer id,
+            @RequestBody Map<String, Boolean> body,
+            HttpServletRequest request) {
+
+        boolean archive = body.getOrDefault("archive", false);
+
+        Optional<EtudeDTO> existingEtude = etudeService.getEtudeById(id);
+        if (!existingEtude.isPresent()) {
+            return ResponseEntity.notFound().build();
+        }
+
+        Optional<EtudeDTO> updatedEtude = etudeService.toggleArchiveEtude(id, archive);
+
+        return updatedEtude.map(etude -> {
+            String user = SecurityContextHolder.getContext().getAuthentication().getName();
+            String ip = request.getRemoteAddr();
+            auditLogService.log(user,
+                    archive ? AuditLog.Action.ARCHIVE : AuditLog.Action.UPDATE,
+                    "ETUDE", id.toString(), etude.getRef(), ip);
+            return ResponseEntity.ok(etude);
+        }).orElse(ResponseEntity.notFound().build());
+    }
+
+    /**
      * Supprime une étude
-     * 
+     *
      * @param id ID de l'étude
      * @return Réponse vide avec statut 204
      */
