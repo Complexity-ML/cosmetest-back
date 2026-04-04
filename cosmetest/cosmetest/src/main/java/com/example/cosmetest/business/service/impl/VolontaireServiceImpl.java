@@ -917,7 +917,7 @@ public class VolontaireServiceImpl implements VolontaireService {
 
     @Override
     public Page<VolontaireDTO> getVolontairesPaginated(int page, int size, boolean includeArchived, String search) {
-        Pageable pageable = PageRequest.of(page, size);
+        Pageable pageable = PageRequest.of(page, size, org.springframework.data.domain.Sort.by(org.springframework.data.domain.Sort.Direction.DESC, "idVol"));
         Page<Volontaire> volontairesPage;
 
         if (search != null && !search.trim().isEmpty()) {
@@ -936,7 +936,7 @@ public class VolontaireServiceImpl implements VolontaireService {
     @Override
     public Page<VolontaireDTO> searchByMultipleFields(String nom, String prenom, String email, String tel,
             String idVol, boolean includeArchived, int page, int size) {
-        Pageable pageable = PageRequest.of(page, size);
+        Pageable pageable = PageRequest.of(page, size, org.springframework.data.domain.Sort.by(org.springframework.data.domain.Sort.Direction.DESC, "idVol"));
 
         // Nettoyer les paramètres : transformer les chaînes vides en null
         String cleanNom = (nom != null && !nom.trim().isEmpty()) ? nom.trim() : null;
