@@ -2,9 +2,11 @@ package com.example.cosmetest.data.repository;
 
 import com.example.cosmetest.domain.model.Annulation;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
@@ -59,6 +61,12 @@ public interface AnnulationRepository extends JpaRepository<Annulation, Integer>
     @Query("SELECT COUNT(a) FROM Annulation a WHERE a.idVol = :idVol")
     Long countAnnulationsByVolontaire(@Param("idVol") int idVol);
 
+    @Query("SELECT COUNT(a) FROM Annulation a WHERE a.idVol = :idVol AND (a.dateAnnulation LIKE CONCAT(:yearN, '%') OR a.dateAnnulation LIKE CONCAT(:yearN1, '%'))")
+    Long countAnnulationsByVolontaireCurrentAndLastYear(@Param("idVol") int idVol, @Param("yearN") String yearN, @Param("yearN1") String yearN1);
+
+    @Query("SELECT COUNT(a) FROM Annulation a WHERE a.idVol = :idVol AND a.dateAnnulation LIKE CONCAT(:year, '%')")
+    Long countAnnulationsByVolontaireAndYear(@Param("idVol") int idVol, @Param("year") String year);
+
     /**
      * Trouve les annulations par identifiant de volontaire, triées par date d'annulation
      * @param idVol Identifiant du volontaire
@@ -66,4 +74,9 @@ public interface AnnulationRepository extends JpaRepository<Annulation, Integer>
      */
     @Query("SELECT a FROM Annulation a WHERE a.idVol = :idVol ORDER BY a.dateAnnulation DESC")
     List<Annulation> findByIdVolOrderByDateAnnulationDesc(@Param("idVol") int idVol);
+
+    @Modifying
+    @Transactional
+    @Query("DELETE FROM Annulation a WHERE a.idVol = :idVol")
+    int deleteByIdVol(@Param("idVol") int idVol);
 }

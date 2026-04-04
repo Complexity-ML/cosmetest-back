@@ -112,6 +112,12 @@ public interface EtudeVolontaireRepository extends JpaRepository<EtudeVolontaire
             nativeQuery = true)
     int deleteByIdEtudeAndIdVolontaire(@Param("idEtude") int idEtude, @Param("idVolontaire") int idVolontaire);
 
+    @Modifying
+    @Transactional
+    @Query(value = "DELETE FROM etude_volontaire WHERE id_volontaire = :idVolontaire",
+            nativeQuery = true)
+    int deleteByIdVolontaire(@Param("idVolontaire") int idVolontaire);
+
     /**
      * Récupère l'indemnité volontaire (IV) la plus fréquente pour une étude donnée
      * @param idEtude Identifiant de l'étude

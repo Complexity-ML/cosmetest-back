@@ -6,6 +6,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -22,6 +23,10 @@ public interface RdvRepository extends JpaRepository<Rdv, RdvId> {
 
         @Query("SELECT r FROM Rdv r WHERE r.idVolontaire = :idVolontaire")
         List<Rdv> findByIdVolontaire(@Param("idVolontaire") Integer idVolontaire);
+
+        @Modifying
+        @Query("DELETE FROM Rdv r WHERE r.idVolontaire = :idVolontaire")
+        int deleteByIdVolontaire(@Param("idVolontaire") Integer idVolontaire);
 
         @Query("SELECT r FROM Rdv r WHERE r.idVolontaire = :idVolontaire AND r.id.idEtude = :idEtude")
         List<Rdv> findByIdVolontaireAndIdEtude(@Param("idVolontaire") Integer idVolontaire, @Param("idEtude") Integer idEtude);

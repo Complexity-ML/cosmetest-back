@@ -5,6 +5,9 @@ import com.example.cosmetest.business.dto.VolontaireDetailDTO;
 import com.example.cosmetest.business.mapper.VolontaireMapper;
 import com.example.cosmetest.business.service.VolontaireService;
 import com.example.cosmetest.domain.model.Volontaire;
+import com.example.cosmetest.data.repository.AnnulationRepository;
+import com.example.cosmetest.data.repository.EtudeVolontaireRepository;
+import com.example.cosmetest.data.repository.RdvRepository;
 import com.example.cosmetest.data.repository.VolontaireRepository;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -40,6 +43,9 @@ public class VolontaireServiceImpl implements VolontaireService {
 
     private final VolontaireRepository volontaireRepository;
     private final VolontaireMapper volontaireMapper;
+    private final RdvRepository rdvRepository;
+    private final EtudeVolontaireRepository etudeVolontaireRepository;
+    private final AnnulationRepository annulationRepository;
     private static final Logger logger = LoggerFactory.getLogger(VolontaireServiceImpl.class);
 
     @Value("${photo.server.url}")
@@ -54,9 +60,14 @@ public class VolontaireServiceImpl implements VolontaireService {
     @Value("${photo.read.timeout:5000}") // 5000ms par défaut
     private int photoReadTimeout;
 
-    public VolontaireServiceImpl(VolontaireRepository volontaireRepository, VolontaireMapper volontaireMapper) {
+    public VolontaireServiceImpl(VolontaireRepository volontaireRepository, VolontaireMapper volontaireMapper,
+                                 RdvRepository rdvRepository, EtudeVolontaireRepository etudeVolontaireRepository,
+                                 AnnulationRepository annulationRepository) {
         this.volontaireRepository = volontaireRepository;
         this.volontaireMapper = volontaireMapper;
+        this.rdvRepository = rdvRepository;
+        this.etudeVolontaireRepository = etudeVolontaireRepository;
+        this.annulationRepository = annulationRepository;
     }
 
     @Override
@@ -334,6 +345,19 @@ public class VolontaireServiceImpl implements VolontaireService {
             return false;
         }
 
+        // 1. Supprimer les RDV liés au volontaire
+        int rdvDeleted = rdvRepository.deleteByIdVolontaire(id);
+        logger.info("Suppression de {} RDV pour le volontaire {}", rdvDeleted, id);
+
+        // 2. Supprimer les annulations liées au volontaire
+        int annulationsDeleted = annulationRepository.deleteByIdVol(id);
+        logger.info("Suppression de {} annulations pour le volontaire {}", annulationsDeleted, id);
+
+        // 3. Supprimer les associations étude-volontaire
+        int evDeleted = etudeVolontaireRepository.deleteByIdVolontaire(id);
+        logger.info("Suppression de {} associations étude-volontaire pour le volontaire {}", evDeleted, id);
+
+        // 4. Supprimer le volontaire
         volontaireRepository.deleteById(id);
         return true;
     }
