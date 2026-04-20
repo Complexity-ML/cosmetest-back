@@ -426,6 +426,9 @@ public class Volontaire implements java.io.Serializable {
 	@Column(name = "DATE_I")
 	private Date dateI;
 
+	@Column(name = "DATE_MODIF")
+	private Date dateModif;
+
 	// Additional characteristics
 	@Column(length = 20)
 	private String levres;
@@ -1790,6 +1793,17 @@ public class Volontaire implements java.io.Serializable {
 
 	public void setDateI(Date dateI) {
 		this.dateI = dateI;
+	}
+
+	public LocalDate getDateModif() {
+		if (this.dateModif == null) {
+			return null;
+		}
+		return this.dateModif.toLocalDate();
+	}
+
+	public void setDateModif(Date dateModif) {
+		this.dateModif = dateModif;
 	}
 
 	public String getLevres() {

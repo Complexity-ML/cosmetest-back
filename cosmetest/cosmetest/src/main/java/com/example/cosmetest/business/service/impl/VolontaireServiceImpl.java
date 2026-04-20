@@ -340,6 +340,19 @@ public class VolontaireServiceImpl implements VolontaireService {
     }
 
     @Override
+    public Optional<VolontaireDTO> touchDateModif(Integer id) {
+        if (id == null || !volontaireRepository.existsById(id)) {
+            return Optional.empty();
+        }
+
+        return volontaireRepository.findById(id)
+                .map(volontaire -> {
+                    volontaire.setDateModif(Date.valueOf(LocalDate.now()));
+                    return volontaireMapper.toDTO(volontaireRepository.save(volontaire));
+                });
+    }
+
+    @Override
     public Optional<VolontaireDTO> setStandby(Integer id, String dateFinStandby) {
         if (id == null || !volontaireRepository.existsById(id)) {
             return Optional.empty();

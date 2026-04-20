@@ -66,6 +66,8 @@ public class VolontaireDTO {
 
     private LocalDate dateI;
 
+    private LocalDate dateModif;
+
     private String santeCompatible;
 
 
@@ -280,6 +282,14 @@ public class VolontaireDTO {
         } else {
             this.dateI = LocalDate.parse(date.toString());
         }
+    }
+
+    public LocalDate getDateModif() {
+        return this.dateModif;
+    }
+
+    public void setDateModif(LocalDate dateModif) {
+        this.dateModif = dateModif;
     }
 
     public String getSanteCompatible() {

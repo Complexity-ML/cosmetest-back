@@ -346,6 +346,29 @@ public class VolontaireController {
      * @param id l'identifiant du volontaire à archiver
      * @return le volontaire archivé
      */
+    @PutMapping("/{id}/touch-modif")
+    @Transactional
+    public ResponseEntity<VolontaireDTO> touchDateModif(@PathVariable Integer id,
+            HttpServletRequest request) {
+        logger.info("Mise à jour de la date de modification du volontaire avec l'ID: {}", id);
+
+        if (id == null) {
+            return ResponseEntity.badRequest().build();
+        }
+
+        return volontaireService.touchDateModif(id)
+                .map(updated -> {
+                    String user = SecurityContextHolder.getContext().getAuthentication().getName();
+                    String ip = request.getRemoteAddr();
+                    auditLogService.log(user, AuditLog.Action.UPDATE, "VOLONTAIRE", id.toString(),
+                            updated.getNomVol() + " " + updated.getPrenomVol() + " (date de mise à jour)", ip);
+                    return ResponseEntity.ok(updated);
+                })
+                .orElseGet(() -> {
+                    throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Volontaire non trouvé avec l'ID: " + id);
+                });
+    }
+
     @PutMapping("/{id}/archive")
     @Transactional
     public ResponseEntity<VolontaireDTO> archiveVolontaire(@PathVariable Integer id,

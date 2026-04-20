@@ -55,6 +55,10 @@ public class VolontaireMapper {
             dto.setDateI(volontaire.getDateI());
         }
 
+        if (volontaire.getDateModif() != null) {
+            dto.setDateModif(volontaire.getDateModif());
+        }
+
         dto.setSanteCompatible(volontaire.getSanteCompatible());
 
         return dto;
@@ -100,6 +104,10 @@ public class VolontaireMapper {
         // If dateI is already a LocalDate
         if (volontaire.getDateI() != null) {
             dto.setDateI(volontaire.getDateI());
+        }
+
+        if (volontaire.getDateModif() != null) {
+            dto.setDateModif(volontaire.getDateModif());
         }
 
         dto.setSanteCompatible(volontaire.getSanteCompatible());
@@ -323,6 +331,10 @@ public class VolontaireMapper {
         // Conversion de LocalDate en Date SQL
         if (dto.getDateI() != null) {
             volontaire.setDateI(Date.valueOf(dto.getDateI()));
+        }
+
+        if (dto.getDateModif() != null) {
+            volontaire.setDateModif(Date.valueOf(dto.getDateModif()));
         }
 
         volontaire.setSanteCompatible(dto.getSanteCompatible());
@@ -603,6 +615,10 @@ public class VolontaireMapper {
         // Conversion de LocalDate en Date SQL
         if (dto.getDateI() != null) {
             entity.setDateI(Date.valueOf(dto.getDateI()));
+        }
+
+        if (dto.getDateModif() != null) {
+            entity.setDateModif(Date.valueOf(dto.getDateModif()));
         }
 
         if (dto.getSanteCompatible() != null)

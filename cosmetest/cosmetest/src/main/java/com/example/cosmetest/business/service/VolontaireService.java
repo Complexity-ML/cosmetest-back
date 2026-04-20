@@ -132,6 +132,14 @@ public interface VolontaireService {
     Optional<VolontaireDTO> toggleArchiveVolontaire(Integer id, boolean archive);
 
     /**
+     * Met à jour la date de dernière modification du volontaire à la date du jour
+     *
+     * @param id l'identifiant du volontaire
+     * @return le volontaire mis à jour
+     */
+    Optional<VolontaireDTO> touchDateModif(Integer id);
+
+    /**
      * Met un volontaire en stand-by (archive + flag standby avec date de fin)
      */
     Optional<VolontaireDTO> setStandby(Integer id, String dateFinStandby);
