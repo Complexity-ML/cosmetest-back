@@ -304,7 +304,7 @@ public class VolontaireMapper {
         volontaire.setTelDomicileVol(dto.getTelDomicileVol());
         volontaire.setTelPortableVol(dto.getTelPortableVol());
         volontaire.setEmailVol(dto.getEmailVol());
-        volontaire.setSexe(dto.getSexe());
+        volontaire.setSexe(VolontaireNormalizer.normalizeSexe(dto.getSexe()));
 
         // Conversion de LocalDate en Date SQL
         if (dto.getDateNaissance() != null) {
@@ -576,7 +576,7 @@ public class VolontaireMapper {
         if (dto.getEmailVol() != null)
             entity.setEmailVol(dto.getEmailVol());
         if (dto.getSexe() != null)
-            entity.setSexe(dto.getSexe());
+            entity.setSexe(VolontaireNormalizer.normalizeSexe(dto.getSexe()));
 
         // Conversion de LocalDate en Date SQL
         if (dto.getDateNaissance() != null) {
