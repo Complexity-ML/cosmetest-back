@@ -42,6 +42,15 @@ public class VolontaireDetailDTO extends VolontaireDTO {
     private String cicatrices;
     private String tatouages;
     private String piercings;
+    private String maquillagePermanent;
+
+    // Médecine esthétique
+    private String injectionsVisage;
+    private String injectionsVisageZone;
+    private java.sql.Date injectionsVisageDate;
+    private String maquillagePermanentVisage;
+    private String maquillagePermanentVisageZone;
+    private java.sql.Date maquillagePermanentVisageDate;
 
     // Vergetures
     private String vergeturesJambes;
@@ -390,6 +399,32 @@ public class VolontaireDetailDTO extends VolontaireDTO {
     public void setPiercings(String piercings) {
         this.piercings = piercings;
     }
+
+    public String getMaquillagePermanent() {
+        return maquillagePermanent;
+    }
+
+    public void setMaquillagePermanent(String maquillagePermanent) {
+        this.maquillagePermanent = maquillagePermanent;
+    }
+
+    public String getInjectionsVisage() { return injectionsVisage; }
+    public void setInjectionsVisage(String v) { this.injectionsVisage = v; }
+
+    public String getInjectionsVisageZone() { return injectionsVisageZone; }
+    public void setInjectionsVisageZone(String v) { this.injectionsVisageZone = v; }
+
+    public java.sql.Date getInjectionsVisageDate() { return injectionsVisageDate; }
+    public void setInjectionsVisageDate(java.sql.Date v) { this.injectionsVisageDate = v; }
+
+    public String getMaquillagePermanentVisage() { return maquillagePermanentVisage; }
+    public void setMaquillagePermanentVisage(String v) { this.maquillagePermanentVisage = v; }
+
+    public String getMaquillagePermanentVisageZone() { return maquillagePermanentVisageZone; }
+    public void setMaquillagePermanentVisageZone(String v) { this.maquillagePermanentVisageZone = v; }
+
+    public java.sql.Date getMaquillagePermanentVisageDate() { return maquillagePermanentVisageDate; }
+    public void setMaquillagePermanentVisageDate(java.sql.Date v) { this.maquillagePermanentVisageDate = v; }
 
     public String getVergeturesJambes() {
         return vergeturesJambes;

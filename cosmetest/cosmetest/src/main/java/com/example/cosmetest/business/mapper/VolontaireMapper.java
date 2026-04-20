@@ -139,6 +139,13 @@ public class VolontaireMapper {
         dto.setCicatrices(volontaire.getCicatrices());
         dto.setTatouages(volontaire.getTatouages());
         dto.setPiercings(volontaire.getPiercings());
+        dto.setMaquillagePermanent(volontaire.getMaquillagePermanent());
+        dto.setInjectionsVisage(volontaire.getInjectionsVisage());
+        dto.setInjectionsVisageZone(volontaire.getInjectionsVisageZone());
+        dto.setInjectionsVisageDate(volontaire.getInjectionsVisageDate());
+        dto.setMaquillagePermanentVisage(volontaire.getMaquillagePermanentVisage());
+        dto.setMaquillagePermanentVisageZone(volontaire.getMaquillagePermanentVisageZone());
+        dto.setMaquillagePermanentVisageDate(volontaire.getMaquillagePermanentVisageDate());
 
         // Vergetures
         dto.setVergeturesJambes(volontaire.getVergeturesJambes());
@@ -371,6 +378,13 @@ public class VolontaireMapper {
         volontaire.setCicatrices(dto.getCicatrices());
         volontaire.setTatouages(dto.getTatouages());
         volontaire.setPiercings(dto.getPiercings());
+        volontaire.setMaquillagePermanent(dto.getMaquillagePermanent());
+        volontaire.setInjectionsVisage(dto.getInjectionsVisage());
+        volontaire.setInjectionsVisageZone(dto.getInjectionsVisageZone());
+        volontaire.setInjectionsVisageDate(dto.getInjectionsVisageDate());
+        volontaire.setMaquillagePermanentVisage(dto.getMaquillagePermanentVisage());
+        volontaire.setMaquillagePermanentVisageZone(dto.getMaquillagePermanentVisageZone());
+        volontaire.setMaquillagePermanentVisageDate(dto.getMaquillagePermanentVisageDate());
 
         // Vergetures
         volontaire.setVergeturesJambes(dto.getVergeturesJambes());
@@ -674,6 +688,20 @@ public class VolontaireMapper {
             entity.setTatouages(dto.getTatouages());
         if (dto.getPiercings() != null)
             entity.setPiercings(dto.getPiercings());
+        if (dto.getMaquillagePermanent() != null)
+            entity.setMaquillagePermanent(dto.getMaquillagePermanent());
+        if (dto.getInjectionsVisage() != null)
+            entity.setInjectionsVisage(dto.getInjectionsVisage());
+        if (dto.getInjectionsVisageZone() != null)
+            entity.setInjectionsVisageZone(dto.getInjectionsVisageZone());
+        if (dto.getInjectionsVisageDate() != null)
+            entity.setInjectionsVisageDate(dto.getInjectionsVisageDate());
+        if (dto.getMaquillagePermanentVisage() != null)
+            entity.setMaquillagePermanentVisage(dto.getMaquillagePermanentVisage());
+        if (dto.getMaquillagePermanentVisageZone() != null)
+            entity.setMaquillagePermanentVisageZone(dto.getMaquillagePermanentVisageZone());
+        if (dto.getMaquillagePermanentVisageDate() != null)
+            entity.setMaquillagePermanentVisageDate(dto.getMaquillagePermanentVisageDate());
 
         // Vergetures
         if (dto.getVergeturesJambes() != null)
