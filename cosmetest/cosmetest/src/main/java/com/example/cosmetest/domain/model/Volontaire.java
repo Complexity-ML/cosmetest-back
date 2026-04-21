@@ -420,7 +420,7 @@ public class Volontaire implements java.io.Serializable {
 	private Integer poids;
 	private Integer taille;
 
-	@Column(length = 30)
+	@Column(length = 255)
 	private String sousEthnie;
 
 	@Column(name = "DATE_I")

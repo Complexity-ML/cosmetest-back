@@ -37,7 +37,7 @@ public class VolontaireDTO {
     @Email(message = "L'email doit être valide")
     private String emailVol;
 
-    @Pattern(regexp = "^(F|M|(?i)Feminin|(?i)Masculin|Autre)$", message = "Le sexe doit être F, M, Feminin, Masculin ou Autre")
+    @Pattern(regexp = "^(?i)(F|M|F[ée]minin|Masculin|Autre)$", message = "Le sexe doit être F, M, Féminin, Masculin ou Autre")
     private String sexe;
 
     private LocalDate dateNaissance;
