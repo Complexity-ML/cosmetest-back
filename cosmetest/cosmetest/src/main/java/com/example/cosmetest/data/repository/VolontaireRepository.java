@@ -205,7 +205,9 @@ public interface VolontaireRepository extends JpaRepository<Volontaire, Integer>
                         "AND (:prenom IS NULL OR LOWER(v.prenomVol) LIKE LOWER(CONCAT('%', :prenom, '%'))) " +
                         "AND (:email IS NULL OR LOWER(v.emailVol) LIKE LOWER(CONCAT('%', :email, '%'))) " +
                         "AND (:tel IS NULL OR v.telPortableVol LIKE CONCAT('%', :tel, '%') OR v.telDomicileVol LIKE CONCAT('%', :tel, '%')) " +
-                        "AND (:idVol IS NULL OR CAST(v.idVol AS string) LIKE CONCAT('%', :idVol, '%'))")
+                        "AND (:idVol IS NULL OR CAST(v.idVol AS string) LIKE CONCAT('%', :idVol, '%')) " +
+                        "AND (:dateModifFrom IS NULL OR v.dateModif >= :dateModifFrom) " +
+                        "AND (:dateModifTo IS NULL OR v.dateModif <= :dateModifTo)")
         Page<Volontaire> searchByMultipleFields(
                         @Param("includeArchived") boolean includeArchived,
                         @Param("nom") String nom,
@@ -213,6 +215,8 @@ public interface VolontaireRepository extends JpaRepository<Volontaire, Integer>
                         @Param("email") String email,
                         @Param("tel") String tel,
                         @Param("idVol") String idVol,
+                        @Param("dateModifFrom") java.sql.Date dateModifFrom,
+                        @Param("dateModifTo") java.sql.Date dateModifTo,
                         Pageable pageable);
 
         // ==================== NOUVELLES MÉTHODES OPTIMISÉES POUR LE CALENDRIER

@@ -284,7 +284,7 @@ public interface VolontaireService {
     Page<VolontaireDTO> getVolontairesPaginated(int page, int size, boolean includeArchived, String search);
 
     Page<VolontaireDTO> searchByMultipleFields(String nom, String prenom, String email, String tel, String idVol,
-            boolean includeArchived, int page, int size);
+            LocalDate dateModifFrom, LocalDate dateModifTo, boolean includeArchived, int page, int size);
 
     List<Volontaire> findAllByIdIn(List<Integer> idList);
 

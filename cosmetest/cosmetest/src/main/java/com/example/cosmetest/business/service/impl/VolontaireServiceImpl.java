@@ -1002,7 +1002,7 @@ public class VolontaireServiceImpl implements VolontaireService {
 
     @Override
     public Page<VolontaireDTO> searchByMultipleFields(String nom, String prenom, String email, String tel,
-            String idVol, boolean includeArchived, int page, int size) {
+            String idVol, LocalDate dateModifFrom, LocalDate dateModifTo, boolean includeArchived, int page, int size) {
         Pageable pageable = PageRequest.of(page, size, org.springframework.data.domain.Sort.by(org.springframework.data.domain.Sort.Direction.DESC, "idVol"));
 
         // Nettoyer les paramètres : transformer les chaînes vides en null
@@ -1011,9 +1011,12 @@ public class VolontaireServiceImpl implements VolontaireService {
         String cleanEmail = (email != null && !email.trim().isEmpty()) ? email.trim() : null;
         String cleanTel = (tel != null && !tel.trim().isEmpty()) ? tel.trim() : null;
         String cleanIdVol = (idVol != null && !idVol.trim().isEmpty()) ? idVol.trim() : null;
+        java.sql.Date sqlFrom = dateModifFrom != null ? java.sql.Date.valueOf(dateModifFrom) : null;
+        java.sql.Date sqlTo = dateModifTo != null ? java.sql.Date.valueOf(dateModifTo) : null;
 
         // Si aucun champ renseigné, retourner la liste paginée standard
-        if (cleanNom == null && cleanPrenom == null && cleanEmail == null && cleanTel == null && cleanIdVol == null) {
+        if (cleanNom == null && cleanPrenom == null && cleanEmail == null && cleanTel == null && cleanIdVol == null
+                && sqlFrom == null && sqlTo == null) {
             Page<Volontaire> volontairesPage = includeArchived
                     ? volontaireRepository.findAll(pageable)
                     : volontaireRepository.findByArchiveFalse(pageable);
@@ -1021,7 +1024,7 @@ public class VolontaireServiceImpl implements VolontaireService {
         }
 
         Page<Volontaire> volontairesPage = volontaireRepository.searchByMultipleFields(
-                includeArchived, cleanNom, cleanPrenom, cleanEmail, cleanTel, cleanIdVol, pageable);
+                includeArchived, cleanNom, cleanPrenom, cleanEmail, cleanTel, cleanIdVol, sqlFrom, sqlTo, pageable);
         return volontairesPage.map(this::convertToDto);
     }
 

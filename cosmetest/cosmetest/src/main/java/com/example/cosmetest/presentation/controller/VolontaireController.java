@@ -92,12 +92,14 @@ public class VolontaireController {
             @RequestParam(required = false) String email,
             @RequestParam(required = false) String tel,
             @RequestParam(required = false) String idVol,
+            @RequestParam(required = false) @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE) java.time.LocalDate dateModifFrom,
+            @RequestParam(required = false) @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE) java.time.LocalDate dateModifTo,
             @RequestParam(defaultValue = "false") boolean includeArchived,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
 
         Page<VolontaireDTO> results = volontaireService.searchByMultipleFields(
-                nom, prenom, email, tel, idVol, includeArchived, page, size);
+                nom, prenom, email, tel, idVol, dateModifFrom, dateModifTo, includeArchived, page, size);
         return ResponseEntity.ok(results);
     }
 
