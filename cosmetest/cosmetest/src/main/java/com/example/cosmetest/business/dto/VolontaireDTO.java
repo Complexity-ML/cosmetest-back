@@ -25,7 +25,7 @@ public class VolontaireDTO {
 
     private String adresseVol;
 
-    @Pattern(regexp = "^[0-9]{5}$", message = "Le code postal doit contenir 5 chiffres")
+    @Pattern(regexp = "^$|^[0-9]{5}$", message = "Le code postal doit contenir 5 chiffres")
     private String cpVol;
 
     private String villeVol;
