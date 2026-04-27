@@ -70,6 +70,8 @@ public class VolontaireDTO {
 
     private String santeCompatible;
 
+    private String observations;
+
 
     // Constructeurs
     public VolontaireDTO() {
@@ -298,6 +300,14 @@ public class VolontaireDTO {
 
     public void setSanteCompatible(String santeCompatible) {
         this.santeCompatible = santeCompatible;
+    }
+
+    public String getObservations() {
+        return observations;
+    }
+
+    public void setObservations(String observations) {
+        this.observations = observations;
     }
 
     /**

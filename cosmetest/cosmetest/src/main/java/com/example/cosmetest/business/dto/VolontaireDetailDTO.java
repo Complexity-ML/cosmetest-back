@@ -166,6 +166,7 @@ public class VolontaireDetailDTO extends VolontaireDTO {
     private String mapyeux;
     private String maplevres;
     private String mapsourcils;
+    private String observations;
 
     // notes
     private Integer notes;
@@ -1152,6 +1153,14 @@ public class VolontaireDetailDTO extends VolontaireDTO {
 
     public void setMapsourcils(String mapsourcils) {
         this.mapsourcils = mapsourcils;
+    }
+
+    public String getObservations() {
+        return observations;
+    }
+
+    public void setObservations(String observations) {
+        this.observations = observations;
     }
 
     // Notes

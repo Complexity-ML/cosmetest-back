@@ -429,6 +429,9 @@ public class Volontaire implements java.io.Serializable {
 	@Column(name = "DATE_MODIF")
 	private Date dateModif;
 
+	@Column(name = "OBSERVATIONS", length = 2000)
+	private String observations;
+
 	// Additional characteristics
 	@Column(length = 20)
 	private String levres;
@@ -1804,6 +1807,14 @@ public class Volontaire implements java.io.Serializable {
 
 	public void setDateModif(Date dateModif) {
 		this.dateModif = dateModif;
+	}
+
+	public String getObservations() {
+		return this.observations;
+	}
+
+	public void setObservations(String observations) {
+		this.observations = observations;
 	}
 
 	public String getLevres() {

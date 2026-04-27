@@ -60,6 +60,7 @@ public class VolontaireMapper {
         }
 
         dto.setSanteCompatible(volontaire.getSanteCompatible());
+        dto.setObservations(volontaire.getObservations());
 
         return dto;
     }
@@ -269,6 +270,7 @@ public class VolontaireMapper {
         dto.setMapyeux(volontaire.getMapyeux());
         dto.setMaplevres(volontaire.getMaplevres());
         dto.setMapsourcils(volontaire.getMapsourcils());
+        dto.setObservations(volontaire.getObservations());
         dto.setNotes(volontaire.getNotes());
         dto.setNotesYeux(volontaire.getNotesYeux());
         dto.setNotesLevres(volontaire.getNotesLevres());
@@ -338,6 +340,7 @@ public class VolontaireMapper {
         }
 
         volontaire.setSanteCompatible(dto.getSanteCompatible());
+        volontaire.setObservations(dto.getObservations());
 
         return volontaire;
     }
@@ -512,6 +515,7 @@ public class VolontaireMapper {
         volontaire.setMapyeux(dto.getMapyeux());
         volontaire.setMaplevres(dto.getMaplevres());
         volontaire.setMapsourcils(dto.getMapsourcils());
+        volontaire.setObservations(dto.getObservations());
         volontaire.setNotesYeux(dto.getNotesYeux());
         volontaire.setNotesLevres(dto.getNotesLevres());
         volontaire.setNotesTeint(dto.getNotesTeint());
@@ -623,6 +627,8 @@ public class VolontaireMapper {
 
         if (dto.getSanteCompatible() != null)
             entity.setSanteCompatible(dto.getSanteCompatible());
+        if (dto.getObservations() != null)
+            entity.setObservations(dto.getObservations());
 
         return entity;
     }
@@ -923,6 +929,8 @@ public class VolontaireMapper {
             entity.setMaplevres(dto.getMaplevres());
         if (dto.getMapsourcils() != null)
             entity.setMapsourcils(dto.getMapsourcils());
+        if (dto.getObservations() != null)
+            entity.setObservations(dto.getObservations());
 
         // Notes et évaluations
         if (dto.getNotes() != null)

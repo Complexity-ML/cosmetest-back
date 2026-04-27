@@ -1043,6 +1043,7 @@ public class VolontaireServiceImpl implements VolontaireService {
         dto.setEthnie(volontaire.getEthnie());
         dto.setStandby(volontaire.getStandby());
         dto.setDateFinStandby(volontaire.getDateFinStandby());
+        dto.setObservations(volontaire.getObservations());
         return dto;
     }
 
