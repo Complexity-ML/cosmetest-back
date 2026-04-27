@@ -219,6 +219,30 @@ public interface VolontaireRepository extends JpaRepository<Volontaire, Integer>
                         @Param("dateModifTo") java.sql.Date dateModifTo,
                         Pageable pageable);
 
+        /**
+         * Recherche "suivi volontaires" : filtres date de mise à jour + sans étude / sans étude cette année.
+         * Utilisée par l'onglet Suivi de la page Rapports.
+         */
+        @Query("SELECT v FROM Volontaire v WHERE " +
+                        "(:includeArchived = true OR v.archive = false) " +
+                        "AND (:dateModifFrom IS NULL OR v.dateModif >= :dateModifFrom) " +
+                        "AND (:dateModifTo IS NULL OR v.dateModif <= :dateModifTo) " +
+                        "AND (:sansEtude = false OR NOT EXISTS (" +
+                        "   SELECT 1 FROM EtudeVolontaire ev WHERE ev.volontaire.idVol = v.idVol)) " +
+                        "AND (:sansEtudeAnnee = false OR NOT EXISTS (" +
+                        "   SELECT 1 FROM EtudeVolontaire ev2 JOIN ev2.etude e " +
+                        "   WHERE ev2.volontaire.idVol = v.idVol " +
+                        "   AND e.dateDebut >= :debutAnnee AND e.dateDebut < :finAnnee))")
+        Page<Volontaire> searchSuiviVolontaires(
+                        @Param("includeArchived") boolean includeArchived,
+                        @Param("dateModifFrom") java.sql.Date dateModifFrom,
+                        @Param("dateModifTo") java.sql.Date dateModifTo,
+                        @Param("sansEtude") boolean sansEtude,
+                        @Param("sansEtudeAnnee") boolean sansEtudeAnnee,
+                        @Param("debutAnnee") java.sql.Date debutAnnee,
+                        @Param("finAnnee") java.sql.Date finAnnee,
+                        Pageable pageable);
+
         // ==================== NOUVELLES MÉTHODES OPTIMISÉES POUR LE CALENDRIER
         // ====================
 

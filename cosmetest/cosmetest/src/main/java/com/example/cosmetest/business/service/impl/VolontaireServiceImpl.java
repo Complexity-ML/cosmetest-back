@@ -1028,6 +1028,24 @@ public class VolontaireServiceImpl implements VolontaireService {
         return volontairesPage.map(this::convertToDto);
     }
 
+    @Override
+    public Page<VolontaireDTO> searchSuiviVolontaires(LocalDate dateModifFrom, LocalDate dateModifTo,
+            boolean sansEtude, boolean sansEtudeAnneeEnCours, boolean includeArchived, int page, int size) {
+        Pageable pageable = PageRequest.of(page, size,
+                org.springframework.data.domain.Sort.by(org.springframework.data.domain.Sort.Direction.ASC, "dateModif"));
+
+        java.sql.Date sqlFrom = dateModifFrom != null ? java.sql.Date.valueOf(dateModifFrom) : null;
+        java.sql.Date sqlTo = dateModifTo != null ? java.sql.Date.valueOf(dateModifTo) : null;
+
+        int currentYear = java.time.LocalDate.now().getYear();
+        java.sql.Date debutAnnee = java.sql.Date.valueOf(java.time.LocalDate.of(currentYear, 1, 1));
+        java.sql.Date finAnnee = java.sql.Date.valueOf(java.time.LocalDate.of(currentYear + 1, 1, 1));
+
+        Page<Volontaire> volontairesPage = volontaireRepository.searchSuiviVolontaires(
+                includeArchived, sqlFrom, sqlTo, sansEtude, sansEtudeAnneeEnCours, debutAnnee, finAnnee, pageable);
+        return volontairesPage.map(this::convertToDto);
+    }
+
     private VolontaireDTO convertToDto(Volontaire volontaire) {
         VolontaireDTO dto = new VolontaireDTO(
                 volontaire.getIdVol(),

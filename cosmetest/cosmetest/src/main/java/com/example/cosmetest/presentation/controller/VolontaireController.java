@@ -104,6 +104,26 @@ public class VolontaireController {
     }
 
     /**
+     * Recherche pour l'onglet "Suivi volontaires" de la page Rapports.
+     * Filtres : date de mise à jour (range) + sansEtude + sansEtudeAnneeEnCours.
+     */
+    @GetMapping("/suivi")
+    @Transactional(readOnly = true)
+    public ResponseEntity<Page<VolontaireDTO>> searchSuivi(
+            @RequestParam(required = false) @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE) java.time.LocalDate dateModifFrom,
+            @RequestParam(required = false) @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE) java.time.LocalDate dateModifTo,
+            @RequestParam(defaultValue = "false") boolean sansEtude,
+            @RequestParam(defaultValue = "false") boolean sansEtudeAnneeEnCours,
+            @RequestParam(defaultValue = "false") boolean includeArchived,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "50") int size) {
+
+        Page<VolontaireDTO> results = volontaireService.searchSuiviVolontaires(
+                dateModifFrom, dateModifTo, sansEtude, sansEtudeAnneeEnCours, includeArchived, page, size);
+        return ResponseEntity.ok(results);
+    }
+
+    /**
      * Récupère tous les volontaires sans pagination pour le matching
      *
      * @return liste complète des volontaires

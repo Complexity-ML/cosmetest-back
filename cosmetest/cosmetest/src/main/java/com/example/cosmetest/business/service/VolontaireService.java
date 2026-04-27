@@ -286,6 +286,12 @@ public interface VolontaireService {
     Page<VolontaireDTO> searchByMultipleFields(String nom, String prenom, String email, String tel, String idVol,
             LocalDate dateModifFrom, LocalDate dateModifTo, boolean includeArchived, int page, int size);
 
+    /**
+     * Recherche pour l'onglet Suivi : filtre par date de mise à jour + sansEtude / sansEtudeAnneeEnCours.
+     */
+    Page<VolontaireDTO> searchSuiviVolontaires(LocalDate dateModifFrom, LocalDate dateModifTo,
+            boolean sansEtude, boolean sansEtudeAnneeEnCours, boolean includeArchived, int page, int size);
+
     List<Volontaire> findAllByIdIn(List<Integer> idList);
 
     /**
