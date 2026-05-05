@@ -393,7 +393,7 @@ class InfobancaireServiceImplTest {
     void testCreateInfobancaire_InvalidBicFormat() {
         // Given
         InfobancaireDTO invalidDTO = new InfobancaireDTO();
-        invalidDTO.setBic("INVALID");
+        invalidDTO.setBic("12345678");
         invalidDTO.setIban("FR7630004000031234567890143");
         invalidDTO.setIdVol(100);
 
