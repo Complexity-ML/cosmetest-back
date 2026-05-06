@@ -818,11 +818,12 @@ public class VolontaireController {
                     mediaType = MediaType.IMAGE_JPEG;
                 }
 
-                // Configurer les en-têtes HTTP
+                // Configurer les en-têtes HTTP — pas de cache navigateur agressif
+                // (sinon IE/Edge gardent une photo périmée après upload)
                 HttpHeaders headers = new HttpHeaders();
                 headers.setContentType(mediaType);
-                headers.setCacheControl(CacheControl.maxAge(1, TimeUnit.DAYS));
-                headers.setPragma("cache");
+                headers.setCacheControl(CacheControl.noCache().mustRevalidate());
+                headers.setPragma("no-cache");
 
                 logger.info("Image récupérée avec succès pour le volontaire ID: {} et le type: {} ({})",
                         id, type, fileName);
@@ -908,11 +909,12 @@ public class VolontaireController {
                     mediaType = MediaType.IMAGE_JPEG;
                 }
 
-                // Configurer les en-têtes HTTP
+                // Configurer les en-têtes HTTP — pas de cache navigateur agressif
+                // (sinon IE/Edge gardent une photo périmée après upload)
                 HttpHeaders headers = new HttpHeaders();
                 headers.setContentType(mediaType);
-                headers.setCacheControl(CacheControl.maxAge(1, TimeUnit.DAYS));
-                headers.setPragma("cache");
+                headers.setCacheControl(CacheControl.noCache().mustRevalidate());
+                headers.setPragma("no-cache");
 
                 logger.info("Miniature récupérée avec succès pour le volontaire ID: {} et le type: {} ({})",
                         id, type, fileName);
