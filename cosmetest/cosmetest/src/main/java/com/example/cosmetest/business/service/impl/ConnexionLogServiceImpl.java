@@ -25,4 +25,9 @@ public class ConnexionLogServiceImpl implements ConnexionLogService {
     public Page<ConnexionLog> findAll(int page, int size) {
         return repository.findAllByOrderByCreatedAtDesc(PageRequest.of(page, size));
     }
+
+    @Override
+    public Page<ConnexionLog> findByDateRange(java.time.LocalDateTime debut, java.time.LocalDateTime fin, int page, int size) {
+        return repository.findByCreatedAtBetweenOrderByCreatedAtDesc(debut, fin, PageRequest.of(page, size));
+    }
 }

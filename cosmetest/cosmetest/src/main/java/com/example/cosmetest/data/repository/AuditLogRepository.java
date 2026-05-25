@@ -15,6 +15,7 @@ public interface AuditLogRepository extends JpaRepository<AuditLog, Long> {
     Page<AuditLog> findAllByOrderByCreatedAtDesc(Pageable pageable);
     Page<AuditLog> findByEntiteOrderByCreatedAtDesc(String entite, Pageable pageable);
     Page<AuditLog> findByUtilisateurOrderByCreatedAtDesc(String utilisateur, Pageable pageable);
+    Page<AuditLog> findByCreatedAtBetweenOrderByCreatedAtDesc(LocalDateTime debut, LocalDateTime fin, Pageable pageable);
 
     @Modifying
     @Query("DELETE FROM AuditLog a WHERE a.createdAt < :before")

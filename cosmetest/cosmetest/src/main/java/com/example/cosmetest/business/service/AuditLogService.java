@@ -10,5 +10,6 @@ public interface AuditLogService {
     Page<AuditLog> findAll(int page, int size);
     Page<AuditLog> findByEntite(String entite, int page, int size);
     Page<AuditLog> findByUtilisateur(String utilisateur, int page, int size);
+    Page<AuditLog> findByDateRange(LocalDateTime debut, LocalDateTime fin, int page, int size);
     int purgeOlderThan(LocalDateTime before);
 }

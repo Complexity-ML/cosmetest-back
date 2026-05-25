@@ -40,6 +40,11 @@ public class AuditLogServiceImpl implements AuditLogService {
     }
 
     @Override
+    public Page<AuditLog> findByDateRange(LocalDateTime debut, LocalDateTime fin, int page, int size) {
+        return repository.findByCreatedAtBetweenOrderByCreatedAtDesc(debut, fin, PageRequest.of(page, size));
+    }
+
+    @Override
     @Transactional
     public int purgeOlderThan(LocalDateTime before) {
         return repository.deleteByCreatedAtBefore(before);

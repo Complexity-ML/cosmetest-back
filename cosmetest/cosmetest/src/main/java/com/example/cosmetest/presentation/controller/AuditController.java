@@ -8,6 +8,8 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import jakarta.servlet.http.HttpServletRequest;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.Map;
 
 @RestController
@@ -27,10 +29,16 @@ public class AuditController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "50") int size,
             @RequestParam(required = false) String entite,
-            @RequestParam(required = false) String utilisateur) {
+            @RequestParam(required = false) String utilisateur,
+            @RequestParam(required = false) String dateDebut,
+            @RequestParam(required = false) String dateFin) {
 
         Page<AuditLog> result;
-        if (entite != null && !entite.isBlank()) {
+        if (dateDebut != null && !dateDebut.isBlank() && dateFin != null && !dateFin.isBlank()) {
+            LocalDateTime debut = LocalDate.parse(dateDebut).atStartOfDay();
+            LocalDateTime fin = LocalDate.parse(dateFin).atTime(23, 59, 59);
+            result = auditLogService.findByDateRange(debut, fin, page, size);
+        } else if (entite != null && !entite.isBlank()) {
             result = auditLogService.findByEntite(entite.toUpperCase(), page, size);
         } else if (utilisateur != null && !utilisateur.isBlank()) {
             result = auditLogService.findByUtilisateur(utilisateur, page, size);

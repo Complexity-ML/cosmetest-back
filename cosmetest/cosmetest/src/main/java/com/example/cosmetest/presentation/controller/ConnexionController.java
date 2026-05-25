@@ -36,9 +36,18 @@ public class ConnexionController {
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Map<String, Object>> getLogs(
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "50") int size) {
+            @RequestParam(defaultValue = "50") int size,
+            @RequestParam(required = false) String dateDebut,
+            @RequestParam(required = false) String dateFin) {
 
-        Page<ConnexionLog> result = connexionLogService.findAll(page, size);
+        Page<ConnexionLog> result;
+        if (dateDebut != null && !dateDebut.isBlank() && dateFin != null && !dateFin.isBlank()) {
+            java.time.LocalDateTime debut = java.time.LocalDate.parse(dateDebut).atStartOfDay();
+            java.time.LocalDateTime fin = java.time.LocalDate.parse(dateFin).atTime(23, 59, 59);
+            result = connexionLogService.findByDateRange(debut, fin, page, size);
+        } else {
+            result = connexionLogService.findAll(page, size);
+        }
 
         var logs = result.getContent().stream().map(log -> Map.<String, Object>of(
             "id", log.getId(),
