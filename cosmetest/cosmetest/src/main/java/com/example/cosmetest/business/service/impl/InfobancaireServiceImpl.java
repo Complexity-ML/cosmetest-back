@@ -23,8 +23,8 @@ public class InfobancaireServiceImpl implements InfobancaireService {
     private final InfobancaireRepository infobancaireRepository;
     private final InfobancaireMapper infobancaireMapper;
 
-    // Regex pour la validation du BIC (7 chars legacy toléré, 8 ou 11 standards)
-    private static final Pattern BIC_PATTERN = Pattern.compile("^[A-Z]{4}[A-Z]{2}[A-Z0-9]{1,2}([A-Z0-9]{3})?$");
+    // Regex pour la validation du BIC (7 chars legacy toléré, 8 ou 11 standards, 12 max)
+    private static final Pattern BIC_PATTERN = Pattern.compile("^[A-Z]{4}[A-Z]{2}[A-Z0-9]{1,2}([A-Z0-9]{2,4})?$");
 
     // Regex pour la validation de l'IBAN européen (2 lettres pays + 2 chiffres contrôle + 10 à 30 alphanumériques)
     private static final Pattern IBAN_PATTERN = Pattern.compile("^[A-Z]{2}[0-9]{2}[A-Z0-9]{10,30}$");
