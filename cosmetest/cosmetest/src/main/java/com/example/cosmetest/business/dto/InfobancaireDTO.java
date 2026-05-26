@@ -11,8 +11,6 @@ import jakarta.validation.constraints.Positive;
 public class InfobancaireDTO {
 
     @NotBlank(message = "Le code BIC ne peut pas être vide")
-    @Pattern(regexp = "^[A-Z]{4}[A-Z]{2}[A-Z0-9]{2}([A-Z0-9]{3})?$",
-            message = "Le format du code BIC est invalide")
     private String bic;
 
     @NotBlank(message = "Le numéro IBAN ne peut pas être vide")

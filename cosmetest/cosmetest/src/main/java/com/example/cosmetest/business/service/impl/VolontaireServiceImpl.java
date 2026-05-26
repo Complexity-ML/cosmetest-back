@@ -383,6 +383,19 @@ public class VolontaireServiceImpl implements VolontaireService {
     }
 
     @Override
+    public Optional<VolontaireDTO> updateObservations(Integer id, String observations) {
+        if (id == null || !volontaireRepository.existsById(id)) {
+            return Optional.empty();
+        }
+
+        return volontaireRepository.findById(id)
+                .map(volontaire -> {
+                    volontaire.setObservations(observations);
+                    return volontaireMapper.toDTO(volontaireRepository.save(volontaire));
+                });
+    }
+
+    @Override
     public boolean deleteVolontaire(Integer id) {
         if (id == null || !volontaireRepository.existsById(id)) {
             return false;

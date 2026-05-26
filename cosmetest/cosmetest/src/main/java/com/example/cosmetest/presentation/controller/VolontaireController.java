@@ -502,6 +502,28 @@ public class VolontaireController {
                 });
     }
 
+    @PutMapping("/{id}/observations")
+    @Transactional
+    public ResponseEntity<VolontaireDTO> updateObservations(@PathVariable Integer id,
+            @RequestBody(required = false) String observations,
+            HttpServletRequest request) {
+        if (id == null) {
+            return ResponseEntity.badRequest().build();
+        }
+
+        return volontaireService.updateObservations(id, observations)
+                .map(vol -> {
+                    String user = SecurityContextHolder.getContext().getAuthentication().getName();
+                    String ip = request.getRemoteAddr();
+                    auditLogService.log(user, AuditLog.Action.UPDATE, "VOLONTAIRE", id.toString(),
+                            "observations: " + vol.getNomVol() + " " + vol.getPrenomVol(), ip);
+                    return ResponseEntity.ok(vol);
+                })
+                .orElseGet(() -> {
+                    throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Volontaire non trouvé avec l'ID: " + id);
+                });
+    }
+
     /**
      * Supprime un volontaire
      *

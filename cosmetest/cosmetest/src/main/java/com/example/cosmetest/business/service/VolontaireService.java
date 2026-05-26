@@ -301,4 +301,6 @@ public interface VolontaireService {
      * @return le volontaire correspondant, s'il existe
      */
     Optional<VolontaireDTO> findByEmail(String email);
+
+    Optional<VolontaireDTO> updateObservations(Integer id, String observations);
 }
