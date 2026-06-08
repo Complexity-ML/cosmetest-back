@@ -11,6 +11,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDate;
+
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -64,6 +66,13 @@ public class ConnexionController {
             "page", result.getNumber(),
             "size", result.getSize()
         ));
+    }
+
+    @DeleteMapping("/purge")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<Map<String, Object>> purge(@RequestParam String before) {
+        int deleted = connexionLogService.purgeOlderThan(LocalDate.parse(before).atStartOfDay());
+        return ResponseEntity.ok(Map.of("deleted", deleted, "before", before));
     }
 
     @GetMapping("/active")

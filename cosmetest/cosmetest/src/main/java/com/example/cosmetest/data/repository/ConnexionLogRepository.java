@@ -10,4 +10,5 @@ import org.springframework.stereotype.Repository;
 public interface ConnexionLogRepository extends JpaRepository<ConnexionLog, Long> {
     Page<ConnexionLog> findAllByOrderByCreatedAtDesc(Pageable pageable);
     Page<ConnexionLog> findByCreatedAtBetweenOrderByCreatedAtDesc(java.time.LocalDateTime debut, java.time.LocalDateTime fin, Pageable pageable);
+    int deleteByCreatedAtBefore(java.time.LocalDateTime cutoff);
 }

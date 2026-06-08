@@ -6,6 +6,7 @@ import com.example.cosmetest.domain.model.ConnexionLog;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class ConnexionLogServiceImpl implements ConnexionLogService {
@@ -29,5 +30,11 @@ public class ConnexionLogServiceImpl implements ConnexionLogService {
     @Override
     public Page<ConnexionLog> findByDateRange(java.time.LocalDateTime debut, java.time.LocalDateTime fin, int page, int size) {
         return repository.findByCreatedAtBetweenOrderByCreatedAtDesc(debut, fin, PageRequest.of(page, size));
+    }
+
+    @Override
+    @Transactional
+    public int purgeOlderThan(java.time.LocalDateTime cutoff) {
+        return repository.deleteByCreatedAtBefore(cutoff);
     }
 }
