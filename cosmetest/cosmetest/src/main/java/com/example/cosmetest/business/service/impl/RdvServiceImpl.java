@@ -3,6 +3,7 @@ package com.example.cosmetest.business.service.impl;
 import com.example.cosmetest.business.dto.RdvDTO;
 import com.example.cosmetest.business.mapper.RdvMapper;
 import com.example.cosmetest.business.service.RdvService;
+import com.example.cosmetest.data.repository.AnnulationRepository;
 import com.example.cosmetest.data.repository.EtudeRepository;
 import com.example.cosmetest.data.repository.RdvRepository;
 import com.example.cosmetest.domain.model.Rdv;
@@ -28,6 +29,7 @@ import org.slf4j.LoggerFactory;
 import java.sql.Date;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Random;
 import java.util.stream.Collectors;
@@ -43,6 +45,7 @@ public class RdvServiceImpl implements RdvService {
 
     private final RdvRepository rdvRepository;
     private final RdvMapper rdvMapper;
+    private final AnnulationRepository annulationRepository;
     @PersistenceContext
     private EntityManager entityManager;
 
@@ -50,9 +53,11 @@ public class RdvServiceImpl implements RdvService {
     @Lazy
     private EtudeRepository etudeRepository;
 
-    public RdvServiceImpl(RdvRepository rdvRepository, RdvMapper rdvMapper, EtudeService etudeService) {
+    public RdvServiceImpl(RdvRepository rdvRepository, RdvMapper rdvMapper, EtudeService etudeService,
+            AnnulationRepository annulationRepository) {
         this.rdvRepository = rdvRepository;
         this.rdvMapper = rdvMapper;
+        this.annulationRepository = annulationRepository;
     }
 
     @Override
@@ -529,10 +534,19 @@ public class RdvServiceImpl implements RdvService {
 
         if (rdvOpt.isPresent()) {
             Rdv rdv = rdvOpt.get();
+            Integer previousVolontaireId = rdv.getIdVolontaire();
+            Integer nextVolontaireId = rdvDTO.getIdVolontaire();
+            String nextEtat = resolveEtatForReassignment(
+                    rdv.getEtat(),
+                    rdvDTO.getEtat(),
+                    previousVolontaireId,
+                    nextVolontaireId,
+                    rdvDTO.getIdEtude());
+
             rdv.setDate(Date.valueOf(rdvDTO.getDate()));
             rdv.setHeure(rdvDTO.getHeure());
             rdv.setDuree(rdvDTO.getDuree());
-            rdv.setEtat(rdvDTO.getEtat());
+            rdv.setEtat(nextEtat);
             rdv.setCommentaires(rdvDTO.getCommentaires());
             rdv.setIdGroupe(rdvDTO.getIdGroupe());
             rdv.setIdVolontaire(rdvDTO.getIdVolontaire());
@@ -540,5 +554,37 @@ public class RdvServiceImpl implements RdvService {
         } else {
             throw new IllegalArgumentException("Rdv not found with ID: " + rdvId);
         }
+    }
+
+    private String resolveEtatForReassignment(String currentEtat, String requestedEtat, Integer previousVolontaireId,
+            Integer nextVolontaireId, Integer idEtude) {
+        String nextEtat = hasText(requestedEtat) ? requestedEtat.trim().toUpperCase() : currentEtat;
+
+        if (!hasText(nextEtat)) {
+            return "PLANIFIE";
+        }
+
+        boolean volontaireChanged = !Objects.equals(previousVolontaireId, nextVolontaireId);
+        if (!volontaireChanged || nextVolontaireId == null || !isCancelledEtat(nextEtat)) {
+            return nextEtat;
+        }
+
+        boolean nextVolontaireAnnule = idEtude != null
+                && !annulationRepository.findByIdVolAndIdEtude(nextVolontaireId, idEtude).isEmpty();
+        if (nextVolontaireAnnule) {
+            return nextEtat;
+        }
+
+        logger.info("RDV reassigned from volunteer {} to {} on etude {}: stale ANNULE state reset to PLANIFIE",
+                previousVolontaireId, nextVolontaireId, idEtude);
+        return "PLANIFIE";
+    }
+
+    private boolean isCancelledEtat(String etat) {
+        return "ANNULE".equalsIgnoreCase(etat);
+    }
+
+    private boolean hasText(String value) {
+        return value != null && !value.trim().isEmpty();
     }
 }

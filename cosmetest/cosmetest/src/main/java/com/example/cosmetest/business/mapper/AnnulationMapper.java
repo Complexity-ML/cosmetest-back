@@ -26,6 +26,7 @@ public class AnnulationMapper {
         dto.setIdAnnuler(annulation.getIdAnnuler());
         dto.setIdVol(annulation.getIdVol());
         dto.setIdEtude(annulation.getIdEtude());
+        dto.setIdRdv(annulation.getIdRdv());
         dto.setDateAnnulation(annulation.getDateAnnulation());
         dto.setCommentaire(annulation.getCommentaire());
         dto.setAnnulePar(annulation.getAnnulePar());
@@ -47,6 +48,7 @@ public class AnnulationMapper {
         annulation.setIdAnnuler(dto.getIdAnnuler());
         annulation.setIdVol(dto.getIdVol());
         annulation.setIdEtude(dto.getIdEtude());
+        annulation.setIdRdv(dto.getIdRdv());
         annulation.setDateAnnulation(dto.getDateAnnulation());
         annulation.setCommentaire(dto.getCommentaire());
         annulation.setAnnulePar(dto.getAnnulePar());
@@ -68,6 +70,7 @@ public class AnnulationMapper {
         // Ne pas mettre à jour l'ID car c'est la clé primaire générée automatiquement
         annulation.setIdVol(dto.getIdVol());
         annulation.setIdEtude(dto.getIdEtude());
+        annulation.setIdRdv(dto.getIdRdv());
         annulation.setDateAnnulation(dto.getDateAnnulation());
         annulation.setCommentaire(dto.getCommentaire());
         annulation.setAnnulePar(dto.getAnnulePar());

@@ -111,11 +111,13 @@ public class AnnulationServiceImpl implements AnnulationService {
     @Override
     @Transactional
     public AnnulationDTO saveAnnulation(AnnulationDTO annulationDTO) {
+        validateAnnulationData(annulationDTO);
+
         logger.debug(" Début création annulation pour volontaire {} dans étude {}",
             annulationDTO.getIdVol(), annulationDTO.getIdEtude());
         
         // Validation des données avant sauvegarde
-        validateAnnulationData(annulationDTO);
+        preserveExistingRdvTrace(annulationDTO);
 
         // Conversion en entité
         Annulation annulation = annulationMapper.toEntity(annulationDTO);
@@ -156,6 +158,16 @@ public class AnnulationServiceImpl implements AnnulationService {
 
         // Conversion en DTO pour retour
         return annulationMapper.toDto(savedAnnulation);
+    }
+
+    private void preserveExistingRdvTrace(AnnulationDTO annulationDTO) {
+        if (annulationDTO.getIdAnnuler() == null || annulationDTO.getIdRdv() != null) {
+            return;
+        }
+
+        annulationRepository.findById(annulationDTO.getIdAnnuler())
+                .map(Annulation::getIdRdv)
+                .ifPresent(annulationDTO::setIdRdv);
     }
 
     @Override

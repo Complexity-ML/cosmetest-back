@@ -322,11 +322,47 @@ class AnnulationServiceImplTest {
     }
 
     @Test
+    @DisplayName("saveAnnulation() - Conserve idRdv existant si la mise a jour ne l'envoie pas")
+    void testSaveAnnulation_UpdatePreservesExistingRdvTrace() {
+        // Arrange
+        Annulation existingAnnulation = new Annulation();
+        existingAnnulation.setIdAnnuler(1);
+        existingAnnulation.setIdVol(10);
+        existingAnnulation.setIdEtude(5);
+        existingAnnulation.setIdRdv(42);
+        existingAnnulation.setDateAnnulation("2024-01-15");
+
+        annulationDTO.setIdRdv(null);
+
+        when(annulationRepository.findById(1)).thenReturn(Optional.of(existingAnnulation));
+        when(annulationMapper.toEntity(annulationDTO)).thenAnswer(invocation -> {
+            AnnulationDTO dto = invocation.getArgument(0);
+            Annulation mapped = new Annulation();
+            mapped.setIdAnnuler(dto.getIdAnnuler());
+            mapped.setIdVol(dto.getIdVol());
+            mapped.setIdEtude(dto.getIdEtude());
+            mapped.setIdRdv(dto.getIdRdv());
+            mapped.setDateAnnulation(dto.getDateAnnulation());
+            mapped.setCommentaire(dto.getCommentaire());
+            return mapped;
+        });
+        when(annulationRepository.save(any(Annulation.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(annulationMapper.toDto(any(Annulation.class))).thenReturn(annulationDTO);
+        when(rdvRepository.findByIdVolontaireAndIdEtude(10, 5)).thenReturn(Collections.emptyList());
+
+        // Act
+        annulationService.saveAnnulation(annulationDTO);
+
+        // Assert
+        verify(annulationRepository).save(argThat(saved -> Integer.valueOf(42).equals(saved.getIdRdv())));
+    }
+
+    @Test
     @DisplayName("saveAnnulation() - Données nulles")
     void testSaveAnnulation_NullData() {
         // Act & Assert - NullPointerException car le logger essaie d'accéder aux propriétés avant validation
         assertThatThrownBy(() -> annulationService.saveAnnulation(null))
-            .isInstanceOf(NullPointerException.class);
+            .isInstanceOf(IllegalArgumentException.class);
     }
 
     @Test

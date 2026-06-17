@@ -2,7 +2,9 @@ package com.example.cosmetest.business.service.impl;
 
 import com.example.cosmetest.business.dto.RdvDTO;
 import com.example.cosmetest.business.mapper.RdvMapper;
+import com.example.cosmetest.data.repository.AnnulationRepository;
 import com.example.cosmetest.data.repository.RdvRepository;
+import com.example.cosmetest.domain.model.Annulation;
 import com.example.cosmetest.domain.model.Rdv;
 import com.example.cosmetest.domain.model.RdvId;
 import org.junit.jupiter.api.BeforeEach;
@@ -43,6 +45,9 @@ class RdvServiceImplTest {
 
     @Mock
     private RdvMapper rdvMapper;
+
+    @Mock
+    private AnnulationRepository annulationRepository;
 
     @InjectMocks
     private RdvServiceImpl rdvService;
@@ -369,6 +374,56 @@ class RdvServiceImplTest {
         verify(rdvMapper, times(1)).toEntity(testRdvDTO1);
         verify(rdvRepository, times(1)).save(rdvToSave);
         verify(rdvMapper, times(1)).toDto(rdvToSave);
+    }
+
+    @Test
+    @DisplayName("updateRdv() - Reattribution remet un etat ANNULE herite en PLANIFIE")
+    void testUpdateRdv_ReassignmentResetsStaleAnnuleState() {
+        // Given
+        RdvDTO updateDTO = new RdvDTO();
+        updateDTO.setIdEtude(101);
+        updateDTO.setIdRdv(1);
+        updateDTO.setIdVolontaire(2);
+        updateDTO.setDate(Date.valueOf(LocalDate.of(2024, 6, 15)));
+        updateDTO.setEtat("ANNULE");
+
+        when(rdvRepository.findById(testRdvId1)).thenReturn(Optional.of(testRdv1));
+        when(annulationRepository.findByIdVolAndIdEtude(2, 101)).thenReturn(List.of());
+        when(rdvRepository.save(testRdv1)).thenReturn(testRdv1);
+
+        // When
+        rdvService.updateRdv(updateDTO);
+
+        // Then
+        assertThat(testRdv1.getIdVolontaire()).isEqualTo(2);
+        assertThat(testRdv1.getEtat()).isEqualTo("PLANIFIE");
+        verify(annulationRepository, times(1)).findByIdVolAndIdEtude(2, 101);
+        verify(rdvRepository, times(1)).save(testRdv1);
+    }
+
+    @Test
+    @DisplayName("updateRdv() - Reattribution garde ANNULE si le nouveau volontaire est annule")
+    void testUpdateRdv_ReassignmentKeepsAnnuleForCancelledVolunteer() {
+        // Given
+        RdvDTO updateDTO = new RdvDTO();
+        updateDTO.setIdEtude(101);
+        updateDTO.setIdRdv(1);
+        updateDTO.setIdVolontaire(2);
+        updateDTO.setDate(Date.valueOf(LocalDate.of(2024, 6, 15)));
+        updateDTO.setEtat("ANNULE");
+
+        when(rdvRepository.findById(testRdvId1)).thenReturn(Optional.of(testRdv1));
+        when(annulationRepository.findByIdVolAndIdEtude(2, 101)).thenReturn(List.of(new Annulation()));
+        when(rdvRepository.save(testRdv1)).thenReturn(testRdv1);
+
+        // When
+        rdvService.updateRdv(updateDTO);
+
+        // Then
+        assertThat(testRdv1.getIdVolontaire()).isEqualTo(2);
+        assertThat(testRdv1.getEtat()).isEqualTo("ANNULE");
+        verify(annulationRepository, times(1)).findByIdVolAndIdEtude(2, 101);
+        verify(rdvRepository, times(1)).save(testRdv1);
     }
 
     // ===== TESTS DELETE RDV =====

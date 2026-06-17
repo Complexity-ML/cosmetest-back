@@ -11,6 +11,7 @@ public class Annulation implements java.io.Serializable {
 	private Integer idAnnuler;
 	private int idVol;
 	private int idEtude;
+	private Integer idRdv;
 	private String dateAnnulation;
 	private String commentaire;
 
@@ -64,6 +65,14 @@ public class Annulation implements java.io.Serializable {
 
 	public void setIdEtude(int idEtude) {
 		this.idEtude = idEtude;
+	}
+
+	public Integer getIdRdv() {
+		return this.idRdv;
+	}
+
+	public void setIdRdv(Integer idRdv) {
+		this.idRdv = idRdv;
 	}
 
 	public String getDateAnnulation() {

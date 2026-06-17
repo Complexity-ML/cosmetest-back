@@ -11,6 +11,7 @@ public class AnnulationDTO {
     private Integer idAnnuler;
     private int idVol;
     private int idEtude;
+    private Integer idRdv;
     private String dateAnnulation;
     private String commentaire;
     private TypeAnnulation annulePar;
@@ -68,6 +69,14 @@ public class AnnulationDTO {
 
     public void setIdEtude(int idEtude) {
         this.idEtude = idEtude;
+    }
+
+    public Integer getIdRdv() {
+        return idRdv;
+    }
+
+    public void setIdRdv(Integer idRdv) {
+        this.idRdv = idRdv;
     }
 
     public String getDateAnnulation() {
