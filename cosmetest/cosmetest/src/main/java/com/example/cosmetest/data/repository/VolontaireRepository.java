@@ -4,7 +4,6 @@ import com.example.cosmetest.domain.model.Volontaire;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
-import org.springframework.stereotype.Repository;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
@@ -17,7 +16,6 @@ import java.util.stream.Collectors;
 /**
  * Repository pour l'accès aux données de l'entité Volontaire
  */
-@Repository
 public interface VolontaireRepository extends JpaRepository<Volontaire, Integer> {
 
         // ==================== MÉTHODES EXISTANTES ====================
@@ -30,6 +28,7 @@ public interface VolontaireRepository extends JpaRepository<Volontaire, Integer>
         @Query("SELECT v FROM Volontaire v WHERE v.standby = true AND v.dateFinStandby <= :today")
         List<Volontaire> findExpiredStandby(@Param("today") String today);
 
+        @Override
         Page<Volontaire> findAll(Pageable pageable);
 
         /**

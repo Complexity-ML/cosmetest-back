@@ -3,14 +3,12 @@ package com.example.cosmetest.data.repository;
 import com.example.cosmetest.domain.model.PanelHc;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
-import org.springframework.stereotype.Repository;
 
 import java.util.List;
 
 /**
  * Repository pour l'accès aux données de l'entité PanelHc
  */
-@Repository
 public interface PanelHcRepository extends JpaRepository<PanelHc, Integer> {
 
     /**

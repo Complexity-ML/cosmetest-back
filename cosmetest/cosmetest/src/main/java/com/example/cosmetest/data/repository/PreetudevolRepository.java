@@ -3,14 +3,12 @@ package com.example.cosmetest.data.repository;
 import com.example.cosmetest.domain.model.Preetudevol;
 import com.example.cosmetest.domain.model.PreetudevolId;
 import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.stereotype.Repository;
 
 import java.util.List;
 
 /**
  * Repository pour l'accès aux données de l'entité Preetudevol
  */
-@Repository
 public interface PreetudevolRepository extends JpaRepository<Preetudevol, PreetudevolId> {
 
     /**

@@ -2,11 +2,9 @@ package com.example.cosmetest.data.repository;
 
 import com.example.cosmetest.domain.model.Identifiant;
 import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.stereotype.Repository;
 
 import java.util.Optional;
 
-@Repository
 public interface IdentifiantRepository extends JpaRepository<Identifiant, Integer> {
 
     /**

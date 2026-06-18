@@ -3,14 +3,12 @@ package com.example.cosmetest.data.repository;
 import com.example.cosmetest.domain.model.Infobancaire;
 import com.example.cosmetest.domain.model.InfobancaireId;
 import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.stereotype.Repository;
 
 import java.util.List;
 
 /**
  * Repository pour l'accès aux données de l'entité Infobancaire
  */
-@Repository
 public interface InfobancaireRepository extends JpaRepository<Infobancaire, InfobancaireId> {
 
     /**

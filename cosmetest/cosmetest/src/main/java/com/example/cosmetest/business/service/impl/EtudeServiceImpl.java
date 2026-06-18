@@ -9,8 +9,6 @@ import com.example.cosmetest.domain.model.Etude;
 
 import jakarta.persistence.EntityNotFoundException;
 
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.annotation.Lazy;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -24,7 +22,6 @@ import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import com.example.cosmetest.business.service.RdvService;
 
 /**
  * Implémentation de la couche business (BLL) pour les études
@@ -36,20 +33,16 @@ public class EtudeServiceImpl implements EtudeService {
     private static final Logger logger = LoggerFactory.getLogger(EtudeServiceImpl.class);
 
     private final EtudeMapper etudeMapper;
+    private final EtudeRepository etudeRepository;
+    private final EtudeVolontaireRepository etudeVolontaireRepository;
 
-    @Autowired
-    @Lazy
-    private RdvService rdvService;
-
-    @Autowired
-    private EtudeRepository etudeRepository;
-
-    @Autowired
-    private EtudeVolontaireRepository etudeVolontaireRepository;
-
-    public EtudeServiceImpl(EtudeRepository etudeRepository, EtudeMapper etudeMapper) {
+    public EtudeServiceImpl(
+            EtudeRepository etudeRepository,
+            EtudeMapper etudeMapper,
+            EtudeVolontaireRepository etudeVolontaireRepository) {
         this.etudeRepository = etudeRepository;
         this.etudeMapper = etudeMapper;
+        this.etudeVolontaireRepository = etudeVolontaireRepository;
     }
 
     @Override

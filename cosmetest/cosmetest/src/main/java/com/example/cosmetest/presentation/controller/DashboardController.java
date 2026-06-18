@@ -4,7 +4,6 @@ package com.example.cosmetest.presentation.controller;
 import com.example.cosmetest.business.dto.*;
 import com.example.cosmetest.business.service.DashboardService;
 import com.example.cosmetest.business.service.EtudeService;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -16,11 +15,13 @@ import java.util.List;
 @RequestMapping("/api/dashboard")
 public class DashboardController {
 
-    @Autowired
-    private EtudeService etudeService;
+    private final EtudeService etudeService;
+    private final DashboardService dashboardService;
 
-    @Autowired
-    private DashboardService dashboardService;
+    public DashboardController(EtudeService etudeService, DashboardService dashboardService) {
+        this.etudeService = etudeService;
+        this.dashboardService = dashboardService;
+    }
 
     @GetMapping("/stats")
     public ResponseEntity<DashboardStatsDTO> getDashboardStats() {

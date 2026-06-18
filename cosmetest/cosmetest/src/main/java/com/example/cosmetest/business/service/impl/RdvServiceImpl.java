@@ -9,11 +9,8 @@ import com.example.cosmetest.data.repository.RdvRepository;
 import com.example.cosmetest.domain.model.Rdv;
 import com.example.cosmetest.domain.model.RdvId;
 
-import jakarta.persistence.EntityManager;
 import jakarta.persistence.EntityNotFoundException;
-import jakarta.persistence.PersistenceContext;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
@@ -21,7 +18,6 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
-import com.example.cosmetest.business.service.EtudeService;
 import com.example.cosmetest.domain.model.Etude;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -46,17 +42,13 @@ public class RdvServiceImpl implements RdvService {
     private final RdvRepository rdvRepository;
     private final RdvMapper rdvMapper;
     private final AnnulationRepository annulationRepository;
-    @PersistenceContext
-    private EntityManager entityManager;
+    private final EtudeRepository etudeRepository;
 
-    @Autowired
-    @Lazy
-    private EtudeRepository etudeRepository;
-
-    public RdvServiceImpl(RdvRepository rdvRepository, RdvMapper rdvMapper, EtudeService etudeService,
+    public RdvServiceImpl(RdvRepository rdvRepository, RdvMapper rdvMapper, @Lazy EtudeRepository etudeRepository,
             AnnulationRepository annulationRepository) {
         this.rdvRepository = rdvRepository;
         this.rdvMapper = rdvMapper;
+        this.etudeRepository = etudeRepository;
         this.annulationRepository = annulationRepository;
     }
 
@@ -498,7 +490,7 @@ public class RdvServiceImpl implements RdvService {
 
                 logger.debug("RDV {}/{} créé avec ID: {}", i + 1, rdvDTOs.size(), idRdv);
 
-            } catch (Exception e) {
+            } catch (RuntimeException e) {
                 String errorMsg = "Erreur création RDV " + (i + 1) + ": " + e.getMessage();
                 logger.error(errorMsg);
                 errors.add(errorMsg);

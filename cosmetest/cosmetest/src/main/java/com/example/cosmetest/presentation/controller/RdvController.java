@@ -9,7 +9,6 @@ import com.example.cosmetest.business.service.EtudeService;
 import com.example.cosmetest.business.service.RdvService;
 import com.example.cosmetest.domain.model.AuditLog;
 import jakarta.servlet.http.HttpServletRequest;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.*;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -32,14 +31,15 @@ public class RdvController {
 
     private static final Logger logger = LoggerFactory.getLogger(RdvController.class);
 
-    @Autowired
-    private RdvService rdvService;
+    private final RdvService rdvService;
+    private final EtudeService etudeService;
+    private final AuditLogService auditLogService;
 
-    @Autowired
-    private EtudeService etudeService;
-
-    @Autowired
-    private AuditLogService auditLogService;
+    public RdvController(RdvService rdvService, EtudeService etudeService, AuditLogService auditLogService) {
+        this.rdvService = rdvService;
+        this.etudeService = etudeService;
+        this.auditLogService = auditLogService;
+    }
 
 
     /**

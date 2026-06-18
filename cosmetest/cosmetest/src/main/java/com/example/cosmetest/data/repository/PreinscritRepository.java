@@ -2,7 +2,6 @@ package com.example.cosmetest.data.repository;
 
 import com.example.cosmetest.domain.model.Preinscrit;
 import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.stereotype.Repository;
 
 import java.sql.Date;
 import java.util.List;
@@ -11,7 +10,6 @@ import java.util.Optional;
 /**
  * Repository pour l'accès aux données de l'entité Preinscrit
  */
-@Repository
 public interface PreinscritRepository extends JpaRepository<Preinscrit, Integer> {
 
     /**

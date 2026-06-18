@@ -6,7 +6,6 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
-import org.springframework.stereotype.Repository;
 import org.slf4j.LoggerFactory;
 
 import java.time.format.DateTimeFormatter;
@@ -26,7 +25,6 @@ import java.util.stream.Collectors;
  * Repository pour l'accès aux données des études
  * Fait partie de la couche d'accès aux données (DAL)
  */
-@Repository
 public interface EtudeRepository extends JpaRepository<Etude, Integer> {
 
         /**

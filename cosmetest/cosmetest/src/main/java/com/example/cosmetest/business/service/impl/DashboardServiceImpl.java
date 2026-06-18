@@ -5,7 +5,6 @@ import com.example.cosmetest.business.dto.*;
 import com.example.cosmetest.business.service.*;
 import com.example.cosmetest.data.repository.*;
 import com.example.cosmetest.domain.model.Rdv;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -24,23 +23,27 @@ public class DashboardServiceImpl implements DashboardService {
 
     private static final Logger logger = LoggerFactory.getLogger(DashboardServiceImpl.class);
 
-    @Autowired
-    private VolontaireService volontaireService;
+    private final VolontaireService volontaireService;
+    private final EtudeService etudeService;
+    private final RdvService rdvService;
+    private final PreinscritService preinscritService;
+    private final RdvRepository rdvRepository;
+    private final EtudeVolontaireService etudeVolontaireService;
 
-    @Autowired
-    private EtudeService etudeService;
-
-    @Autowired
-    private RdvService rdvService;
-
-    @Autowired
-    private PreinscritService preinscritService;
-
-    @Autowired
-    private RdvRepository rdvRepository;
-
-    @Autowired
-    private EtudeVolontaireService etudeVolontaireService;
+    public DashboardServiceImpl(
+            VolontaireService volontaireService,
+            EtudeService etudeService,
+            RdvService rdvService,
+            PreinscritService preinscritService,
+            RdvRepository rdvRepository,
+            EtudeVolontaireService etudeVolontaireService) {
+        this.volontaireService = volontaireService;
+        this.etudeService = etudeService;
+        this.rdvService = rdvService;
+        this.preinscritService = preinscritService;
+        this.rdvRepository = rdvRepository;
+        this.etudeVolontaireService = etudeVolontaireService;
+    }
 
     @Override
     public DashboardStatsDTO getDashboardStats() {
