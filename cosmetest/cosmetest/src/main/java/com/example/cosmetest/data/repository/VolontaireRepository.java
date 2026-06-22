@@ -2,8 +2,10 @@ package com.example.cosmetest.data.repository;
 
 import com.example.cosmetest.domain.model.Volontaire;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
@@ -50,6 +52,24 @@ public interface VolontaireRepository extends JpaRepository<Volontaire, Integer>
          * Trouve des volontaires par email
          */
         List<Volontaire> findByEmailVol(String emailVol);
+
+        @Modifying
+        @Transactional
+        @Query("UPDATE Volontaire v SET v.telDomicileVol = CONCAT('0', TRIM(v.telDomicileVol)) " +
+                        "WHERE v.telDomicileVol IS NOT NULL " +
+                        "AND TRIM(v.telDomicileVol) <> '' " +
+                        "AND LENGTH(TRIM(v.telDomicileVol)) = 9 " +
+                        "AND TRIM(v.telDomicileVol) NOT LIKE '0%'")
+        int prefixMissingZeroOnTelDomicileVol();
+
+        @Modifying
+        @Transactional
+        @Query("UPDATE Volontaire v SET v.telPortableVol = CONCAT('0', TRIM(v.telPortableVol)) " +
+                        "WHERE v.telPortableVol IS NOT NULL " +
+                        "AND TRIM(v.telPortableVol) <> '' " +
+                        "AND LENGTH(TRIM(v.telPortableVol)) = 9 " +
+                        "AND TRIM(v.telPortableVol) NOT LIKE '0%'")
+        int prefixMissingZeroOnTelPortableVol();
 
         /**
          * Trouve des volontaires par sexe
