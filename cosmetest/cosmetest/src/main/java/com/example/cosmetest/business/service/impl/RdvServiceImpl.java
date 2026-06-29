@@ -508,7 +508,8 @@ public class RdvServiceImpl implements RdvService {
     }
 
     @Override
-    public void updateRdv(RdvDTO rdvDTO) {
+    @Transactional(isolation = Isolation.SERIALIZABLE)
+    public RdvDTO updateRdv(RdvDTO rdvDTO) {
         // Création de la clé composite avec les 3 paramètres requis
         RdvId rdvId = new RdvId();
         rdvId.setIdEtude(rdvDTO.getIdEtude());
@@ -528,6 +529,28 @@ public class RdvServiceImpl implements RdvService {
             Rdv rdv = rdvOpt.get();
             Integer previousVolontaireId = rdv.getIdVolontaire();
             Integer nextVolontaireId = rdvDTO.getIdVolontaire();
+            boolean volontaireChanged = !Objects.equals(previousVolontaireId, nextVolontaireId);
+            boolean reassigningCancelledRdv = volontaireChanged
+                    && nextVolontaireId != null
+                    && isCancelledEtat(rdv.getEtat());
+            boolean reassigningRdvWithCancellationTrace = volontaireChanged
+                    && nextVolontaireId != null
+                    && rdvDTO.getIdEtude() != null
+                    && rdvDTO.getIdRdv() != null
+                    && annulationRepository.existsRdvTraceForOtherVolunteer(
+                            rdvDTO.getIdEtude(),
+                            rdvDTO.getIdRdv(),
+                            nextVolontaireId);
+            if (reassigningCancelledRdv || reassigningRdvWithCancellationTrace) {
+                Rdv replacement = buildReplacementRdvWithNewId(rdv, rdvDTO);
+                Rdv savedReplacement = rdvRepository.save(replacement);
+                rdv.setEtat("ANNULE");
+                rdvRepository.save(rdv);
+                logger.info("RDV {} on etude {} reused after cancellation: old RDV kept, new RDV id {} assigned to volunteer {}",
+                        rdvDTO.getIdRdv(), rdvDTO.getIdEtude(), savedReplacement.getId().getIdRdv(), nextVolontaireId);
+                return convertToDTO(savedReplacement);
+            }
+
             String nextEtat = resolveEtatForReassignment(
                     rdv.getEtat(),
                     rdvDTO.getEtat(),
@@ -542,10 +565,37 @@ public class RdvServiceImpl implements RdvService {
             rdv.setCommentaires(rdvDTO.getCommentaires());
             rdv.setIdGroupe(rdvDTO.getIdGroupe());
             rdv.setIdVolontaire(rdvDTO.getIdVolontaire());
-            rdvRepository.save(rdv);
+            Rdv savedRdv = rdvRepository.save(rdv);
+            return convertToDTO(savedRdv);
         } else {
             throw new IllegalArgumentException("Rdv not found with ID: " + rdvId);
         }
+    }
+
+    private Rdv buildReplacementRdvWithNewId(Rdv existingRdv, RdvDTO rdvDTO) {
+        Integer idEtude = rdvDTO.getIdEtude();
+        Rdv replacement = new Rdv();
+        replacement.setId(new RdvId(idEtude, generateUniqueRdvId(idEtude)));
+        replacement.setEtude(existingRdv.getEtude());
+        replacement.setIdVolontaire(rdvDTO.getIdVolontaire());
+        replacement.setIdGroupe(rdvDTO.getIdGroupe());
+        replacement.setDate(Date.valueOf(rdvDTO.getDate()));
+        replacement.setHeure(rdvDTO.getHeure());
+        replacement.setDuree(rdvDTO.getDuree());
+        replacement.setEtat(hasText(rdvDTO.getEtat()) && !isCancelledEtat(rdvDTO.getEtat()) ? rdvDTO.getEtat().trim().toUpperCase() : "PLANIFIE");
+        replacement.setCommentaires(rdvDTO.getCommentaires());
+        return replacement;
+    }
+
+    private Integer generateUniqueRdvId(Integer idEtude) {
+        Random random = new Random();
+        for (int attempt = 0; attempt < 20; attempt++) {
+            Integer idRdv = 100000 + random.nextInt(900000);
+            if (!rdvRepository.existsById(new RdvId(idEtude, idRdv))) {
+                return idRdv;
+            }
+        }
+        throw new RuntimeException("Impossible de generer un nouvel ID RDV apres plusieurs tentatives");
     }
 
     private String resolveEtatForReassignment(String currentEtat, String requestedEtat, Integer previousVolontaireId,

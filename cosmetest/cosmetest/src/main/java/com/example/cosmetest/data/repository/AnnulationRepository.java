@@ -77,4 +77,16 @@ public interface AnnulationRepository extends JpaRepository<Annulation, Integer>
     @Transactional
     @Query("DELETE FROM Annulation a WHERE a.idVol = :idVol")
     int deleteByIdVol(@Param("idVol") int idVol);
+
+    @Query("""
+            SELECT COUNT(a) > 0
+            FROM Annulation a
+            WHERE a.idEtude = :idEtude
+              AND a.idRdv = :idRdv
+              AND a.idVol <> :idVol
+            """)
+    boolean existsRdvTraceForOtherVolunteer(
+            @Param("idEtude") int idEtude,
+            @Param("idRdv") int idRdv,
+            @Param("idVol") int idVol);
 }

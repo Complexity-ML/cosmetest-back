@@ -14,7 +14,7 @@ public class InfobancaireDTO {
     private String bic;
 
     @NotBlank(message = "Le numéro IBAN ne peut pas être vide")
-    @Pattern(regexp = "^[A-Z]{2}[0-9]{2}[A-Z0-9]{4}[0-9]{7}([A-Z0-9]?){0,16}$",
+    @Pattern(regexp = "^[A-Z]{2}[0-9]{2}[A-Z0-9]{10,30}$",
             message = "Le format du numéro IBAN est invalide")
     private String iban;
 

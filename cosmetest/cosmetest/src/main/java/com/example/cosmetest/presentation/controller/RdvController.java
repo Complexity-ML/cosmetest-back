@@ -231,13 +231,14 @@ public class RdvController {
             }
         }
 
-        rdvService.updateRdv(rdvDTO);
+        RdvDTO updatedRdv = rdvService.updateRdv(rdvDTO);
 
         String utilisateur = SecurityContextHolder.getContext().getAuthentication().getName();
         auditLogService.log(utilisateur, AuditLog.Action.UPDATE, "RDV", idRdv.toString(), rdvDTO.getDate() != null ? rdvDTO.getDate().toString() : "id:" + idRdv, request.getRemoteAddr());
 
         Map<String, Object> response = new HashMap<>();
         response.put("success", true);
+        response.put("rdv", updatedRdv);
         if (!warnings.isEmpty()) {
             response.put("warnings", warnings);
         }

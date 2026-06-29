@@ -118,6 +118,10 @@ public class AnnulationServiceImpl implements AnnulationService {
         
         // Validation des données avant sauvegarde
         preserveExistingRdvTrace(annulationDTO);
+        List<Rdv> rdvsToCancel = findRdvsToCancel(annulationDTO);
+        if (annulationDTO.getIdRdv() == null && !rdvsToCancel.isEmpty()) {
+            annulationDTO.setIdRdv(rdvsToCancel.get(0).getId().getIdRdv());
+        }
 
         // Conversion en entité
         Annulation annulation = annulationMapper.toEntity(annulationDTO);
@@ -132,17 +136,14 @@ public class AnnulationServiceImpl implements AnnulationService {
                 annulationDTO.getIdVol(), annulationDTO.getIdEtude());
             
             // Récupérer tous les RDV du volontaire dans cette étude
-            List<Rdv> rdvs = rdvRepository.findByIdVolontaireAndIdEtude(
-                annulationDTO.getIdVol(), 
-                annulationDTO.getIdEtude()
-            );
+            List<Rdv> rdvs = rdvsToCancel;
             
             logger.debug(" {} RDV trouvés à libérer", rdvs.size());
             
             // Mettre idVolontaire à null pour chaque RDV (libérer le créneau)
             int rdvsLiberes = 0;
             for (Rdv rdv : rdvs) {
-                rdv.setIdVolontaire(null);
+                rdv.setEtat("ANNULE");
                 rdvRepository.save(rdv);
                 rdvsLiberes++;
                 logger.debug(" Créneau RDV {} libéré", rdv.getId());
@@ -158,6 +159,21 @@ public class AnnulationServiceImpl implements AnnulationService {
 
         // Conversion en DTO pour retour
         return annulationMapper.toDto(savedAnnulation);
+    }
+
+    private List<Rdv> findRdvsToCancel(AnnulationDTO annulationDTO) {
+        List<Rdv> rdvs = rdvRepository.findByIdVolontaireAndIdEtude(
+                annulationDTO.getIdVol(),
+                annulationDTO.getIdEtude());
+
+        if (annulationDTO.getIdRdv() == null) {
+            return rdvs;
+        }
+
+        return rdvs.stream()
+                .filter(rdv -> rdv.getId() != null
+                        && annulationDTO.getIdRdv().equals(rdv.getId().getIdRdv()))
+                .collect(Collectors.toList());
     }
 
     private void preserveExistingRdvTrace(AnnulationDTO annulationDTO) {

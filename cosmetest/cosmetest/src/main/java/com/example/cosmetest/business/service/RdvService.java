@@ -166,6 +166,6 @@ public interface RdvService {
      */
     List<RdvDTO> createRdvsBatch(List<RdvDTO> rdvDTOs);
 
-    void updateRdv(RdvDTO rdvDTO);
+    RdvDTO updateRdv(RdvDTO rdvDTO);
 
 }
