@@ -7,6 +7,7 @@ import com.example.cosmetest.data.repository.AnnulationRepository;
 import com.example.cosmetest.data.repository.RdvRepository;
 import com.example.cosmetest.domain.model.Annulation;
 import com.example.cosmetest.domain.model.Rdv;
+import com.example.cosmetest.domain.model.RdvId;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -143,8 +144,14 @@ public class AnnulationServiceImpl implements AnnulationService {
             // Mettre idVolontaire à null pour chaque RDV (libérer le créneau)
             int rdvsLiberes = 0;
             for (Rdv rdv : rdvs) {
+                boolean wasAlreadyCancelled = "ANNULE".equalsIgnoreCase(rdv.getEtat());
                 rdv.setEtat("ANNULE");
                 rdvRepository.save(rdv);
+                if (!wasAlreadyCancelled) {
+                    Rdv replacement = createEmptyReplacementRdv(rdv);
+                    rdvRepository.save(replacement);
+                    logger.debug("Nouveau creneau RDV {} cree pour remplacer {}", replacement.getId(), rdv.getId());
+                }
                 rdvsLiberes++;
                 logger.debug(" Créneau RDV {} libéré", rdv.getId());
             }
@@ -159,6 +166,30 @@ public class AnnulationServiceImpl implements AnnulationService {
 
         // Conversion en DTO pour retour
         return annulationMapper.toDto(savedAnnulation);
+    }
+
+    private Rdv createEmptyReplacementRdv(Rdv cancelledRdv) {
+        Integer idEtude = cancelledRdv.getId().getIdEtude();
+        Rdv replacement = new Rdv();
+        replacement.setId(new RdvId(idEtude, generateNextRdvId(idEtude)));
+        replacement.setEtude(cancelledRdv.getEtude());
+        replacement.setIdVolontaire(null);
+        replacement.setIdGroupe(cancelledRdv.getIdGroupe());
+        replacement.setDate(cancelledRdv.getDate());
+        replacement.setHeure(cancelledRdv.getHeure());
+        replacement.setDuree(cancelledRdv.getDuree());
+        replacement.setEtat("PLANIFIE");
+        replacement.setCommentaires(cancelledRdv.getCommentaires());
+        return replacement;
+    }
+
+    private Integer generateNextRdvId(Integer idEtude) {
+        Integer maxId = rdvRepository.findMaxRdvIdForEtude(idEtude);
+        int nextId = maxId == null ? 1 : maxId + 1;
+        while (rdvRepository.existsById(new RdvId(idEtude, nextId))) {
+            nextId++;
+        }
+        return nextId;
     }
 
     private List<Rdv> findRdvsToCancel(AnnulationDTO annulationDTO) {
