@@ -142,7 +142,7 @@ class RdvServiceImplTest {
         List<Rdv> rdvs = Arrays.asList(testRdv1, testRdv2);
         Page<Rdv> rdvsPage = new PageImpl<>(rdvs, pageable, 2);
 
-        when(rdvRepository.findAll(pageable)).thenReturn(rdvsPage);
+        when(rdvRepository.findOperationalRdvs(pageable)).thenReturn(rdvsPage);
         when(rdvMapper.toDto(testRdv1)).thenReturn(testRdvDTO1);
         when(rdvMapper.toDto(testRdv2)).thenReturn(testRdvDTO2);
 
@@ -154,7 +154,7 @@ class RdvServiceImplTest {
         assertThat(result.getContent()).hasSize(2);
         assertThat(result.getTotalElements()).isEqualTo(2);
 
-        verify(rdvRepository, times(1)).findAll(pageable);
+        verify(rdvRepository, times(1)).findOperationalRdvs(pageable);
     }
 
     // ===== TESTS GET RDV BY ID =====

@@ -13,6 +13,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.ArgumentCaptor;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
@@ -308,6 +309,7 @@ class AnnulationServiceImplTest {
         
         when(rdvRepository.findByIdVolontaireAndIdEtude(10, 5))
             .thenReturn(Collections.singletonList(rdv1));
+        when(rdvRepository.findMaxRdvIdForEtude(5)).thenReturn(1);
         when(rdvRepository.save(any(Rdv.class))).thenReturn(rdv1);
 
         // Act
@@ -318,7 +320,17 @@ class AnnulationServiceImplTest {
         assertThat(result.getIdAnnuler()).isEqualTo(1);
         verify(annulationRepository, times(1)).save(annulation);
         verify(rdvRepository, times(1)).findByIdVolontaireAndIdEtude(10, 5);
-        verify(rdvRepository, times(1)).save(any(Rdv.class));
+        ArgumentCaptor<Rdv> rdvCaptor = ArgumentCaptor.forClass(Rdv.class);
+        verify(rdvRepository, times(2)).save(rdvCaptor.capture());
+
+        List<Rdv> savedRdvs = rdvCaptor.getAllValues();
+        assertThat(savedRdvs.get(0).getId()).isEqualTo(rdvId1);
+        assertThat(savedRdvs.get(0).getIdVolontaire()).isEqualTo(10);
+        assertThat(savedRdvs.get(0).getEtat()).isEqualTo("ANNULE");
+        assertThat(savedRdvs.get(1).getId().getIdEtude()).isEqualTo(5);
+        assertThat(savedRdvs.get(1).getId().getIdRdv()).isEqualTo(2);
+        assertThat(savedRdvs.get(1).getIdVolontaire()).isNull();
+        assertThat(savedRdvs.get(1).getEtat()).isEqualTo("PLANIFIE");
     }
 
     @Test

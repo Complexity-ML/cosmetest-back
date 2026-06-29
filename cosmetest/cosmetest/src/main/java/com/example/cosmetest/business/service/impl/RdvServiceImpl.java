@@ -55,13 +55,14 @@ public class RdvServiceImpl implements RdvService {
     @Override
     public List<RdvDTO> getAllRdvs() {
         return rdvRepository.findAll().stream()
+                .filter(this::isOperationalRdv)
                 .map(rdvMapper::toDto)
                 .collect(Collectors.toList());
     }
 
     @Override
     public Page<RdvDTO> getAllRdvsPaginated(Pageable pageable) {
-        return rdvRepository.findAll(pageable)
+        return rdvRepository.findOperationalRdvs(pageable)
                 .map(rdvMapper::toDto);
     }
 
@@ -74,6 +75,7 @@ public class RdvServiceImpl implements RdvService {
     @Override
     public List<RdvDTO> getRdvsByVolontaire(Integer idVolontaire) {
         return rdvRepository.findByIdVolontaire(idVolontaire).stream()
+                .filter(this::isOperationalRdv)
                 .map(rdvMapper::toDto)
                 .collect(Collectors.toList());
     }
@@ -81,6 +83,7 @@ public class RdvServiceImpl implements RdvService {
     @Override
     public List<RdvDTO> getRdvsByDate(Date date) {
         return rdvRepository.findByDate(date).stream()
+                .filter(this::isOperationalRdv)
                 .map(rdvMapper::toDto)
                 .collect(Collectors.toList());
     }
@@ -88,6 +91,7 @@ public class RdvServiceImpl implements RdvService {
     @Override
     public List<RdvDTO> getRdvsByVolontaireAndDate(Integer idVolontaire, Date date) {
         return rdvRepository.findByIdVolontaireAndDate(idVolontaire, date).stream()
+                .filter(this::isOperationalRdv)
                 .map(rdvMapper::toDto)
                 .collect(Collectors.toList());
     }
@@ -95,6 +99,7 @@ public class RdvServiceImpl implements RdvService {
     @Override
     public List<RdvDTO> getRdvsByVolontaireAndDateRange(Integer idVolontaire, Date startDate, Date endDate) {
         return rdvRepository.findByVolontaireAndDateRange(idVolontaire, startDate, endDate).stream()
+                .filter(this::isOperationalRdv)
                 .map(rdvMapper::toDto)
                 .collect(Collectors.toList());
     }
@@ -102,13 +107,18 @@ public class RdvServiceImpl implements RdvService {
     @Override
     public List<RdvDTO> getRdvsByGroupe(Integer idGroupe) {
         return rdvRepository.findByIdGroupe(idGroupe).stream()
+                .filter(this::isOperationalRdv)
                 .map(rdvMapper::toDto)
                 .collect(Collectors.toList());
     }
 
     @Override
     public List<RdvDTO> getRdvsByEtat(String etat) {
+        if (isCancelledEtat(etat)) {
+            return List.of();
+        }
         return rdvRepository.findByEtat(etat).stream()
+                .filter(this::isOperationalRdv)
                 .map(rdvMapper::toDto)
                 .collect(Collectors.toList());
     }
@@ -143,6 +153,7 @@ public class RdvServiceImpl implements RdvService {
     @Override
     public List<RdvDTO> searchRdvsByCommentaires(String keyword) {
         return rdvRepository.findByCommentairesContaining(keyword).stream()
+                .filter(this::isOperationalRdv)
                 .map(rdvMapper::toDto)
                 .collect(Collectors.toList());
     }
@@ -201,7 +212,9 @@ public class RdvServiceImpl implements RdvService {
     @Override
     public List<RdvDTO> getRecentRdvs(int limit) {
         // Implémentation temporaire
-        List<Rdv> rdvs = rdvRepository.findAll();
+        List<Rdv> rdvs = rdvRepository.findAll().stream()
+                .filter(this::isOperationalRdv)
+                .collect(Collectors.toList());
 
         // Trier par date (du plus récent au plus ancien)
         rdvs.sort((r1, r2) -> {
@@ -226,7 +239,9 @@ public class RdvServiceImpl implements RdvService {
     public List<RdvDTO> getUpcomingRdvs(int limit) {
         try {
             Date today = new java.sql.Date(System.currentTimeMillis());
-            List<Rdv> rdvs = rdvRepository.findByDateAfterOrderByDateAsc(today);
+            List<Rdv> rdvs = rdvRepository.findByDateAfterOrderByDateAsc(today).stream()
+                    .filter(this::isOperationalRdv)
+                    .collect(Collectors.toList());
 
             // Add null safety for all fields
             List<RdvDTO> dtoList = new ArrayList<>();
@@ -316,6 +331,7 @@ public class RdvServiceImpl implements RdvService {
         List<Rdv> rdvs = rdvRepository.findById_IdEtudeOrderByDateDesc(idEtude);
 
         return rdvs.stream()
+                .filter(this::isOperationalRdv)
                 .map(rdvMapper::toDto)
                 .collect(Collectors.toList());
     }
@@ -327,6 +343,7 @@ public class RdvServiceImpl implements RdvService {
     public List<RdvDTO> getRdvsByIdEtude(Integer idEtude) {
         List<Rdv> rdvs = rdvRepository.findById_IdEtudeOrderByDateDesc(idEtude);
         return rdvs.stream()
+                .filter(this::isOperationalRdv)
                 .map(rdvMapper::toDto)
                 .collect(Collectors.toList());
     }
@@ -335,6 +352,7 @@ public class RdvServiceImpl implements RdvService {
     public List<RdvDTO> getRdvsByIdVolontaire(Integer idVolontaire) {
         List<Rdv> rdvs = rdvRepository.findByIdVolontaire(idVolontaire);
         return rdvs.stream()
+                .filter(this::isOperationalRdv)
                 .map(rdvMapper::toDto)
                 .collect(Collectors.toList());
     }
@@ -347,7 +365,7 @@ public class RdvServiceImpl implements RdvService {
 
         // Check if any RDV exists for this volunteer and study
         Optional<Rdv> existingRdv = rdvRepository.findByVolontaireIdAndEtudeId(idVolontaire, idEtude);
-        return existingRdv.isPresent();
+        return existingRdv.filter(this::isOperationalRdv).isPresent();
     }
 
     @Override
@@ -624,6 +642,10 @@ public class RdvServiceImpl implements RdvService {
 
     private boolean isCancelledEtat(String etat) {
         return "ANNULE".equalsIgnoreCase(etat);
+    }
+
+    private boolean isOperationalRdv(Rdv rdv) {
+        return rdv != null && !isCancelledEtat(rdv.getEtat());
     }
 
     private boolean hasText(String value) {
