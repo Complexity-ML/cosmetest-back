@@ -345,6 +345,7 @@ public interface VolontaireRepository extends JpaRepository<Volontaire, Integer>
                         "FROM Volontaire v " +
                         "INNER JOIN Rdv r ON r.idVolontaire = v.idVol " +
                         "WHERE r.date BETWEEN :dateDebut AND :dateFin " +
+                        "AND (r.etat IS NULL OR UPPER(r.etat) <> 'ANNULE') " +
                         "GROUP BY v.idVol, v.nomVol, v.prenomVol " +
                         "ORDER BY COUNT(r) DESC")
         List<Object[]> findVolontairesLesPlusActifsRaw(
@@ -423,7 +424,8 @@ public interface VolontaireRepository extends JpaRepository<Volontaire, Integer>
                         "AND NOT EXISTS (" +
                         "   SELECT 1 FROM Rdv r " +
                         "   WHERE r.idVolontaire = v.idVol " +
-                        "   AND r.date BETWEEN :dateDebut AND :dateFin" +
+                        "   AND r.date BETWEEN :dateDebut AND :dateFin " +
+                        "   AND (r.etat IS NULL OR UPPER(r.etat) <> 'ANNULE')" +
                         ") " +
                         "ORDER BY v.nomVol, v.prenomVol")
         List<Volontaire> findVolontairesDisponiblesPourPeriode(
@@ -438,7 +440,8 @@ public interface VolontaireRepository extends JpaRepository<Volontaire, Integer>
                         "AND NOT EXISTS (" +
                         "   SELECT 1 FROM Rdv r " +
                         "   WHERE r.idVolontaire = v.idVol " +
-                        "   AND r.date BETWEEN :dateDebut AND :dateFin" +
+                        "   AND r.date BETWEEN :dateDebut AND :dateFin " +
+                        "   AND (r.etat IS NULL OR UPPER(r.etat) <> 'ANNULE')" +
                         ")")
         Integer countVolontairesDisponiblesPourPeriode(
                         @Param("dateDebut") Date dateDebut,
@@ -450,6 +453,7 @@ public interface VolontaireRepository extends JpaRepository<Volontaire, Integer>
         @Query("SELECT DISTINCT v FROM Volontaire v " +
                         "INNER JOIN Rdv r ON r.idVolontaire = v.idVol " +
                         "WHERE r.date BETWEEN :dateDebut AND :dateFin " +
+                        "AND (r.etat IS NULL OR UPPER(r.etat) <> 'ANNULE') " +
                         "ORDER BY v.nomVol, v.prenomVol")
         List<Volontaire> findVolontairesAvecRdvDansPeriode(
                         @Param("dateDebut") Date dateDebut,

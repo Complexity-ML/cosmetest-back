@@ -175,6 +175,7 @@ public interface EtudeRepository extends JpaRepository<Etude, Integer> {
         @Query("SELECT e, COUNT(r) as rdvCount FROM Etude e " +
                         "LEFT JOIN Rdv r ON r.id.idEtude = e.idEtude " +
                         "AND r.date BETWEEN :dateDebut AND :dateFin " +
+                        "AND (r.etat IS NULL OR UPPER(r.etat) <> 'ANNULE') " +
                         "WHERE (e.dateDebut <= :dateFinEtude AND e.dateFin >= :dateDebutEtude) " +
                         "GROUP BY e.idEtude " +
                         "ORDER BY e.dateDebut ASC")
@@ -217,6 +218,7 @@ public interface EtudeRepository extends JpaRepository<Etude, Integer> {
          */
         @Query("SELECT e.ref, e.titre, COUNT(r) as rdvCount FROM Etude e " +
                         "LEFT JOIN Rdv r ON r.id.idEtude = e.idEtude " +
+                        "AND (r.etat IS NULL OR UPPER(r.etat) <> 'ANNULE') " +
                         "GROUP BY e.idEtude, e.ref, e.titre " +
                         "ORDER BY COUNT(r) DESC")
         List<Object[]> findEtudesWithMostRdvs(Pageable pageable);
@@ -228,7 +230,8 @@ public interface EtudeRepository extends JpaRepository<Etude, Integer> {
                         "WHERE NOT EXISTS (" +
                         "   SELECT 1 FROM Rdv r " +
                         "   WHERE r.id.idEtude = e.idEtude " +
-                        "   AND r.date BETWEEN :dateDebut AND :dateFin" +
+                        "   AND r.date BETWEEN :dateDebut AND :dateFin " +
+                        "   AND (r.etat IS NULL OR UPPER(r.etat) <> 'ANNULE')" +
                         ") " +
                         "AND (e.dateDebut <= :dateFinEtude AND e.dateFin >= :dateDebutEtude)")
         List<Etude> findEtudesSansRdvDansPeriode(
@@ -247,8 +250,10 @@ public interface EtudeRepository extends JpaRepository<Etude, Integer> {
                         "FROM Etude e " +
                         "LEFT JOIN (SELECT r.id.idEtude as etudeId, COUNT(r) as rdvCount " +
                         "          FROM Rdv r WHERE r.date BETWEEN :dateDebut AND :dateFin " +
+                        "          AND (r.etat IS NULL OR UPPER(r.etat) <> 'ANNULE') " +
                         "          GROUP BY r.id.idEtude) rdvCounts ON rdvCounts.etudeId = e.idEtude " +
                         "LEFT JOIN Rdv r ON r.id.idEtude = e.idEtude AND r.date BETWEEN :dateDebut AND :dateFin " +
+                        "AND (r.etat IS NULL OR UPPER(r.etat) <> 'ANNULE') " +
                         "WHERE (e.dateDebut <= :dateFinEtude AND e.dateFin >= :dateDebutEtude)")
         List<Object[]> getStatistiquesEtudesPourPeriode(
                         @Param("dateDebut") Date dateDebut,
@@ -421,7 +426,8 @@ public interface EtudeRepository extends JpaRepository<Etude, Integer> {
          */
         @Query("SELECT DISTINCT e FROM Etude e " +
                         "INNER JOIN Rdv r ON r.id.idEtude = e.idEtude " +
-                        "WHERE r.idVolontaire = :idVolontaire")
+                        "WHERE r.idVolontaire = :idVolontaire " +
+                        "AND (r.etat IS NULL OR UPPER(r.etat) <> 'ANNULE')")
         List<Etude> findEtudesByVolontaireId(@Param("idVolontaire") Integer idVolontaire);
 
         /**
@@ -429,6 +435,7 @@ public interface EtudeRepository extends JpaRepository<Etude, Integer> {
          */
         @Query("SELECT DISTINCT r.date FROM Rdv r " +
                         "WHERE r.id.idEtude = :idEtude " +
+                        "AND (r.etat IS NULL OR UPPER(r.etat) <> 'ANNULE') " +
                         "ORDER BY r.date ASC")
         List<Date> findRdvDatesForEtude(@Param("idEtude") Integer idEtude);
 
@@ -473,6 +480,7 @@ public interface EtudeRepository extends JpaRepository<Etude, Integer> {
          */
         @Query("SELECT DISTINCT r.date FROM Rdv r " +
                         "WHERE r.id.idEtude = :idEtude " +
+                        "AND (r.etat IS NULL OR UPPER(r.etat) <> 'ANNULE') " +
                         "ORDER BY r.date ASC")
         List<Date> findRdvDatesForEtudeAsList(@Param("idEtude") Integer idEtude);
 

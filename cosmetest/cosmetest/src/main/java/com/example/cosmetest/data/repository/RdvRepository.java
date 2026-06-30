@@ -207,7 +207,8 @@ public interface RdvRepository extends JpaRepository<Rdv, RdvId> {
          */
         @Query("SELECT COUNT(r) FROM Rdv r " +
                         "WHERE r.id.idEtude = :idEtude " +
-                        "AND r.date BETWEEN :dateDebut AND :dateFin")
+                        "AND r.date BETWEEN :dateDebut AND :dateFin " +
+                        "AND (r.etat IS NULL OR UPPER(r.etat) <> 'ANNULE')")
         Integer countByIdEtudeAndDateBetween(
                         @Param("idEtude") Integer idEtude,
                         @Param("dateDebut") Date dateDebut,
@@ -219,6 +220,7 @@ public interface RdvRepository extends JpaRepository<Rdv, RdvId> {
         @Query("SELECT r.idVolontaire, r.date, COUNT(r) FROM Rdv r " +
                         "WHERE r.date BETWEEN :dateDebut AND :dateFin " +
                         "AND r.idVolontaire IS NOT NULL " +
+                        "AND (r.etat IS NULL OR UPPER(r.etat) <> 'ANNULE') " +
                         "GROUP BY r.idVolontaire, r.date " +
                         "HAVING COUNT(r) > 1 " +
                         "ORDER BY r.date, r.idVolontaire")
@@ -232,6 +234,7 @@ public interface RdvRepository extends JpaRepository<Rdv, RdvId> {
         @Query("SELECT r.date, r.heure, COUNT(r) FROM Rdv r " +
                         "WHERE r.date BETWEEN :dateDebut AND :dateFin " +
                         "AND r.heure IS NOT NULL " +
+                        "AND (r.etat IS NULL OR UPPER(r.etat) <> 'ANNULE') " +
                         "GROUP BY r.date, r.heure " +
                         "HAVING COUNT(r) > 1 " +
                         "ORDER BY r.date, r.heure")
@@ -245,6 +248,7 @@ public interface RdvRepository extends JpaRepository<Rdv, RdvId> {
         @Query("SELECT e.ref, e.titre, COUNT(r) as rdvCount FROM Rdv r " +
                         "INNER JOIN r.etude e " +
                         "WHERE r.date BETWEEN :dateDebut AND :dateFin " +
+                        "AND (r.etat IS NULL OR UPPER(r.etat) <> 'ANNULE') " +
                         "GROUP BY e.idEtude, e.ref, e.titre " +
                         "ORDER BY COUNT(r) DESC")
         List<Object[]> findMostActiveStudiesBetweenDatesRaw(
@@ -277,6 +281,7 @@ public interface RdvRepository extends JpaRepository<Rdv, RdvId> {
         @Query("SELECT v.nomVol, v.prenomVol, COUNT(r) as rdvCount FROM Rdv r " +
                         "INNER JOIN Volontaire v ON v.idVol = r.idVolontaire " +
                         "WHERE r.date BETWEEN :dateDebut AND :dateFin " +
+                        "AND (r.etat IS NULL OR UPPER(r.etat) <> 'ANNULE') " +
                         "GROUP BY r.idVolontaire, v.nomVol, v.prenomVol " +
                         "ORDER BY COUNT(r) DESC")
         List<Object[]> findMostActiveVolunteersBetweenDatesRaw(
@@ -309,6 +314,7 @@ public interface RdvRepository extends JpaRepository<Rdv, RdvId> {
          */
         @Query("SELECT YEAR(r.date) as annee, WEEKOFYEAR(r.date) as semaine, COUNT(r) FROM Rdv r " +
                         "WHERE r.date BETWEEN :dateDebut AND :dateFin " +
+                        "AND (r.etat IS NULL OR UPPER(r.etat) <> 'ANNULE') " +
                         "GROUP BY YEAR(r.date), WEEKOFYEAR(r.date) " +
                         "ORDER BY YEAR(r.date), WEEKOFYEAR(r.date)")
         List<Object[]> countRdvByWeekBetweenDatesRaw(
@@ -339,6 +345,7 @@ public interface RdvRepository extends JpaRepository<Rdv, RdvId> {
         @Query("SELECT YEAR(r.date) as annee, WEEKOFYEAR(r.date) as semaine, COUNT(r) FROM Rdv r " +
                         "WHERE r.date BETWEEN :dateDebut AND :dateFin " +
                         "AND r.etat = :etat " +
+                        "AND (r.etat IS NULL OR UPPER(r.etat) <> 'ANNULE') " +
                         "GROUP BY YEAR(r.date), WEEKOFYEAR(r.date) " +
                         "ORDER BY YEAR(r.date), WEEKOFYEAR(r.date)")
         List<Object[]> countRdvByWeekAndEtatBetweenDatesRaw(
@@ -385,7 +392,8 @@ public interface RdvRepository extends JpaRepository<Rdv, RdvId> {
          */
         @Query("SELECT COUNT(r) FROM Rdv r " +
                         "WHERE r.id.idEtude = :idEtude " +
-                        "AND r.date = :date")
+                        "AND r.date = :date " +
+                        "AND (r.etat IS NULL OR UPPER(r.etat) <> 'ANNULE')")
         Integer countByIdEtudeAndDate(
                         @Param("idEtude") Integer idEtude,
                         @Param("date") Date date);
@@ -397,6 +405,7 @@ public interface RdvRepository extends JpaRepository<Rdv, RdvId> {
         @Query("SELECT DISTINCT r.date FROM Rdv r " +
                         "WHERE r.id.idEtude = :idEtude " +
                         "AND r.date BETWEEN :dateDebut AND :dateFin " +
+                        "AND (r.etat IS NULL OR UPPER(r.etat) <> 'ANNULE') " +
                         "ORDER BY r.date ASC")
         List<Date> findDistinctDatesByIdEtudeAndPeriod(
                         @Param("idEtude") Integer idEtude,
@@ -410,6 +419,7 @@ public interface RdvRepository extends JpaRepository<Rdv, RdvId> {
         @Query("SELECT r.date, COUNT(r) as nombreRdv FROM Rdv r " +
                         "WHERE r.id.idEtude = :idEtude " +
                         "AND r.date BETWEEN :dateDebut AND :dateFin " +
+                        "AND (r.etat IS NULL OR UPPER(r.etat) <> 'ANNULE') " +
                         "GROUP BY r.date " +
                         "ORDER BY r.date ASC")
         List<Object[]> countRdvsByDateForEtudeInPeriod(

@@ -18,6 +18,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 
@@ -324,6 +325,8 @@ class EtudeVolontaireServiceImplTest {
     @DisplayName("saveEtudeVolontaire() - Sauvegarde réussie")
     void testSaveEtudeVolontaire_Success() {
         // Given
+        when(etudeVolontaireRepository.findByIdEtudeAndIdVolontaire(1, 100))
+                .thenReturn(Collections.emptyList());
         when(etudeVolontaireMapper.toEntity(testEtudeVolontaireDTO1)).thenReturn(testEtudeVolontaire1);
         when(etudeVolontaireRepository.save(testEtudeVolontaire1)).thenReturn(testEtudeVolontaire1);
         when(etudeVolontaireMapper.toDto(testEtudeVolontaire1)).thenReturn(testEtudeVolontaireDTO1);
@@ -335,6 +338,27 @@ class EtudeVolontaireServiceImplTest {
         assertThat(result).isNotNull();
         assertThat(result.getIdEtude()).isEqualTo(1);
 
+        verify(etudeVolontaireRepository, times(1)).save(testEtudeVolontaire1);
+    }
+
+    @Test
+    @DisplayName("saveEtudeVolontaire() - Remplace les anciennes associations du meme volontaire sur la meme etude")
+    void testSaveEtudeVolontaire_ReplacesExistingAssociationForSameStudyAndVolunteer() {
+        // Given
+        when(etudeVolontaireRepository.findByIdEtudeAndIdVolontaire(1, 100))
+                .thenReturn(Collections.singletonList(testEtudeVolontaire1));
+        when(etudeVolontaireRepository.deleteByIdEtudeAndIdVolontaire(1, 100)).thenReturn(1);
+        when(etudeVolontaireMapper.toEntity(testEtudeVolontaireDTO1)).thenReturn(testEtudeVolontaire1);
+        when(etudeVolontaireRepository.save(testEtudeVolontaire1)).thenReturn(testEtudeVolontaire1);
+        when(etudeVolontaireMapper.toDto(testEtudeVolontaire1)).thenReturn(testEtudeVolontaireDTO1);
+
+        // When
+        EtudeVolontaireDTO result = etudeVolontaireService.saveEtudeVolontaire(testEtudeVolontaireDTO1);
+
+        // Then
+        assertThat(result).isNotNull();
+        verify(etudeVolontaireRepository, times(1)).deleteByIdEtudeAndIdVolontaire(1, 100);
+        verify(etudeVolontaireRepository, times(1)).flush();
         verify(etudeVolontaireRepository, times(1)).save(testEtudeVolontaire1);
     }
 
@@ -594,6 +618,8 @@ class EtudeVolontaireServiceImplTest {
     @DisplayName("saveEtudeVolontaire() - Exception lors de la sauvegarde")
     void testSaveEtudeVolontaire_SaveException() {
         // Given
+        when(etudeVolontaireRepository.findByIdEtudeAndIdVolontaire(1, 100))
+                .thenReturn(Collections.emptyList());
         when(etudeVolontaireMapper.toEntity(testEtudeVolontaireDTO1)).thenReturn(testEtudeVolontaire1);
         when(etudeVolontaireRepository.save(testEtudeVolontaire1))
                 .thenThrow(new RuntimeException("Erreur contrainte DB"));

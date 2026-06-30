@@ -18,7 +18,9 @@ import org.springframework.transaction.annotation.Isolation;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 import jakarta.persistence.EntityManager;
@@ -90,7 +92,7 @@ public class EtudeVolontaireServiceImpl implements EtudeVolontaireService {
     public List<EtudeVolontaireDTO> getEtudeVolontairesByVolontaire(int idVolontaire) {
         log.debug("Récupération des études pour le volontaire: {}", idVolontaire);
         validatePositiveId(idVolontaire, "idVolontaire");
-        return convertToDto(etudeVolontaireRepository.findByIdVolontaire(idVolontaire));
+        return convertToDto(keepOneAssociationPerStudy(etudeVolontaireRepository.findByIdVolontaire(idVolontaire)));
     }
 
     @Override
@@ -105,7 +107,7 @@ public class EtudeVolontaireServiceImpl implements EtudeVolontaireService {
         log.debug("Recherche étude: {} et volontaire: {}", idEtude, idVolontaire);
         validatePositiveId(idEtude, "idEtude");
         validatePositiveId(idVolontaire, "idVolontaire");
-        return convertToDto(etudeVolontaireRepository.findByIdEtudeAndIdVolontaire(idEtude, idVolontaire));
+        return convertToDto(keepOneAssociationPerStudy(etudeVolontaireRepository.findByIdEtudeAndIdVolontaire(idEtude, idVolontaire)));
     }
 
     @Override
@@ -144,6 +146,19 @@ public class EtudeVolontaireServiceImpl implements EtudeVolontaireService {
         validateEtudeVolontaireData(etudeVolontaireDTO);
 
         try {
+            List<EtudeVolontaire> existingAssociations = etudeVolontaireRepository.findByIdEtudeAndIdVolontaire(
+                    etudeVolontaireDTO.getIdEtude(),
+                    etudeVolontaireDTO.getIdVolontaire());
+
+            if (!existingAssociations.isEmpty()) {
+                int deleted = etudeVolontaireRepository.deleteByIdEtudeAndIdVolontaire(
+                        etudeVolontaireDTO.getIdEtude(),
+                        etudeVolontaireDTO.getIdVolontaire());
+                etudeVolontaireRepository.flush();
+                log.info("{} ancienne(s) association(s) remplacee(s) pour etude={} volontaire={}",
+                        deleted, etudeVolontaireDTO.getIdEtude(), etudeVolontaireDTO.getIdVolontaire());
+            }
+
             EtudeVolontaire entity = etudeVolontaireMapper.toEntity(etudeVolontaireDTO);
             EtudeVolontaire saved = etudeVolontaireRepository.save(entity);
 
@@ -385,6 +400,47 @@ public class EtudeVolontaireServiceImpl implements EtudeVolontaireService {
         return entities.stream()
                 .map(etudeVolontaireMapper::toDto)
                 .collect(Collectors.toList());
+    }
+
+    private List<EtudeVolontaire> keepOneAssociationPerStudy(List<EtudeVolontaire> entities) {
+        Map<Integer, EtudeVolontaire> byStudy = new LinkedHashMap<>();
+        for (EtudeVolontaire entity : entities) {
+            if (entity == null || entity.getId() == null || entity.getId().getIdEtude() == null) {
+                continue;
+            }
+
+            Integer idEtude = entity.getId().getIdEtude();
+            EtudeVolontaire current = byStudy.get(idEtude);
+            byStudy.put(idEtude, chooseVisibleAssociation(current, entity));
+        }
+        return List.copyOf(byStudy.values());
+    }
+
+    private EtudeVolontaire chooseVisibleAssociation(EtudeVolontaire current, EtudeVolontaire candidate) {
+        if (current == null) {
+            return candidate;
+        }
+
+        if (isAnnule(current) && !isAnnule(candidate)) {
+            return candidate;
+        }
+        if (!isAnnule(current) && isAnnule(candidate)) {
+            return current;
+        }
+        if (candidate.getId().getIv() > current.getId().getIv()) {
+            return candidate;
+        }
+        if (candidate.getId().getNumsujet() > 0 && current.getId().getNumsujet() <= 0) {
+            return candidate;
+        }
+        return current;
+    }
+
+    private boolean isAnnule(EtudeVolontaire association) {
+        return association != null
+                && association.getId() != null
+                && association.getId().getStatut() != null
+                && "ANNULE".equalsIgnoreCase(association.getId().getStatut());
     }
 
     /**
