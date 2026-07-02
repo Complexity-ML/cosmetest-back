@@ -76,6 +76,14 @@ public interface RdvRepository extends JpaRepository<Rdv, RdvId> {
         Optional<Rdv> findByVolontaireIdAndEtudeId(@Param("idVolontaire") Integer idVolontaire,
                         @Param("idEtude") int idEtude);
 
+        @Query("SELECT COUNT(r) > 0 FROM Rdv r " +
+                        "WHERE r.idVolontaire = :idVolontaire " +
+                        "AND r.id.idEtude = :idEtude " +
+                        "AND (r.etat IS NULL OR UPPER(r.etat) <> 'ANNULE')")
+        boolean existsOperationalByVolontaireAndEtude(
+                        @Param("idVolontaire") Integer idVolontaire,
+                        @Param("idEtude") int idEtude);
+
         @Query("SELECT r FROM Rdv r WHERE r.date >= :date AND (r.etat IS NULL OR UPPER(r.etat) <> 'ANNULE') ORDER BY r.date ASC, r.heure ASC")
         Page<Rdv> findByDateGreaterThanEqualOrderByDateAscHeureAsc(@Param("date") Date date, Pageable pageable);
 

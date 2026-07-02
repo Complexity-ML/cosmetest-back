@@ -363,9 +363,7 @@ public class RdvServiceImpl implements RdvService {
             return false;
         }
 
-        // Check if any RDV exists for this volunteer and study
-        Optional<Rdv> existingRdv = rdvRepository.findByVolontaireIdAndEtudeId(idVolontaire, idEtude);
-        return existingRdv.filter(this::isOperationalRdv).isPresent();
+        return rdvRepository.existsOperationalByVolontaireAndEtude(idVolontaire, idEtude);
     }
 
     @Override
@@ -548,6 +546,9 @@ public class RdvServiceImpl implements RdvService {
             Integer previousVolontaireId = rdv.getIdVolontaire();
             Integer nextVolontaireId = rdvDTO.getIdVolontaire();
             boolean volontaireChanged = !Objects.equals(previousVolontaireId, nextVolontaireId);
+            boolean replacingAssignedVolunteer = volontaireChanged
+                    && previousVolontaireId != null
+                    && nextVolontaireId != null;
             boolean reassigningCancelledRdv = volontaireChanged
                     && nextVolontaireId != null
                     && isCancelledEtat(rdv.getEtat());
@@ -559,7 +560,7 @@ public class RdvServiceImpl implements RdvService {
                             rdvDTO.getIdEtude(),
                             rdvDTO.getIdRdv(),
                             nextVolontaireId);
-            if (reassigningCancelledRdv || reassigningRdvWithCancellationTrace) {
+            if (replacingAssignedVolunteer || reassigningCancelledRdv || reassigningRdvWithCancellationTrace) {
                 Rdv replacement = buildReplacementRdvWithNewId(rdv, rdvDTO);
                 Rdv savedReplacement = rdvRepository.save(replacement);
                 rdv.setEtat("ANNULE");
