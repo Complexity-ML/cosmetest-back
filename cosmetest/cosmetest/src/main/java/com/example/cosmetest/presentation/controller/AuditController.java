@@ -14,8 +14,9 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/api/audit")
-@CrossOrigin(origins = {"http://192.168.127.36:3000","http://192.168.127.36:5000","http://intranet:5000"}, allowCredentials = "true")
 public class AuditController {
+
+    private static final int MAX_PAGE_SIZE = 100;
 
     private final AuditLogService auditLogService;
 
@@ -33,17 +34,19 @@ public class AuditController {
             @RequestParam(required = false) String dateDebut,
             @RequestParam(required = false) String dateFin) {
 
+        int safePage = Math.max(0, page);
+        int safeSize = Math.min(MAX_PAGE_SIZE, Math.max(1, size));
         Page<AuditLog> result;
         if (dateDebut != null && !dateDebut.isBlank() && dateFin != null && !dateFin.isBlank()) {
             LocalDateTime debut = LocalDate.parse(dateDebut).atStartOfDay();
             LocalDateTime fin = LocalDate.parse(dateFin).atTime(23, 59, 59);
-            result = auditLogService.findByDateRange(debut, fin, page, size);
+            result = auditLogService.findByDateRange(debut, fin, safePage, safeSize);
         } else if (entite != null && !entite.isBlank()) {
-            result = auditLogService.findByEntite(entite.toUpperCase(), page, size);
+            result = auditLogService.findByEntite(entite.toUpperCase(), safePage, safeSize);
         } else if (utilisateur != null && !utilisateur.isBlank()) {
-            result = auditLogService.findByUtilisateur(utilisateur, page, size);
+            result = auditLogService.findByUtilisateur(utilisateur, safePage, safeSize);
         } else {
-            result = auditLogService.findAll(page, size);
+            result = auditLogService.findAll(safePage, safeSize);
         }
 
         var logs = result.getContent().stream().map(log -> Map.<String, Object>of(

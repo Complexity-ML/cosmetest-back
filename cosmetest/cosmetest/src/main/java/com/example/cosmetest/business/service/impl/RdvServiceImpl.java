@@ -1,18 +1,21 @@
 package com.example.cosmetest.business.service.impl;
 
+import com.example.cosmetest.business.dto.EtudeVolontaireDTO;
 import com.example.cosmetest.business.dto.RdvDTO;
 import com.example.cosmetest.business.mapper.RdvMapper;
+import com.example.cosmetest.business.service.EtudeVolontaireService;
 import com.example.cosmetest.business.service.RdvService;
 import com.example.cosmetest.data.repository.AnnulationRepository;
 import com.example.cosmetest.data.repository.EtudeRepository;
+import com.example.cosmetest.data.repository.GroupeRepository;
 import com.example.cosmetest.data.repository.RdvRepository;
+import com.example.cosmetest.domain.model.Groupe;
 import com.example.cosmetest.domain.model.Rdv;
-import com.example.cosmetest.domain.model.RdvId;
+
 
 import jakarta.persistence.EntityNotFoundException;
 
 import org.springframework.context.annotation.Lazy;
-import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -27,7 +30,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.Random;
 import java.util.stream.Collectors;
 
 /**
@@ -43,13 +45,22 @@ public class RdvServiceImpl implements RdvService {
     private final RdvMapper rdvMapper;
     private final AnnulationRepository annulationRepository;
     private final EtudeRepository etudeRepository;
+    private final EtudeVolontaireService etudeVolontaireService;
+    private final GroupeRepository groupeRepository;
+    private final RdvIdAllocator rdvIdAllocator;
 
     public RdvServiceImpl(RdvRepository rdvRepository, RdvMapper rdvMapper, @Lazy EtudeRepository etudeRepository,
-            AnnulationRepository annulationRepository) {
+            AnnulationRepository annulationRepository,
+            EtudeVolontaireService etudeVolontaireService,
+            GroupeRepository groupeRepository,
+            RdvIdAllocator rdvIdAllocator) {
         this.rdvRepository = rdvRepository;
         this.rdvMapper = rdvMapper;
         this.etudeRepository = etudeRepository;
         this.annulationRepository = annulationRepository;
+        this.etudeVolontaireService = etudeVolontaireService;
+        this.groupeRepository = groupeRepository;
+        this.rdvIdAllocator = rdvIdAllocator;
     }
 
     @Override
@@ -67,8 +78,14 @@ public class RdvServiceImpl implements RdvService {
     }
 
     @Override
-    public Optional<RdvDTO> getRdvById(RdvId id) {
-        return rdvRepository.findById(id)
+    public Optional<RdvDTO> getRdvById(Long rdvPk) {
+        return rdvRepository.findById(rdvPk)
+                .map(rdvMapper::toDto);
+    }
+
+    @Override
+    public Optional<RdvDTO> getRdvByBusinessKey(Integer idEtude, Integer idRdv) {
+        return rdvRepository.findByIdEtudeAndIdRdv(idEtude, idRdv)
                 .map(rdvMapper::toDto);
     }
 
@@ -132,6 +149,9 @@ public class RdvServiceImpl implements RdvService {
         // Appliquer des règles métier avant la sauvegarde si nécessaire
         validateRdv(rdvEntity);
 
+        ensureEtudeVolontaireAssociation(
+                rdvDTO.getIdEtude(), rdvDTO.getIdGroupe(), rdvDTO.getIdVolontaire());
+
         // Sauvegarder l'entité
         Rdv savedRdv = rdvRepository.save(rdvEntity);
 
@@ -141,12 +161,12 @@ public class RdvServiceImpl implements RdvService {
 
     @Override
     @Transactional
-    public void deleteRdv(RdvId id) {
+    public void deleteRdv(Long rdvPk) {
         // Vérifier si le rendez-vous existe avant de le supprimer
-        if (rdvRepository.existsById(id)) {
-            rdvRepository.deleteById(id);
+        if (rdvRepository.existsById(rdvPk)) {
+            rdvRepository.deleteById(rdvPk);
         } else {
-            throw new IllegalArgumentException("Le rendez-vous avec l'ID " + id + " n'existe pas");
+            throw new IllegalArgumentException("Le rendez-vous avec l'ID technique " + rdvPk + " n'existe pas");
         }
     }
 
@@ -160,10 +180,10 @@ public class RdvServiceImpl implements RdvService {
 
     @Override
     @Transactional
-    public void updateRdvEtat(RdvId id, String nouvelEtat) {
+    public void updateRdvEtat(Long rdvPk, String nouvelEtat) {
         // Récupérer le rendez-vous
-        Rdv rdv = rdvRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Le rendez-vous avec l'ID " + id + " n'existe pas"));
+        Rdv rdv = rdvRepository.findById(rdvPk)
+                .orElseThrow(() -> new IllegalArgumentException("Le rendez-vous avec l'ID technique " + rdvPk + " n'existe pas"));
 
         // Vérifier que l'état est valide
         validateEtat(nouvelEtat);
@@ -278,12 +298,9 @@ public class RdvServiceImpl implements RdvService {
     private RdvDTO convertToDTO(Rdv rdv) {
         RdvDTO dto = new RdvDTO();
 
-        // Copie des informations d'identifiant
-        if (rdv.getId() != null) {
-            dto.setIdRdv(rdv.getId().getIdRdv());
-            dto.setIdEtude(rdv.getId().getIdEtude());
-            // dto.setSequence(rdv.getId().getSequence()); // Copier la séquence
-        }
+        dto.setRdvPk(rdv.getRdvPk());
+        dto.setIdRdv(rdv.getIdRdv());
+        dto.setIdEtude(rdv.getIdEtude());
 
         // Copie des informations générales
         dto.setIdVolontaire(rdv.getIdVolontaire());
@@ -328,7 +345,7 @@ public class RdvServiceImpl implements RdvService {
 
     @Override
     public List<RdvDTO> getRdvsByIdEtudeWithRef(Integer idEtude) {
-        List<Rdv> rdvs = rdvRepository.findById_IdEtudeOrderByDateDesc(idEtude);
+        List<Rdv> rdvs = rdvRepository.findByIdEtudeOrderByDateDesc(idEtude);
 
         return rdvs.stream()
                 .filter(this::isOperationalRdv)
@@ -341,7 +358,7 @@ public class RdvServiceImpl implements RdvService {
      */
     @Override
     public List<RdvDTO> getRdvsByIdEtude(Integer idEtude) {
-        List<Rdv> rdvs = rdvRepository.findById_IdEtudeOrderByDateDesc(idEtude);
+        List<Rdv> rdvs = rdvRepository.findByIdEtudeOrderByDateDesc(idEtude);
         return rdvs.stream()
                 .filter(this::isOperationalRdv)
                 .map(rdvMapper::toDto)
@@ -383,53 +400,13 @@ public class RdvServiceImpl implements RdvService {
             throw new EntityNotFoundException("L'étude spécifiée n'existe pas.");
         }
 
-        // Créer le RDV
-        Rdv rdv = new Rdv();
-        rdv.setIdVolontaire(rdvDTO.getIdVolontaire());
-        rdv.setEtude(etudeOpt.get());
-
-        // Générer un ID très élevé et aléatoire pour éviter les collisions
-        Random random = new Random();
         Integer idEtude = rdvDTO.getIdEtude();
+        Rdv rdv = buildRdv(rdvDTO, etudeOpt.get(), rdvIdAllocator.nextForStudy(idEtude));
 
-        // Générer un ID entre 100000 et 999999 (6 chiffres)
-        Integer idRdv = 100000 + random.nextInt(900000);
+        ensureEtudeVolontaireAssociation(
+                rdvDTO.getIdEtude(), rdvDTO.getIdGroupe(), rdvDTO.getIdVolontaire());
 
-        // Créer la clé primaire
-        RdvId rdvId = new RdvId(idEtude, idRdv);
-        rdv.setId(rdvId);
-
-        // Définir les autres propriétés
-        if (rdvDTO.getDate() != null) {
-            rdv.setDate(java.sql.Date.valueOf(rdvDTO.getDate()));
-        }
-        rdv.setHeure(rdvDTO.getHeure());
-        rdv.setDuree(rdvDTO.getDuree());
-        rdv.setCommentaires(rdvDTO.getCommentaires());
-        rdv.setEtat(rdvDTO.getEtat() != null ? rdvDTO.getEtat() : "PLANIFIE");
-        rdv.setIdGroupe(rdvDTO.getIdGroupe());
-
-        // Essayer de sauvegarder avec un ID aléatoire, réessayer en cas d'échec
-        int maxAttempts = 5;
-        for (int attempt = 0; attempt < maxAttempts; attempt++) {
-            try {
-                Rdv savedRdv = rdvRepository.save(rdv);
-                return convertToDTO(savedRdv);
-            } catch (DataIntegrityViolationException e) {
-                // Si collision, générer un nouvel ID aléatoire
-                idRdv = 100000 + random.nextInt(900000);
-                rdvId = new RdvId(idEtude, idRdv);
-                rdv.setId(rdvId);
-
-                // Continuer si ce n'est pas la dernière tentative
-                if (attempt == maxAttempts - 1) {
-                    throw new RuntimeException("Impossible de créer le RDV après plusieurs tentatives", e);
-                }
-            }
-        }
-
-        // Ne devrait jamais atteindre ce point
-        throw new RuntimeException("Erreur inattendue lors de la création du RDV");
+        return convertToDTO(rdvRepository.save(rdv));
     }
 
     @Override
@@ -453,7 +430,6 @@ public class RdvServiceImpl implements RdvService {
         Etude etude = etudeOpt.get();
 
         // Créer tous les RDV dans la même transaction
-        Random random = new Random();
         for (int i = 0; i < rdvDTOs.size(); i++) {
             RdvDTO rdvDTO = rdvDTOs.get(i);
 
@@ -462,42 +438,11 @@ public class RdvServiceImpl implements RdvService {
                     throw new IllegalArgumentException("L'ID de l'étude est obligatoire");
                 }
 
-                // Créer le RDV
-                Rdv rdv = new Rdv();
-                rdv.setIdVolontaire(rdvDTO.getIdVolontaire());
-                rdv.setEtude(etude);
+                int idRdv = rdvIdAllocator.nextForStudy(idEtude);
+                Rdv rdv = buildRdv(rdvDTO, etude, idRdv);
 
-                // Générer un ID aléatoire unique pour ce batch
-                Integer idRdv = 100000 + random.nextInt(900000);
-                RdvId rdvId = new RdvId(idEtude, idRdv);
-
-                // Vérifier l'unicité dans ce batch et en base
-                int attempts = 0;
-                while (attempts < 10) {
-                    final Integer currentIdRdv = idRdv; // Variable finale pour lambda
-                    boolean existsInBatch = createdRdvs.stream()
-                        .anyMatch(created -> created.getIdRdv().equals(currentIdRdv));
-
-                    if (!existsInBatch && !rdvRepository.existsById(rdvId)) {
-                        break;
-                    }
-
-                    idRdv = 100000 + random.nextInt(900000);
-                    rdvId = new RdvId(idEtude, idRdv);
-                    attempts++;
-                }
-
-                rdv.setId(rdvId);
-
-                // Définir les autres propriétés
-                if (rdvDTO.getDate() != null) {
-                    rdv.setDate(java.sql.Date.valueOf(rdvDTO.getDate()));
-                }
-                rdv.setHeure(rdvDTO.getHeure());
-                rdv.setDuree(rdvDTO.getDuree());
-                rdv.setCommentaires(rdvDTO.getCommentaires());
-                rdv.setEtat(rdvDTO.getEtat() != null ? rdvDTO.getEtat() : "PLANIFIE");
-                rdv.setIdGroupe(rdvDTO.getIdGroupe());
+                ensureEtudeVolontaireAssociation(
+                        rdvDTO.getIdEtude(), rdvDTO.getIdGroupe(), rdvDTO.getIdVolontaire());
 
                 // Sauvegarder
                 Rdv savedRdv = rdvRepository.save(rdv);
@@ -523,23 +468,29 @@ public class RdvServiceImpl implements RdvService {
         return createdRdvs;
     }
 
+    private Rdv buildRdv(RdvDTO dto, Etude etude, int idRdv) {
+        Rdv rdv = new Rdv();
+        rdv.setIdEtude(dto.getIdEtude());
+        rdv.setIdRdv(idRdv);
+        rdv.setEtude(etude);
+        rdv.setIdVolontaire(dto.getIdVolontaire());
+        rdv.setIdGroupe(dto.getIdGroupe());
+        if (dto.getDate() != null) {
+            rdv.setDate(java.sql.Date.valueOf(dto.getDate()));
+        }
+        rdv.setHeure(dto.getHeure());
+        rdv.setDuree(dto.getDuree());
+        rdv.setCommentaires(dto.getCommentaires());
+        rdv.setEtat(dto.getEtat() != null ? dto.getEtat() : "PLANIFIE");
+        return rdv;
+    }
+
     @Override
     @Transactional(isolation = Isolation.SERIALIZABLE)
     public RdvDTO updateRdv(RdvDTO rdvDTO) {
-        // Création de la clé composite avec les 3 paramètres requis
-        RdvId rdvId = new RdvId();
-        rdvId.setIdEtude(rdvDTO.getIdEtude());
-        rdvId.setIdRdv(rdvDTO.getIdRdv());
-
-        // Si le DTO a une séquence, utilisez-la, sinon utilisez 1 comme valeur par
-        // défaut
-        // if (rdvDTO.getSequence() != null) {
-        // rdvId.setSequence(rdvDTO.getSequence());
-        // } else {
-        // rdvId.setSequence(1); // Valeur par défaut
-        // }
-
-        Optional<Rdv> rdvOpt = rdvRepository.findById(rdvId);
+        Optional<Rdv> rdvOpt = rdvDTO.getRdvPk() != null
+                ? rdvRepository.findById(rdvDTO.getRdvPk())
+                : rdvRepository.findByIdEtudeAndIdRdv(rdvDTO.getIdEtude(), rdvDTO.getIdRdv());
 
         if (rdvOpt.isPresent()) {
             Rdv rdv = rdvOpt.get();
@@ -562,11 +513,17 @@ public class RdvServiceImpl implements RdvService {
                             nextVolontaireId);
             if (replacingAssignedVolunteer || reassigningCancelledRdv || reassigningRdvWithCancellationTrace) {
                 Rdv replacement = buildReplacementRdvWithNewId(rdv, rdvDTO);
+                ensureEtudeVolontaireAssociation(
+                        rdvDTO.getIdEtude(), rdvDTO.getIdGroupe(), nextVolontaireId);
                 Rdv savedReplacement = rdvRepository.save(replacement);
                 rdv.setEtat("ANNULE");
                 rdvRepository.save(rdv);
+                removeCancellationForReassignment(
+                        rdvDTO.getIdEtude(), nextVolontaireId, volontaireChanged);
+                removeStudyAssociationIfNoOperationalRdv(
+                        rdvDTO.getIdEtude(), previousVolontaireId, true);
                 logger.info("RDV {} on etude {} reused after cancellation: old RDV kept, new RDV id {} assigned to volunteer {}",
-                        rdvDTO.getIdRdv(), rdvDTO.getIdEtude(), savedReplacement.getId().getIdRdv(), nextVolontaireId);
+                        rdvDTO.getIdRdv(), rdvDTO.getIdEtude(), savedReplacement.getIdRdv(), nextVolontaireId);
                 return convertToDTO(savedReplacement);
             }
 
@@ -584,17 +541,25 @@ public class RdvServiceImpl implements RdvService {
             rdv.setCommentaires(rdvDTO.getCommentaires());
             rdv.setIdGroupe(rdvDTO.getIdGroupe());
             rdv.setIdVolontaire(rdvDTO.getIdVolontaire());
+            ensureEtudeVolontaireAssociation(
+                    rdvDTO.getIdEtude(), rdvDTO.getIdGroupe(), nextVolontaireId);
             Rdv savedRdv = rdvRepository.save(rdv);
+            removeCancellationForReassignment(
+                    rdvDTO.getIdEtude(), nextVolontaireId, volontaireChanged);
+            removeStudyAssociationIfNoOperationalRdv(
+                    rdvDTO.getIdEtude(), previousVolontaireId, volontaireChanged);
             return convertToDTO(savedRdv);
         } else {
-            throw new IllegalArgumentException("Rdv not found with ID: " + rdvId);
+            throw new IllegalArgumentException("Rdv introuvable: rdvPk=" + rdvDTO.getRdvPk()
+                    + ", idEtude=" + rdvDTO.getIdEtude() + ", numeroRdv=" + rdvDTO.getIdRdv());
         }
     }
 
     private Rdv buildReplacementRdvWithNewId(Rdv existingRdv, RdvDTO rdvDTO) {
         Integer idEtude = rdvDTO.getIdEtude();
         Rdv replacement = new Rdv();
-        replacement.setId(new RdvId(idEtude, generateUniqueRdvId(idEtude)));
+        replacement.setIdEtude(idEtude);
+        replacement.setIdRdv(rdvIdAllocator.nextForStudy(idEtude));
         replacement.setEtude(existingRdv.getEtude());
         replacement.setIdVolontaire(rdvDTO.getIdVolontaire());
         replacement.setIdGroupe(rdvDTO.getIdGroupe());
@@ -606,16 +571,67 @@ public class RdvServiceImpl implements RdvService {
         return replacement;
     }
 
-    private Integer generateUniqueRdvId(Integer idEtude) {
-        Random random = new Random();
-        for (int attempt = 0; attempt < 20; attempt++) {
-            Integer idRdv = 100000 + random.nextInt(900000);
-            if (!rdvRepository.existsById(new RdvId(idEtude, idRdv))) {
-                return idRdv;
-            }
+    private void ensureEtudeVolontaireAssociation(
+            Integer idEtude, Integer idGroupe, Integer idVolontaire) {
+        if (idVolontaire == null) {
+            return;
         }
-        throw new RuntimeException("Impossible de generer un nouvel ID RDV apres plusieurs tentatives");
+        if (idEtude == null || idEtude <= 0 || idVolontaire <= 0) {
+            throw new IllegalArgumentException("Etude et volontaire valides requis pour affecter un RDV");
+        }
+        if (etudeVolontaireService.existsByEtudeAndVolontaire(idEtude, idVolontaire)) {
+            return;
+        }
+
+        int groupeId = idGroupe != null && idGroupe > 0 ? idGroupe : 0;
+        int iv = 0;
+        if (groupeId > 0) {
+            Groupe groupe = groupeRepository.findById(groupeId)
+                    .orElseThrow(() -> new IllegalArgumentException("Groupe introuvable: " + groupeId));
+            if (groupe.getIdEtude() != null && !Objects.equals(groupe.getIdEtude(), idEtude)) {
+                throw new IllegalArgumentException(
+                        "Le groupe " + groupeId + " n'appartient pas a l'etude " + idEtude);
+            }
+            iv = groupe.getIv();
+        }
+
+        EtudeVolontaireDTO association = new EtudeVolontaireDTO(
+                idEtude, groupeId, idVolontaire, iv, 0, 0, "INSCRIT");
+        etudeVolontaireService.saveEtudeVolontaire(association);
+        logger.info(
+                "Association etude-volontaire creee depuis le RDV: etude={}, groupe={}, volontaire={}, iv={}",
+                idEtude, groupeId, idVolontaire, iv);
     }
+
+    private void removeStudyAssociationIfNoOperationalRdv(
+            Integer idEtude, Integer previousVolontaireId, boolean volontaireChanged) {
+        if (!volontaireChanged || idEtude == null || previousVolontaireId == null) {
+            return;
+        }
+        if (rdvRepository.existsOperationalByVolontaireAndEtude(previousVolontaireId, idEtude)) {
+            return;
+        }
+
+        int deleted = etudeVolontaireService.deleteByEtudeAndVolontaire(idEtude, previousVolontaireId);
+        logger.info(
+                "Association etude-volontaire supprimee apres dernier RDV operationnel: etude={}, volontaire={}, lignes={}",
+                idEtude, previousVolontaireId, deleted);
+    }
+
+    private void removeCancellationForReassignment(
+            Integer idEtude, Integer nextVolontaireId, boolean volontaireChanged) {
+        if (!volontaireChanged || idEtude == null || nextVolontaireId == null) {
+            return;
+        }
+
+        int deleted = annulationRepository.deleteByIdVolAndIdEtude(nextVolontaireId, idEtude);
+        if (deleted > 0) {
+            logger.info(
+                    "Annulation supprimee lors de la reaffectation transactionnelle: etude={}, volontaire={}, lignes={}",
+                    idEtude, nextVolontaireId, deleted);
+        }
+    }
+
 
     private String resolveEtatForReassignment(String currentEtat, String requestedEtat, Integer previousVolontaireId,
             Integer nextVolontaireId, Integer idEtude) {

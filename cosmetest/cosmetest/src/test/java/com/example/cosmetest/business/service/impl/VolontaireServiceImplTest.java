@@ -3,6 +3,7 @@ package com.example.cosmetest.business.service.impl;
 import com.example.cosmetest.business.dto.VolontaireDTO;
 import com.example.cosmetest.business.dto.VolontaireDetailDTO;
 import com.example.cosmetest.business.mapper.VolontaireMapper;
+
 import com.example.cosmetest.data.repository.VolontaireRepository;
 import com.example.cosmetest.domain.model.Volontaire;
 import org.junit.jupiter.api.BeforeEach;
@@ -10,6 +11,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.Page;
@@ -19,7 +21,10 @@ import org.springframework.data.domain.Pageable;
 
 import java.util.Arrays;
 import java.util.List;
+
 import java.util.Optional;
+import java.sql.Date;
+import java.time.LocalDate;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.*;
@@ -41,6 +46,7 @@ class VolontaireServiceImplTest {
     @Mock
     private VolontaireMapper volontaireMapper;
 
+
     @InjectMocks
     private VolontaireServiceImpl volontaireService;
 
@@ -49,6 +55,7 @@ class VolontaireServiceImplTest {
     private VolontaireDTO testVolontaireDTO1;
     private VolontaireDTO testVolontaireDTO2;
     private VolontaireDetailDTO testVolontaireDetailDTO;
+
 
     @BeforeEach
     void setUp() {
@@ -85,6 +92,23 @@ class VolontaireServiceImplTest {
     }
 
     // ===== TESTS GET ALL VOLONTAIRES =====
+
+    @Test
+    @DisplayName("getTodayNotifications() - projection minimale et limite bornée")
+    void testGetTodayNotifications_BoundedProjection() {
+        testVolontaire1.setDateI(Date.valueOf(LocalDate.now()));
+        when(volontaireRepository.findByDateIOrderByIdVolDesc(any(Date.class), any(Pageable.class)))
+                .thenReturn(List.of(testVolontaire1));
+
+        var result = volontaireService.getTodayNotifications(999);
+
+        assertThat(result).hasSize(1);
+        assertThat(result.getFirst().id()).isEqualTo(1);
+        assertThat(result.getFirst().nom()).isEqualTo("Dupont");
+        ArgumentCaptor<Pageable> pageableCaptor = ArgumentCaptor.forClass(Pageable.class);
+        verify(volontaireRepository).findByDateIOrderByIdVolDesc(any(Date.class), pageableCaptor.capture());
+        assertThat(pageableCaptor.getValue().getPageSize()).isEqualTo(100);
+    }
 
     @Test
     @DisplayName("getAllVolontaires() - Récupération de tous les volontaires")

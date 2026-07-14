@@ -1,7 +1,6 @@
 package com.example.cosmetest.data.repository;
 
 import com.example.cosmetest.domain.model.Rdv;
-import com.example.cosmetest.domain.model.RdvId;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -17,7 +16,11 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
-public interface RdvRepository extends JpaRepository<Rdv, RdvId> {
+public interface RdvRepository extends JpaRepository<Rdv, Long> {
+
+        Optional<Rdv> findByIdEtudeAndIdRdv(Integer idEtude, Integer idRdv);
+
+        boolean existsByIdEtudeAndIdRdv(Integer idEtude, Integer idRdv);
 
         @Query("SELECT r FROM Rdv r WHERE r.etat IS NULL OR UPPER(r.etat) <> 'ANNULE'")
         Page<Rdv> findOperationalRdvs(Pageable pageable);
@@ -29,7 +32,7 @@ public interface RdvRepository extends JpaRepository<Rdv, RdvId> {
         @Query("DELETE FROM Rdv r WHERE r.idVolontaire = :idVolontaire")
         int deleteByIdVolontaire(@Param("idVolontaire") Integer idVolontaire);
 
-        @Query("SELECT r FROM Rdv r WHERE r.idVolontaire = :idVolontaire AND r.id.idEtude = :idEtude")
+        @Query("SELECT r FROM Rdv r WHERE r.idVolontaire = :idVolontaire AND r.idEtude = :idEtude")
         List<Rdv> findByIdVolontaireAndIdEtude(@Param("idVolontaire") Integer idVolontaire, @Param("idEtude") Integer idEtude);
 
         @Query("SELECT r FROM Rdv r WHERE r.date = :date")
@@ -69,16 +72,16 @@ public interface RdvRepository extends JpaRepository<Rdv, RdvId> {
         @Query("SELECT COUNT(r) FROM Rdv r WHERE r.date BETWEEN :startDate AND :endDate AND (r.etat IS NULL OR UPPER(r.etat) <> 'ANNULE')")
         int countByDateBetween(@Param("startDate") Date startDate, @Param("endDate") Date endDate);
 
-        @Query("SELECT r FROM Rdv r WHERE r.id.idEtude = :idEtude AND (r.etat IS NULL OR UPPER(r.etat) <> 'ANNULE') ORDER BY r.date DESC")
-        List<Rdv> findById_IdEtudeOrderByDateDesc(@Param("idEtude") Integer idEtude);
+        @Query("SELECT r FROM Rdv r WHERE r.idEtude = :idEtude AND (r.etat IS NULL OR UPPER(r.etat) <> 'ANNULE') ORDER BY r.date DESC")
+        List<Rdv> findByIdEtudeOrderByDateDesc(@Param("idEtude") Integer idEtude);
 
-        @Query("SELECT r FROM Rdv r WHERE r.idVolontaire = :idVolontaire AND r.id.idEtude = :idEtude")
+        @Query("SELECT r FROM Rdv r WHERE r.idVolontaire = :idVolontaire AND r.idEtude = :idEtude")
         Optional<Rdv> findByVolontaireIdAndEtudeId(@Param("idVolontaire") Integer idVolontaire,
                         @Param("idEtude") int idEtude);
 
         @Query("SELECT COUNT(r) > 0 FROM Rdv r " +
                         "WHERE r.idVolontaire = :idVolontaire " +
-                        "AND r.id.idEtude = :idEtude " +
+                        "AND r.idEtude = :idEtude " +
                         "AND (r.etat IS NULL OR UPPER(r.etat) <> 'ANNULE')")
         boolean existsOperationalByVolontaireAndEtude(
                         @Param("idVolontaire") Integer idVolontaire,
@@ -87,10 +90,20 @@ public interface RdvRepository extends JpaRepository<Rdv, RdvId> {
         @Query("SELECT r FROM Rdv r WHERE r.date >= :date AND (r.etat IS NULL OR UPPER(r.etat) <> 'ANNULE') ORDER BY r.date ASC, r.heure ASC")
         Page<Rdv> findByDateGreaterThanEqualOrderByDateAscHeureAsc(@Param("date") Date date, Pageable pageable);
 
-        @Query("SELECT MAX(r.id.idRdv) FROM Rdv r WHERE r.id.idEtude = :idEtude")
+        @Query("SELECT MAX(r.idRdv) FROM Rdv r WHERE r.idEtude = :idEtude")
         Integer findMaxRdvIdForEtude(@Param("idEtude") Integer idEtude);
 
-        @Query("SELECT r FROM Rdv r WHERE r.id.idEtude = :idEtude AND (r.etat IS NULL OR UPPER(r.etat) <> 'ANNULE')")
+        @Query(value = """
+                        SELECT *
+                        FROM rdv
+                        WHERE ID_ETUDE = :idEtude
+                        ORDER BY ID_RDV DESC
+                        LIMIT 1
+                        FOR UPDATE
+                        """, nativeQuery = true)
+        Optional<Rdv> findLastRdvForEtudeForUpdate(@Param("idEtude") Integer idEtude);
+
+        @Query("SELECT r FROM Rdv r WHERE r.idEtude = :idEtude AND (r.etat IS NULL OR UPPER(r.etat) <> 'ANNULE')")
         List<Rdv> findByIdEtude(@Param("idEtude") Integer idEtude);
 
         // ==================== MÉTHODES OPTIMISÉES POUR LE CALENDRIER
@@ -115,7 +128,7 @@ public interface RdvRepository extends JpaRepository<Rdv, RdvId> {
          */
         @Query("SELECT r FROM Rdv r " +
                         "LEFT JOIN FETCH r.etude e " +
-                        "WHERE r.id.idEtude = :idEtude " +
+                        "WHERE r.idEtude = :idEtude " +
                         "AND (r.etat IS NULL OR UPPER(r.etat) <> 'ANNULE') " +
                         "ORDER BY r.date DESC, r.heure DESC")
         Page<Rdv> findByIdEtudeWithDetailsOptimized(
@@ -214,7 +227,7 @@ public interface RdvRepository extends JpaRepository<Rdv, RdvId> {
          * Compte les RDV par étude et période
          */
         @Query("SELECT COUNT(r) FROM Rdv r " +
-                        "WHERE r.id.idEtude = :idEtude " +
+                        "WHERE r.idEtude = :idEtude " +
                         "AND r.date BETWEEN :dateDebut AND :dateFin " +
                         "AND (r.etat IS NULL OR UPPER(r.etat) <> 'ANNULE')")
         Integer countByIdEtudeAndDateBetween(
@@ -386,7 +399,7 @@ public interface RdvRepository extends JpaRepository<Rdv, RdvId> {
          */
         @Query("SELECT r FROM Rdv r " +
                         "LEFT JOIN FETCH r.etude e " +
-                        "WHERE r.id.idEtude = :idEtude " +
+                        "WHERE r.idEtude = :idEtude " +
                         "AND r.date = :date " +
                         "AND (r.etat IS NULL OR UPPER(r.etat) <> 'ANNULE') " +
                         "ORDER BY r.heure ASC")
@@ -399,7 +412,7 @@ public interface RdvRepository extends JpaRepository<Rdv, RdvId> {
          * Utile pour des vérifications rapides
          */
         @Query("SELECT COUNT(r) FROM Rdv r " +
-                        "WHERE r.id.idEtude = :idEtude " +
+                        "WHERE r.idEtude = :idEtude " +
                         "AND r.date = :date " +
                         "AND (r.etat IS NULL OR UPPER(r.etat) <> 'ANNULE')")
         Integer countByIdEtudeAndDate(
@@ -411,7 +424,7 @@ public interface RdvRepository extends JpaRepository<Rdv, RdvId> {
          * Optimisé pour obtenir rapidement la liste des dates occupées
          */
         @Query("SELECT DISTINCT r.date FROM Rdv r " +
-                        "WHERE r.id.idEtude = :idEtude " +
+                        "WHERE r.idEtude = :idEtude " +
                         "AND r.date BETWEEN :dateDebut AND :dateFin " +
                         "AND (r.etat IS NULL OR UPPER(r.etat) <> 'ANNULE') " +
                         "ORDER BY r.date ASC")
@@ -425,7 +438,7 @@ public interface RdvRepository extends JpaRepository<Rdv, RdvId> {
          * Version brute pour traitement côté service
          */
         @Query("SELECT r.date, COUNT(r) as nombreRdv FROM Rdv r " +
-                        "WHERE r.id.idEtude = :idEtude " +
+                        "WHERE r.idEtude = :idEtude " +
                         "AND r.date BETWEEN :dateDebut AND :dateFin " +
                         "AND (r.etat IS NULL OR UPPER(r.etat) <> 'ANNULE') " +
                         "GROUP BY r.date " +

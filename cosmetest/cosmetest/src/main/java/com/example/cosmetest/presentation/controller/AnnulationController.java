@@ -26,6 +26,8 @@ import java.util.Optional;
 @RequestMapping("/api/annulations")
 public class AnnulationController {
 
+    private static final int MAX_PAGE_SIZE = 100;
+
     private final AnnulationService annulationService;
     private final AuditLogService auditLogService;
 
@@ -40,9 +42,13 @@ public class AnnulationController {
      * @return Liste de toutes les annulations
      */
     @GetMapping
-    public ResponseEntity<List<AnnulationDTO>> getAllAnnulations() {
-        List<AnnulationDTO> annulations = annulationService.getAllAnnulations();
-        return ResponseEntity.ok(annulations);
+    public ResponseEntity<Page<AnnulationDTO>> getAllAnnulations(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "50") int size) {
+        int safePage = Math.max(0, page);
+        int safeSize = Math.min(MAX_PAGE_SIZE, Math.max(1, size));
+        return ResponseEntity.ok(annulationService.getAllAnnulationsPaginated(
+                PageRequest.of(safePage, safeSize, Sort.by(Sort.Direction.DESC, "dateAnnulation"))));
     }
 
     /**
@@ -61,7 +67,9 @@ public class AnnulationController {
             @RequestParam(defaultValue = "DESC") String direction) {
 
         Sort.Direction sortDirection = Sort.Direction.fromString(direction);
-        Pageable pageable = PageRequest.of(page, size, Sort.by(sortDirection, sortBy));
+        int safePage = Math.max(0, page);
+        int safeSize = Math.min(MAX_PAGE_SIZE, Math.max(1, size));
+        Pageable pageable = PageRequest.of(safePage, safeSize, Sort.by(sortDirection, sortBy));
 
         Page<AnnulationDTO> annulationsPage = annulationService.getAllAnnulationsPaginated(pageable);
 

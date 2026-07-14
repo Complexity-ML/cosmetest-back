@@ -1,11 +1,15 @@
 package com.example.cosmetest.business.service.impl;
 
+import com.example.cosmetest.business.dto.EtudeVolontaireDTO;
 import com.example.cosmetest.business.dto.RdvDTO;
 import com.example.cosmetest.business.mapper.RdvMapper;
+import com.example.cosmetest.business.service.EtudeVolontaireService;
 import com.example.cosmetest.data.repository.AnnulationRepository;
+import com.example.cosmetest.data.repository.EtudeRepository;
+import com.example.cosmetest.data.repository.GroupeRepository;
 import com.example.cosmetest.data.repository.RdvRepository;
+import com.example.cosmetest.domain.model.Groupe;
 import com.example.cosmetest.domain.model.Rdv;
-import com.example.cosmetest.domain.model.RdvId;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -49,6 +53,18 @@ class RdvServiceImplTest {
     @Mock
     private AnnulationRepository annulationRepository;
 
+    @Mock
+    private EtudeRepository etudeRepository;
+
+    @Mock
+    private EtudeVolontaireService etudeVolontaireService;
+
+    @Mock
+    private GroupeRepository groupeRepository;
+
+    @Mock
+    private RdvIdAllocator rdvIdAllocator;
+
     @InjectMocks
     private RdvServiceImpl rdvService;
 
@@ -56,34 +72,41 @@ class RdvServiceImplTest {
     private Rdv testRdv2;
     private RdvDTO testRdvDTO1;
     private RdvDTO testRdvDTO2;
-    private RdvId testRdvId1;
+    private Long testRdvId1;
 
     @BeforeEach
     void setUp() {
+        lenient().when(rdvIdAllocator.nextForStudy(anyInt())).thenReturn(2);
         // Préparer des IDs composites  
-        testRdvId1 = new RdvId(101, 1);  // idEtude, idRdv
+        testRdvId1 = 1001L;
 
         // Préparer des rendez-vous de test
         testRdv1 = new Rdv();
         testRdv1.setId(testRdvId1);
+        testRdv1.setIdEtude(101);
+        testRdv1.setIdRdv(1);
         testRdv1.setIdVolontaire(1);
         testRdv1.setDate(Date.valueOf(LocalDate.of(2024, 6, 15)));
         testRdv1.setEtat("CONFIRME");
 
         testRdv2 = new Rdv();
-        testRdv2.setId(new RdvId(102, 1));
+        testRdv2.setId(1002L);
+        testRdv2.setIdEtude(102);
+        testRdv2.setIdRdv(1);
         testRdv2.setIdVolontaire(2);
         testRdv2.setDate(Date.valueOf(LocalDate.of(2024, 6, 16)));
         testRdv2.setEtat("PLANIFIE");
 
         // Préparer des DTOs de test
         testRdvDTO1 = new RdvDTO();
+        testRdvDTO1.setRdvPk(testRdvId1);
         testRdvDTO1.setIdEtude(101);
         testRdvDTO1.setIdRdv(1);
         testRdvDTO1.setIdVolontaire(1);
         testRdvDTO1.setDate(Date.valueOf(LocalDate.of(2024, 6, 15)));
 
         testRdvDTO2 = new RdvDTO();
+        testRdvDTO2.setRdvPk(1002L);
         testRdvDTO2.setIdEtude(102);
         testRdvDTO2.setIdRdv(1);
         testRdvDTO2.setIdVolontaire(2);
@@ -381,6 +404,7 @@ class RdvServiceImplTest {
     void testUpdateRdv_ReplacingAssignedVolunteerCreatesNewRdv() {
         // Given
         RdvDTO updateDTO = new RdvDTO();
+        updateDTO.setRdvPk(testRdvId1);
         updateDTO.setIdEtude(101);
         updateDTO.setIdRdv(1);
         updateDTO.setIdVolontaire(2);
@@ -389,7 +413,6 @@ class RdvServiceImplTest {
 
         when(rdvRepository.findById(testRdvId1)).thenReturn(Optional.of(testRdv1));
         when(annulationRepository.existsRdvTraceForOtherVolunteer(101, 1, 2)).thenReturn(false);
-        when(rdvRepository.existsById(any(RdvId.class))).thenReturn(false);
         when(rdvRepository.save(any(Rdv.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         // When
@@ -404,13 +427,172 @@ class RdvServiceImplTest {
         Rdv oldRdv = savedRdvs.get(1);
 
         assertThat(result.getIdRdv()).isNotEqualTo(1);
-        assertThat(replacement.getId().getIdEtude()).isEqualTo(101);
-        assertThat(replacement.getId().getIdRdv()).isNotEqualTo(1);
+        assertThat(replacement.getIdEtude()).isEqualTo(101);
+        assertThat(replacement.getIdRdv()).isNotEqualTo(1);
         assertThat(replacement.getIdVolontaire()).isEqualTo(2);
         assertThat(replacement.getEtat()).isEqualTo("PLANIFIE");
         assertThat(oldRdv.getId()).isEqualTo(testRdvId1);
         assertThat(oldRdv.getIdVolontaire()).isEqualTo(1);
         assertThat(testRdv1.getEtat()).isEqualTo("ANNULE");
+    }
+
+    @Test
+    @DisplayName("updateRdv() - Affecter un volontaire cree l'association etude-volontaire manquante")
+    void testUpdateRdv_AssigningVolunteerCreatesMissingStudyAssociation() {
+        testRdv1.setIdVolontaire(null);
+        testRdv1.setIdGroupe(10);
+        testRdv1.setEtat("PLANIFIE");
+
+        RdvDTO updateDTO = new RdvDTO();
+        updateDTO.setRdvPk(testRdvId1);
+        updateDTO.setIdEtude(101);
+        updateDTO.setIdRdv(1);
+        updateDTO.setIdVolontaire(2);
+        updateDTO.setIdGroupe(10);
+        updateDTO.setDate(Date.valueOf(LocalDate.of(2024, 6, 15)));
+        updateDTO.setEtat("PLANIFIE");
+
+        Groupe groupe = new Groupe();
+        groupe.setIdGroupe(10);
+        groupe.setIdEtude(101);
+        groupe.setIv(35);
+
+        when(rdvRepository.findById(testRdvId1)).thenReturn(Optional.of(testRdv1));
+        when(rdvRepository.save(any(Rdv.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(etudeVolontaireService.existsByEtudeAndVolontaire(101, 2)).thenReturn(false);
+        when(groupeRepository.findById(10)).thenReturn(Optional.of(groupe));
+
+        rdvService.updateRdv(updateDTO);
+
+        ArgumentCaptor<EtudeVolontaireDTO> associationCaptor = ArgumentCaptor.forClass(EtudeVolontaireDTO.class);
+        verify(etudeVolontaireService).saveEtudeVolontaire(associationCaptor.capture());
+        EtudeVolontaireDTO association = associationCaptor.getValue();
+        assertThat(association.getIdEtude()).isEqualTo(101);
+        assertThat(association.getIdGroupe()).isEqualTo(10);
+        assertThat(association.getIdVolontaire()).isEqualTo(2);
+        assertThat(association.getIv()).isEqualTo(35);
+        assertThat(association.getNumsujet()).isZero();
+        assertThat(association.getPaye()).isZero();
+        assertThat(association.getStatut()).isEqualTo("INSCRIT");
+    }
+
+    @Test
+    @DisplayName("updateRdv() - Réaffecter un volontaire supprime son annulation dans la même transaction")
+    void testUpdateRdv_ReassigningCancelledVolunteerRemovesCancellation() {
+        testRdv1.setIdVolontaire(null);
+        testRdv1.setIdGroupe(10);
+        testRdv1.setEtat("PLANIFIE");
+
+        RdvDTO updateDTO = new RdvDTO();
+        updateDTO.setRdvPk(testRdvId1);
+        updateDTO.setIdEtude(101);
+        updateDTO.setIdRdv(1);
+        updateDTO.setIdVolontaire(2);
+        updateDTO.setIdGroupe(10);
+        updateDTO.setDate(Date.valueOf(LocalDate.of(2024, 6, 15)));
+        updateDTO.setEtat("PLANIFIE");
+
+        when(rdvRepository.findById(testRdvId1)).thenReturn(Optional.of(testRdv1));
+        when(rdvRepository.save(any(Rdv.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(etudeVolontaireService.existsByEtudeAndVolontaire(101, 2)).thenReturn(true);
+        when(annulationRepository.deleteByIdVolAndIdEtude(2, 101)).thenReturn(1);
+
+        rdvService.updateRdv(updateDTO);
+
+        verify(annulationRepository).deleteByIdVolAndIdEtude(2, 101);
+    }
+
+    @Test
+    @DisplayName("updateRdv() - Désassigner le dernier RDV supprime l'association étude-volontaire")
+    void testUpdateRdv_UnassigningLastOperationalRdvRemovesStudyAssociation() {
+        testRdv1.setIdVolontaire(1);
+        testRdv1.setEtat("PLANIFIE");
+
+        RdvDTO updateDTO = new RdvDTO();
+        updateDTO.setRdvPk(testRdvId1);
+        updateDTO.setIdEtude(101);
+        updateDTO.setIdRdv(1);
+        updateDTO.setIdVolontaire(null);
+        updateDTO.setDate(Date.valueOf(LocalDate.of(2024, 6, 15)));
+        updateDTO.setEtat("PLANIFIE");
+
+        when(rdvRepository.findById(testRdvId1)).thenReturn(Optional.of(testRdv1));
+        when(rdvRepository.save(any(Rdv.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(rdvRepository.existsOperationalByVolontaireAndEtude(1, 101)).thenReturn(false);
+
+        rdvService.updateRdv(updateDTO);
+
+        verify(etudeVolontaireService).deleteByEtudeAndVolontaire(101, 1);
+    }
+
+    @Test
+    @DisplayName("updateRdv() - Désassigner un RDV conserve l'association si un autre RDV reste actif")
+    void testUpdateRdv_UnassigningOneOfSeveralRdvsKeepsStudyAssociation() {
+        testRdv1.setIdVolontaire(1);
+        testRdv1.setEtat("PLANIFIE");
+
+        RdvDTO updateDTO = new RdvDTO();
+        updateDTO.setRdvPk(testRdvId1);
+        updateDTO.setIdEtude(101);
+        updateDTO.setIdRdv(1);
+        updateDTO.setIdVolontaire(null);
+        updateDTO.setDate(Date.valueOf(LocalDate.of(2024, 6, 15)));
+        updateDTO.setEtat("PLANIFIE");
+
+        when(rdvRepository.findById(testRdvId1)).thenReturn(Optional.of(testRdv1));
+        when(rdvRepository.save(any(Rdv.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(rdvRepository.existsOperationalByVolontaireAndEtude(1, 101)).thenReturn(true);
+
+        rdvService.updateRdv(updateDTO);
+
+        verify(etudeVolontaireService, never()).deleteByEtudeAndVolontaire(anyInt(), anyInt());
+    }
+
+    @Test
+    @DisplayName("updateRdv() - Assigner un nouveau volontaire apres annulation garde l'ancien RDV historique")
+    void testUpdateRdv_AssigningNewVolunteerAfterCancellationCreatesCleanRdv() {
+        // Given: l'ancien volontaire 1 est sur un RDV deja annule.
+        testRdv1.setIdVolontaire(1);
+        testRdv1.setEtat("ANNULE");
+
+        RdvDTO updateDTO = new RdvDTO();
+        updateDTO.setRdvPk(testRdvId1);
+        updateDTO.setIdEtude(101);
+        updateDTO.setIdRdv(1);
+        updateDTO.setIdVolontaire(2);
+        updateDTO.setDate(Date.valueOf(LocalDate.of(2024, 6, 15)));
+        updateDTO.setEtat("ANNULE");
+
+        when(rdvRepository.findById(testRdvId1)).thenReturn(Optional.of(testRdv1));
+        when(annulationRepository.existsRdvTraceForOtherVolunteer(101, 1, 2)).thenReturn(true);
+        when(rdvRepository.save(any(Rdv.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        // When: on assigne le nouveau volontaire 2 sur ce creneau.
+        RdvDTO result = rdvService.updateRdv(updateDTO);
+
+        // Then: le nouveau volontaire est sur un nouveau RDV actif.
+        ArgumentCaptor<Rdv> rdvCaptor = ArgumentCaptor.forClass(Rdv.class);
+        verify(rdvRepository, times(2)).save(rdvCaptor.capture());
+        List<Rdv> savedRdvs = rdvCaptor.getAllValues();
+
+        Rdv replacement = savedRdvs.get(0);
+        Rdv oldRdv = savedRdvs.get(1);
+
+        assertThat(result.getIdRdv()).isNotEqualTo(1);
+        assertThat(result.getIdVolontaire()).isEqualTo(2);
+        assertThat(result.getEtat()).isEqualTo("PLANIFIE");
+
+        assertThat(replacement.getIdEtude()).isEqualTo(101);
+        assertThat(replacement.getIdRdv()).isNotEqualTo(1);
+        assertThat(replacement.getIdVolontaire()).isEqualTo(2);
+        assertThat(replacement.getEtat()).isEqualTo("PLANIFIE");
+
+        assertThat(oldRdv.getId()).isEqualTo(testRdvId1);
+        assertThat(oldRdv.getIdVolontaire()).isEqualTo(1);
+        assertThat(oldRdv.getEtat()).isEqualTo("ANNULE");
+        verify(annulationRepository).existsRdvTraceForOtherVolunteer(101, 1, 2);
+        verify(annulationRepository).deleteByIdVolAndIdEtude(2, 101);
+        verifyNoMoreInteractions(annulationRepository);
     }
 
     // ===== TESTS DELETE RDV =====

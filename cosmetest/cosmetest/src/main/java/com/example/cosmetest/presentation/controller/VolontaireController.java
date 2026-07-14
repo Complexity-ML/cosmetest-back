@@ -2,7 +2,9 @@ package com.example.cosmetest.presentation.controller;
 
 import com.example.cosmetest.business.dto.VolontaireDTO;
 import com.example.cosmetest.business.dto.VolontaireDetailDTO;
+import com.example.cosmetest.business.dto.VolontaireNotificationDTO;
 import com.example.cosmetest.business.service.AuditLogService;
+import com.example.cosmetest.business.service.PhotoProxyService;
 import com.example.cosmetest.business.service.VolontaireService;
 import com.example.cosmetest.domain.model.AuditLog;
 import com.example.cosmetest.domain.model.Volontaire;
@@ -19,11 +21,6 @@ import org.springframework.transaction.annotation.Isolation;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.server.ResponseStatusException;
-import java.io.InputStream;
-import java.net.URI;
-import java.net.URL;
-import java.net.URLConnection;
-import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -31,17 +28,13 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
-import java.io.ByteArrayOutputStream;
 import java.util.stream.Collectors;
 
 import org.springframework.http.CacheControl;
 import org.springframework.http.HttpHeaders;
-import org.springframework.http.MediaType;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.net.URLEncoder;
 
 /**
  * Contrôleur REST pour la gestion des volontaires
@@ -53,10 +46,13 @@ public class VolontaireController {
     private static final Logger logger = LoggerFactory.getLogger(VolontaireController.class);
     private final VolontaireService volontaireService;
     private final AuditLogService auditLogService;
+    private final PhotoProxyService photoProxyService;
 
-    public VolontaireController(VolontaireService volontaireService, AuditLogService auditLogService) {
+    public VolontaireController(VolontaireService volontaireService, AuditLogService auditLogService,
+                                PhotoProxyService photoProxyService) {
         this.volontaireService = volontaireService;
         this.auditLogService = auditLogService;
+        this.photoProxyService = photoProxyService;
     }
 
     /**
@@ -163,8 +159,29 @@ public class VolontaireController {
         return ResponseEntity.ok(volontaires);
     }
 
+    @GetMapping("/notifications/today")
+    @Transactional(readOnly = true)
+    public ResponseEntity<TodayNotificationsResponse> getTodayNotifications(
+            @RequestParam(defaultValue = "50") int limit) {
+        int boundedLimit = Math.max(1, Math.min(limit, 100));
+        List<VolontaireNotificationDTO> notifications = volontaireService.getTodayNotifications(boundedLimit);
+        if (notifications == null) {
+            notifications = List.of();
+        }
+        return ResponseEntity.ok(new TodayNotificationsResponse(
+                notifications,
+                volontaireService.countVolontairesAddedToday(),
+                LocalDate.now().toString()));
+    }
+
+    public record TodayNotificationsResponse(
+            List<VolontaireNotificationDTO> data,
+            int total,
+            String date) {
+    }
+
     /**
-     * Récupère un volontaire par son ID (version simplifiée)
+     * Récupère un volontaire par son ID
      *
      * @param id l'identifiant du volontaire
      * @return le volontaire correspondant
@@ -776,86 +793,7 @@ public class VolontaireController {
     @GetMapping("/{id}/photos/{type}/image")
     @Transactional(readOnly = true)
     public ResponseEntity<byte[]> getVolontairePhotoImage(@PathVariable Integer id, @PathVariable String type) {
-        logger.info("Récupération de l'image de type '{}' pour le volontaire avec l'ID: {}", type, id);
-
-        if (id == null) {
-            logger.warn("ID de volontaire invalide: null");
-            return ResponseEntity.badRequest().build();
-        }
-
-        try {
-            Map<String, Object> photoInfo = volontaireService.getVolontairePhoto(id, type);
-
-            if (photoInfo == null || !(Boolean) photoInfo.get("exists")) {
-                logger.warn("Photo non trouvée pour le volontaire ID: {} et le type: {}", id, type);
-                return ResponseEntity.notFound().build();
-            }
-
-            String photoUrl = (String) photoInfo.get("photoUrl");
-            String fileName = (String) photoInfo.get("fileName");
-
-            // IMPORTANT: Encoder l'URL pour gérer les espaces et caractères spéciaux
-            String encodedPhotoUrl;
-            try {
-                // Séparer l'URL de base et le nom de fichier
-                String baseUrl = photoUrl.substring(0, photoUrl.lastIndexOf('/') + 1);
-                String fileNameOnly = photoUrl.substring(photoUrl.lastIndexOf('/') + 1);
-
-                // Encoder seulement le nom de fichier
-                String encodedFileName = URLEncoder.encode(fileNameOnly, StandardCharsets.UTF_8)
-                        .replace("+", "%20"); // URLEncoder remplace espaces par +, on veut %20
-
-                encodedPhotoUrl = baseUrl + encodedFileName;
-
-                logger.debug("URL originale: {}", photoUrl);
-                logger.debug("URL encodée: {}", encodedPhotoUrl);
-
-            } catch (Exception e) {
-                logger.error("Erreur lors de l'encodage de l'URL '{}': {}", photoUrl, e.getMessage());
-                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
-            }
-
-            // Télécharger l'image avec l'URL encodée
-            URI uri = URI.create(encodedPhotoUrl);
-            URL url = uri.toURL();
-            URLConnection connection = url.openConnection();
-
-            try (InputStream inputStream = connection.getInputStream()) {
-                // Convertir l'image en tableau d'octets
-                ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
-                byte[] buffer = new byte[1024];
-                int bytesRead;
-                while ((bytesRead = inputStream.read(buffer)) != -1) {
-                    outputStream.write(buffer, 0, bytesRead);
-                }
-                byte[] imageBytes = outputStream.toByteArray();
-
-                // Détecter le type de fichier et configurer le MediaType approprié
-                MediaType mediaType;
-                if (fileName.toLowerCase().endsWith(".pdf")) {
-                    mediaType = MediaType.APPLICATION_PDF;
-                } else if (fileName.toLowerCase().endsWith(".png")) {
-                    mediaType = MediaType.IMAGE_PNG;
-                } else {
-                    mediaType = MediaType.IMAGE_JPEG;
-                }
-
-                // Configurer les en-têtes HTTP — pas de cache navigateur agressif
-                // (sinon IE/Edge gardent une photo périmée après upload)
-                HttpHeaders headers = new HttpHeaders();
-                headers.setContentType(mediaType);
-                headers.setCacheControl(CacheControl.noCache().mustRevalidate());
-                headers.setPragma("no-cache");
-
-                logger.info("Image récupérée avec succès pour le volontaire ID: {} et le type: {} ({})",
-                        id, type, fileName);
-                return new ResponseEntity<>(imageBytes, headers, HttpStatus.OK);
-            }
-
-        } catch (Exception e) {
-            logger.error("Erreur lors de la récupération de l'image: {}", e.getMessage(), e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
-        }
+        return proxyPhoto(id, type, "image");
     }
 
     /**
@@ -868,83 +806,39 @@ public class VolontaireController {
     @GetMapping("/{id}/photos/{type}/thumbnail")
     @Transactional(readOnly = true)
     public ResponseEntity<byte[]> getVolontairePhotoThumbnail(@PathVariable Integer id, @PathVariable String type) {
-        logger.info("Récupération de la miniature de type '{}' pour le volontaire avec l'ID: {}", type, id);
+        return proxyPhoto(id, type, "miniature");
+    }
 
+    private ResponseEntity<byte[]> proxyPhoto(Integer id, String type, String label) {
         if (id == null) {
-            logger.warn("ID de volontaire invalide: null");
             return ResponseEntity.badRequest().build();
         }
-
         try {
             Map<String, Object> photoInfo = volontaireService.getVolontairePhoto(id, type);
-
-            if (photoInfo == null || !(Boolean) photoInfo.get("exists")) {
-                logger.warn("Photo non trouvée pour le volontaire ID: {} et le type: {}", id, type);
+            if (photoInfo == null || !Boolean.TRUE.equals(photoInfo.get("exists"))) {
                 return ResponseEntity.notFound().build();
             }
-
-            String photoUrl = (String) photoInfo.get("photoUrl");
-            String fileName = (String) photoInfo.get("fileName");
-
-            // IMPORTANT: Encoder l'URL pour gérer les espaces et caractères spéciaux
-            String encodedPhotoUrl;
-            try {
-                // Séparer l'URL de base et le nom de fichier
-                String baseUrl = photoUrl.substring(0, photoUrl.lastIndexOf('/') + 1);
-                String fileNameOnly = photoUrl.substring(photoUrl.lastIndexOf('/') + 1);
-
-                // Encoder seulement le nom de fichier
-                String encodedFileName = URLEncoder.encode(fileNameOnly, StandardCharsets.UTF_8)
-                        .replace("+", "%20");
-
-                encodedPhotoUrl = baseUrl + encodedFileName;
-
-                logger.debug("URL originale: {}", photoUrl);
-                logger.debug("URL encodée: {}", encodedPhotoUrl);
-
-            } catch (Exception e) {
-                logger.error("Erreur lors de l'encodage de l'URL '{}': {}", photoUrl, e.getMessage());
-                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+            Object fileName = photoInfo.get("fileName");
+            if (!(fileName instanceof String name)) {
+                return ResponseEntity.status(HttpStatus.BAD_GATEWAY).build();
             }
-
-            // Télécharger l'image avec l'URL encodée
-            URI uri = URI.create(encodedPhotoUrl);
-            URL url = uri.toURL();
-            URLConnection connection = url.openConnection();
-            try (InputStream inputStream = connection.getInputStream()) {
-                // Convertir l'image en tableau d'octets
-                ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
-                byte[] buffer = new byte[1024];
-                int bytesRead;
-                while ((bytesRead = inputStream.read(buffer)) != -1) {
-                    outputStream.write(buffer, 0, bytesRead);
-                }
-                byte[] imageBytes = outputStream.toByteArray();
-
-                // Détecter le type de fichier et configurer le MediaType approprié
-                MediaType mediaType;
-                if (fileName.toLowerCase().endsWith(".pdf")) {
-                    mediaType = MediaType.APPLICATION_PDF;
-                } else if (fileName.toLowerCase().endsWith(".png")) {
-                    mediaType = MediaType.IMAGE_PNG;
-                } else {
-                    mediaType = MediaType.IMAGE_JPEG;
-                }
-
-                // Configurer les en-têtes HTTP — pas de cache navigateur agressif
-                // (sinon IE/Edge gardent une photo périmée après upload)
-                HttpHeaders headers = new HttpHeaders();
-                headers.setContentType(mediaType);
-                headers.setCacheControl(CacheControl.noCache().mustRevalidate());
-                headers.setPragma("no-cache");
-
-                logger.info("Miniature récupérée avec succès pour le volontaire ID: {} et le type: {} ({})",
-                        id, type, fileName);
-                return new ResponseEntity<>(imageBytes, headers, HttpStatus.OK);
-            }
-        } catch (Exception e) {
-            logger.error("Erreur lors de la récupération de la miniature: {}", e.getMessage(), e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+            PhotoProxyService.PhotoPayload payload = photoProxyService.fetch(name);
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(payload.contentType());
+            headers.setCacheControl(CacheControl.noCache().mustRevalidate());
+            headers.setPragma("no-cache");
+            return new ResponseEntity<>(payload.bytes(), headers, HttpStatus.OK);
+        } catch (PhotoProxyService.InvalidPhotoPathException e) {
+            logger.warn("Chemin de {} photo rejeté pour le volontaire {}", label, id);
+            return ResponseEntity.badRequest().build();
+        } catch (PhotoProxyService.PhotoNotFoundException e) {
+            return ResponseEntity.notFound().build();
+        } catch (PhotoProxyService.PhotoTimeoutException e) {
+            logger.warn("Timeout du serveur photo pour le volontaire {}", id);
+            return ResponseEntity.status(HttpStatus.GATEWAY_TIMEOUT).build();
+        } catch (PhotoProxyService.PhotoTooLargeException | PhotoProxyService.PhotoUpstreamException e) {
+            logger.warn("Réponse invalide du serveur photo pour le volontaire {}: {}", id, e.getMessage());
+            return ResponseEntity.status(HttpStatus.BAD_GATEWAY).build();
         }
     }
 

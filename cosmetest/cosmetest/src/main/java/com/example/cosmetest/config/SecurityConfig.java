@@ -1,16 +1,22 @@
 package com.example.cosmetest.config;
 
+import com.example.cosmetest.business.service.CustomUserDetailsService;
 import com.example.cosmetest.security.JwtAuthenticationFilter;
 import com.example.cosmetest.security.JwtAuthenticationEntryPoint;
 import com.example.cosmetest.security.JwtCookieFilter;
+import com.example.cosmetest.security.ApiAccessDeniedHandler;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.crypto.factory.PasswordEncoderFactories;
+import org.springframework.security.crypto.password.DelegatingPasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.web.cors.CorsConfiguration;
@@ -46,8 +52,11 @@ public class SecurityConfig {
     }
 
     @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+    public SecurityFilterChain securityFilterChain(HttpSecurity http,
+                                                   DaoAuthenticationProvider authenticationProvider,
+                                                   ApiAccessDeniedHandler accessDeniedHandler) throws Exception {
         http
+            .authenticationProvider(authenticationProvider)
             .csrf(csrf -> csrf.disable())
             .cors(cors -> cors.configurationSource(corsConfigurationSource()))
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
@@ -55,7 +64,8 @@ public class SecurityConfig {
             // Configuration des autorisations
             .authorizeHttpRequests(auth -> auth
                 // Authentification et documentation
-                .requestMatchers("/api/auth/**", "/v3/api-docs/**", "/swagger-ui/**").permitAll()
+                .requestMatchers(HttpMethod.POST, "/api/auth/login", "/api/auth/logout").permitAll()
+                .requestMatchers("/v3/api-docs/**", "/swagger-ui/**").permitAll()
                 .requestMatchers("/api/health").permitAll()
                 // Fichiers statiques du frontend (SPA React/Vite)
                 .requestMatchers("/", "/index.html", "/favicon.ico", "/vite.svg").permitAll()
@@ -68,13 +78,20 @@ public class SecurityConfig {
                 .requestMatchers("/planning", "/planning/**").permitAll()
                 .requestMatchers("/admin", "/admin/**").permitAll()
                 .requestMatchers("/settings", "/settings/**").permitAll()
-                // Toutes les requêtes API nécessitent une authentification
+                // Matrice minimale issue des règles déjà présentes dans les contrôleurs
+                .requestMatchers(
+                        "/api/audit/**",
+                        "/api/connexions/**",
+                        "/api/etude-volontaires/repair/**")
+                .hasRole("ADMIN")
+                // Toutes les autres requêtes API nécessitent une authentification
                 .anyRequest().authenticated()
             )
             
             // IMPORTANT: Configuration du gestionnaire d'exceptions JWT
             .exceptionHandling(exceptions -> exceptions
                 .authenticationEntryPoint(jwtAuthenticationEntryPoint)
+                .accessDeniedHandler(accessDeniedHandler)
             )
             
             // CRITIQUE: Utiliser addFilterBefore (pas After) pour que JWT s'exécute en premier
@@ -121,8 +138,21 @@ public class SecurityConfig {
 
     @Bean
     public PasswordEncoder passwordEncoder() {
-        // Gardez votre MD5PasswordEncoder existant pour la compatibilité
-        return new com.example.cosmetest.security.MD5PasswordEncoder();
+        DelegatingPasswordEncoder encoder = (DelegatingPasswordEncoder)
+                PasswordEncoderFactories.createDelegatingPasswordEncoder();
+        // Les lignes historiques sans préfixe restent lisibles; les nouveaux
+        // mots de passe sont encodés en BCrypt avec le préfixe {bcrypt}.
+        encoder.setDefaultPasswordEncoderForMatches(new com.example.cosmetest.security.MD5PasswordEncoder());
+        return encoder;
+    }
+
+    @Bean
+    public DaoAuthenticationProvider authenticationProvider(CustomUserDetailsService userDetailsService,
+                                                             PasswordEncoder passwordEncoder) {
+        DaoAuthenticationProvider provider = new DaoAuthenticationProvider(userDetailsService);
+        provider.setPasswordEncoder(passwordEncoder);
+        provider.setUserDetailsPasswordService(userDetailsService);
+        return provider;
     }
 
     @Bean

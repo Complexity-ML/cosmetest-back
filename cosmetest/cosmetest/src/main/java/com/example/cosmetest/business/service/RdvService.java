@@ -1,7 +1,7 @@
 package com.example.cosmetest.business.service;
 
 import com.example.cosmetest.business.dto.RdvDTO;
-import com.example.cosmetest.domain.model.RdvId;
+
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -37,7 +37,9 @@ public interface RdvService {
      * @param id Identifiant du rendez-vous
      * @return Le rendez-vous trouvé ou vide si non trouvé
      */
-    Optional<RdvDTO> getRdvById(RdvId id);
+    Optional<RdvDTO> getRdvById(Long rdvPk);
+
+    Optional<RdvDTO> getRdvByBusinessKey(Integer idEtude, Integer idRdv);
 
     /**
      * Recherche les rendez-vous d'un volontaire
@@ -103,7 +105,7 @@ public interface RdvService {
      *
      * @param id Identifiant du rendez-vous à supprimer
      */
-    void deleteRdv(RdvId id);
+    void deleteRdv(Long rdvPk);
 
     /**
      * Recherche des rendez-vous par mots-clés dans les commentaires
@@ -119,7 +121,7 @@ public interface RdvService {
      * @param id         Identifiant du rendez-vous
      * @param nouvelEtat Nouvel état
      */
-    void updateRdvEtat(RdvId id, String nouvelEtat);
+    void updateRdvEtat(Long rdvPk, String nouvelEtat);
 
     int countRdvForToday();
 

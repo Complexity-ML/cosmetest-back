@@ -489,10 +489,9 @@ class DashboardServiceImplTest {
 
     private Rdv createRdv(Integer idRdv, Integer idEtude, LocalDate date) {
         Rdv rdv = new Rdv();
-        RdvId rdvId = new RdvId();
-        rdvId.setIdRdv(idRdv);
-        rdvId.setIdEtude(idEtude);
-        rdv.setId(rdvId);
+        rdv.setId(idRdv.longValue());
+        rdv.setIdRdv(idRdv);
+        rdv.setIdEtude(idEtude);
         rdv.setDate(java.sql.Date.valueOf(date));
         rdv.setHeure("10:00:00");
         rdv.setEtat("Planifié");

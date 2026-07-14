@@ -2,7 +2,7 @@ package com.example.cosmetest.presentation.controller;
 
 import com.example.cosmetest.business.dto.EtudeDTO;
 import com.example.cosmetest.business.dto.RdvDTO;
-import com.example.cosmetest.domain.model.RdvId;
+
 import com.example.cosmetest.business.dto.PaginatedResponse;
 import com.example.cosmetest.business.service.AuditLogService;
 import com.example.cosmetest.business.service.EtudeService;
@@ -52,13 +52,14 @@ public class RdvController {
             @RequestParam(defaultValue = "date,desc") String sort) {
 
         // Limiter la taille de page pour des raisons de performance
-        int limitedSize = Math.min(size, 50);
+        int safePage = Math.max(0, page);
+        int limitedSize = Math.min(50, Math.max(1, size));
 
         // Créer l'objet Pageable à partir des paramètres
         String[] sortParams = sort.split(",");
         Sort.Direction direction = sortParams.length > 1 && sortParams[1].equalsIgnoreCase("asc") ?
                 Sort.Direction.ASC : Sort.Direction.DESC;
-        Pageable pageable = PageRequest.of(page, limitedSize, Sort.by(direction, sortParams[0]));
+        Pageable pageable = PageRequest.of(safePage, limitedSize, Sort.by(direction, sortParams[0]));
 
         // Récupérer les données paginées
         Page<RdvDTO> rdvPage = rdvService.getAllRdvsPaginated(pageable);
@@ -145,34 +146,46 @@ public class RdvController {
 
 
     /**
-     * Récupère un rendez-vous spécifique
+     * Récupère un rendez-vous par son ID technique.
+     */
+    @GetMapping("/{rdvPk}")
+    public ResponseEntity<RdvDTO> getByTechnicalId(@PathVariable Long rdvPk) {
+        return rdvService.getRdvById(rdvPk)
+                .map(ResponseEntity::ok)
+                .orElseGet(() -> ResponseEntity.notFound().build());
+    }
+
+    /**
+     * Route composite historique, conservée temporairement.
      */
     @GetMapping("/{idEtude}/{idRdv}")
     public ResponseEntity<RdvDTO> getById(
             @PathVariable Integer idEtude,
-            @PathVariable Integer idRdv)
-            //@RequestParam(required = false) Integer sequence) 
-            {
-
-        RdvId rdvId;
-        //if (sequence != null) {
-        //    rdvId = new RdvId(idEtude, idRdv, sequence);
-        //} else {
-            rdvId = new RdvId(idEtude, idRdv);
-        //}
-
-        Optional<RdvDTO> rdvOpt = rdvService.getRdvById(rdvId);
-
-        if (rdvOpt.isEmpty()) {
-            return ResponseEntity.notFound().build();
-        }
-
-        return ResponseEntity.ok(rdvOpt.get());
+            @PathVariable Integer idRdv) {
+        return rdvService.getRdvByBusinessKey(idEtude, idRdv)
+                .map(ResponseEntity::ok)
+                .orElseGet(() -> ResponseEntity.notFound().build());
     }
 
     /**
      * Met à jour uniquement le statut d'un rendez-vous
      */
+    @PatchMapping("/{rdvPk}/etat")
+    public ResponseEntity<RdvDTO> updateStatusByTechnicalId(
+            @PathVariable Long rdvPk,
+            @RequestParam String nouvelEtat,
+            HttpServletRequest request) {
+        Optional<RdvDTO> rdvOpt = rdvService.getRdvById(rdvPk);
+        if (rdvOpt.isEmpty()) {
+            return ResponseEntity.notFound().build();
+        }
+        rdvService.updateRdvEtat(rdvPk, nouvelEtat);
+        String utilisateur = SecurityContextHolder.getContext().getAuthentication().getName();
+        auditLogService.log(utilisateur, AuditLog.Action.UPDATE, "RDV", rdvPk.toString(),
+                "etat: " + nouvelEtat, request.getRemoteAddr());
+        return ResponseEntity.ok(rdvService.getRdvById(rdvPk).orElseThrow());
+    }
+
     @PatchMapping("/{idEtude}/{idRdv}/etat")
     public ResponseEntity<RdvDTO> updateStatus(
             @PathVariable Integer idEtude,
@@ -181,60 +194,71 @@ public class RdvController {
             @RequestParam String nouvelEtat,
             HttpServletRequest request) {
 
-        RdvId rdvId = new RdvId(idEtude, idRdv);
-        Optional<RdvDTO> rdvOpt = rdvService.getRdvById(rdvId);
+        Optional<RdvDTO> rdvOpt = rdvService.getRdvByBusinessKey(idEtude, idRdv);
 
         if (rdvOpt.isEmpty()) {
             return ResponseEntity.notFound().build();
         }
 
-        rdvService.updateRdvEtat(rdvId, nouvelEtat);
+        Long rdvPk = rdvOpt.get().getRdvPk();
+        rdvService.updateRdvEtat(rdvPk, nouvelEtat);
 
         String utilisateur = SecurityContextHolder.getContext().getAuthentication().getName();
         auditLogService.log(utilisateur, AuditLog.Action.UPDATE, "RDV", idRdv.toString(), "etat: " + nouvelEtat, request.getRemoteAddr());
 
         // Récupérer le RDV mis à jour
-        rdvOpt = rdvService.getRdvById(rdvId);
+        rdvOpt = rdvService.getRdvById(rdvPk);
         return ResponseEntity.ok(rdvOpt.get());
     }
 
     /**
-     * Met à jour un rendez-vous
+     * Met à jour un rendez-vous par son ID technique.
      */
+    @PutMapping("/{rdvPk}")
+    public ResponseEntity<?> updateRdvByTechnicalId(@PathVariable Long rdvPk,
+                                                     @RequestBody RdvDTO rdvDTO,
+                                                     HttpServletRequest request) {
+        Optional<RdvDTO> existingRdvOpt = rdvService.getRdvById(rdvPk);
+        return updateResolvedRdv(existingRdvOpt, rdvDTO, request, "rdvPk=" + rdvPk);
+    }
+
+    /** Route composite historique, conservée temporairement. */
     @PutMapping("/{idEtude}/{idRdv}")
     public ResponseEntity<?> updateRdv(@PathVariable Integer idEtude,
                                        @PathVariable Integer idRdv,
                                        @RequestBody RdvDTO rdvDTO,
                                        HttpServletRequest request) {
-        // Ensure IDs in path match those in the DTO
-        rdvDTO.setIdEtude(idEtude);
-        rdvDTO.setIdRdv(idRdv);
+        Optional<RdvDTO> existingRdvOpt = rdvService.getRdvByBusinessKey(idEtude, idRdv);
+        return updateResolvedRdv(existingRdvOpt, rdvDTO, request,
+                "idEtude=" + idEtude + ", numeroRdv=" + idRdv);
+    }
 
-        // Check if the record exists
-        RdvId rdvId = new RdvId(idEtude, idRdv);
-        Optional<RdvDTO> existingRdvOpt = rdvService.getRdvById(rdvId);
-        if (!existingRdvOpt.isPresent()) {
+    private ResponseEntity<?> updateResolvedRdv(Optional<RdvDTO> existingRdvOpt,
+                                                RdvDTO rdvDTO,
+                                                HttpServletRequest request,
+                                                String requestedIdentifier) {
+        if (existingRdvOpt.isEmpty()) {
             return ResponseEntity.status(404)
-                    .body(Map.of("error", "No rendezvous found with ID: " + rdvId));
+                    .body(Map.of("error", "No rendezvous found with " + requestedIdentifier));
         }
 
+        RdvDTO existing = existingRdvOpt.get();
+        rdvDTO.setRdvPk(existing.getRdvPk());
+        rdvDTO.setIdEtude(existing.getIdEtude());
+        rdvDTO.setIdRdv(existing.getIdRdv());
         List<String> warnings = new ArrayList<>();
 
-        // Vérifier le chevauchement seulement si on assigne un volontaire
-        if (rdvDTO.getIdVolontaire() != null) {
-            Integer previousVolontaireId = existingRdvOpt.get().getIdVolontaire();
-            // Vérifier seulement si c'est une nouvelle assignation (volontaire différent)
-            if (!Objects.equals(rdvDTO.getIdVolontaire(), previousVolontaireId)) {
-                if (checkForOverlappingStudies(rdvDTO.getIdVolontaire(), idEtude)) {
-                    warnings.add("Le volontaire participe déjà à une étude dont la période chevauche celle-ci.");
-                }
-            }
+        if (rdvDTO.getIdVolontaire() != null
+                && !Objects.equals(rdvDTO.getIdVolontaire(), existing.getIdVolontaire())
+                && checkForOverlappingStudies(rdvDTO.getIdVolontaire(), existing.getIdEtude())) {
+            warnings.add("Le volontaire participe déjà à une étude dont la période chevauche celle-ci.");
         }
 
         RdvDTO updatedRdv = rdvService.updateRdv(rdvDTO);
-
         String utilisateur = SecurityContextHolder.getContext().getAuthentication().getName();
-        auditLogService.log(utilisateur, AuditLog.Action.UPDATE, "RDV", idRdv.toString(), rdvDTO.getDate() != null ? rdvDTO.getDate().toString() : "id:" + idRdv, request.getRemoteAddr());
+        auditLogService.log(utilisateur, AuditLog.Action.UPDATE, "RDV", existing.getRdvPk().toString(),
+                rdvDTO.getDate() != null ? rdvDTO.getDate().toString() : requestedIdentifier,
+                request.getRemoteAddr());
 
         Map<String, Object> response = new HashMap<>();
         response.put("success", true);
@@ -245,21 +269,31 @@ public class RdvController {
         return ResponseEntity.ok(response);
     }
 
-    /**
-     * Supprime un rendez-vous
-     */
+    /** Supprime un rendez-vous par son ID technique. */
+    @DeleteMapping("/{rdvPk}")
+    public ResponseEntity<Void> deleteByTechnicalId(@PathVariable Long rdvPk, HttpServletRequest request) {
+        rdvService.deleteRdv(rdvPk);
+        String utilisateur = SecurityContextHolder.getContext().getAuthentication().getName();
+        auditLogService.log(utilisateur, AuditLog.Action.DELETE, "RDV", rdvPk.toString(),
+                "rdvPk:" + rdvPk, request.getRemoteAddr());
+        return ResponseEntity.ok().build();
+    }
+
+    /** Route composite historique, conservée temporairement. */
     @DeleteMapping("/{idEtude}/{idRdv}")
     public ResponseEntity<Void> delete(
             @PathVariable Integer idEtude,
             @PathVariable Integer idRdv,
             HttpServletRequest request) {
-
-        RdvId rdvId = new RdvId(idEtude, idRdv);
-        rdvService.deleteRdv(rdvId);
-
+        Optional<RdvDTO> existing = rdvService.getRdvByBusinessKey(idEtude, idRdv);
+        if (existing.isEmpty()) {
+            return ResponseEntity.notFound().build();
+        }
+        Long rdvPk = existing.get().getRdvPk();
+        rdvService.deleteRdv(rdvPk);
         String utilisateur = SecurityContextHolder.getContext().getAuthentication().getName();
-        auditLogService.log(utilisateur, AuditLog.Action.DELETE, "RDV", idRdv.toString(), "id:" + idRdv, request.getRemoteAddr());
-
+        auditLogService.log(utilisateur, AuditLog.Action.DELETE, "RDV", rdvPk.toString(),
+                "idEtude=" + idEtude + ", numeroRdv=" + idRdv, request.getRemoteAddr());
         return ResponseEntity.ok().build();
     }
 

@@ -19,8 +19,9 @@ import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/connexions")
-@CrossOrigin(origins = {"http://192.168.127.36:3000","http://192.168.127.36:5000","http://intranet:5000"}, allowCredentials = "true")
 public class ConnexionController {
+
+    private static final int MAX_PAGE_SIZE = 100;
 
     private final ConnexionLogService connexionLogService;
     private final ActiveSessionService activeSessionService;
@@ -42,13 +43,15 @@ public class ConnexionController {
             @RequestParam(required = false) String dateDebut,
             @RequestParam(required = false) String dateFin) {
 
+        int safePage = Math.max(0, page);
+        int safeSize = Math.min(MAX_PAGE_SIZE, Math.max(1, size));
         Page<ConnexionLog> result;
         if (dateDebut != null && !dateDebut.isBlank() && dateFin != null && !dateFin.isBlank()) {
             java.time.LocalDateTime debut = java.time.LocalDate.parse(dateDebut).atStartOfDay();
             java.time.LocalDateTime fin = java.time.LocalDate.parse(dateFin).atTime(23, 59, 59);
-            result = connexionLogService.findByDateRange(debut, fin, page, size);
+            result = connexionLogService.findByDateRange(debut, fin, safePage, safeSize);
         } else {
-            result = connexionLogService.findAll(page, size);
+            result = connexionLogService.findAll(safePage, safeSize);
         }
 
         var logs = result.getContent().stream().map(log -> Map.<String, Object>of(
@@ -92,9 +95,12 @@ public class ConnexionController {
             @RequestParam(defaultValue = "50") int size,
             @RequestParam(required = false) String login) {
 
+        int safePage = Math.max(0, page);
+        int safeSize = Math.min(MAX_PAGE_SIZE, Math.max(1, size));
+        PageRequest pageable = PageRequest.of(safePage, safeSize);
         Page<SessionHistory> result = (login != null && !login.isBlank())
-                ? sessionHistoryRepository.findByLoginContainingIgnoreCaseOrderByLoginTimeDesc(login, PageRequest.of(page, size))
-                : sessionHistoryRepository.findAllByOrderByLoginTimeDesc(PageRequest.of(page, size));
+                ? sessionHistoryRepository.findByLoginContainingIgnoreCaseOrderByLoginTimeDesc(login, pageable)
+                : sessionHistoryRepository.findAllByOrderByLoginTimeDesc(pageable);
 
         var entries = result.getContent().stream().map(s -> {
             Map<String, Object> m = new java.util.HashMap<>();

@@ -183,8 +183,12 @@ public interface VolontaireRepository extends JpaRepository<Volontaire, Integer>
         @Query("SELECT COUNT(v) FROM Volontaire v WHERE v.dateI BETWEEN :startDate AND :endDate")
         int countByDateIBetween(@Param("startDate") Date startDate, @Param("endDate") Date endDate);
 
+        int countByDateI(Date dateI);
+
         @Query("SELECT v FROM Volontaire v ORDER BY v.dateI DESC")
         List<Volontaire> findRecentVolontaires(Pageable pageable);
+
+        List<Volontaire> findByDateIOrderByIdVolDesc(Date dateI, Pageable pageable);
 
         /**
          * Recherche tous les volontaires (archivés et non archivés)
@@ -300,27 +304,27 @@ public interface VolontaireRepository extends JpaRepository<Volontaire, Integer>
         /**
          * Compte les volontaires actifs par tranche d'âge
          */
-        @Query("SELECT " +
+        @Query(value = "SELECT " +
                         "CASE " +
-                        "  WHEN DATEDIFF(CURDATE(), v.dateNaissance) / 365 < 18 THEN 'Moins de 18 ans' " +
-                        "  WHEN DATEDIFF(CURDATE(), v.dateNaissance) / 365 < 30 THEN '18-29 ans' " +
-                        "  WHEN DATEDIFF(CURDATE(), v.dateNaissance) / 365 < 40 THEN '30-39 ans' " +
-                        "  WHEN DATEDIFF(CURDATE(), v.dateNaissance) / 365 < 50 THEN '40-49 ans' " +
-                        "  WHEN DATEDIFF(CURDATE(), v.dateNaissance) / 365 < 60 THEN '50-59 ans' " +
+                        "  WHEN DATEDIFF(CURDATE(), DATE_NAISSANCE) / 365 < 18 THEN 'Moins de 18 ans' " +
+                        "  WHEN DATEDIFF(CURDATE(), DATE_NAISSANCE) / 365 < 30 THEN '18-29 ans' " +
+                        "  WHEN DATEDIFF(CURDATE(), DATE_NAISSANCE) / 365 < 40 THEN '30-39 ans' " +
+                        "  WHEN DATEDIFF(CURDATE(), DATE_NAISSANCE) / 365 < 50 THEN '40-49 ans' " +
+                        "  WHEN DATEDIFF(CURDATE(), DATE_NAISSANCE) / 365 < 60 THEN '50-59 ans' " +
                         "  ELSE '60 ans et plus' " +
                         "END as trancheAge, " +
-                        "COUNT(v) as nombre " +
-                        "FROM Volontaire v " +
-                        "WHERE v.archive = false AND v.dateNaissance IS NOT NULL " +
+                        "COUNT(*) as nombre " +
+                        "FROM volontaire " +
+                        "WHERE ARCHIVE = false AND DATE_NAISSANCE IS NOT NULL " +
                         "GROUP BY " +
                         "CASE " +
-                        "  WHEN DATEDIFF(CURDATE(), v.dateNaissance) / 365 < 18 THEN 'Moins de 18 ans' " +
-                        "  WHEN DATEDIFF(CURDATE(), v.dateNaissance) / 365 < 30 THEN '18-29 ans' " +
-                        "  WHEN DATEDIFF(CURDATE(), v.dateNaissance) / 365 < 40 THEN '30-39 ans' " +
-                        "  WHEN DATEDIFF(CURDATE(), v.dateNaissance) / 365 < 50 THEN '40-49 ans' " +
-                        "  WHEN DATEDIFF(CURDATE(), v.dateNaissance) / 365 < 60 THEN '50-59 ans' " +
+                        "  WHEN DATEDIFF(CURDATE(), DATE_NAISSANCE) / 365 < 18 THEN 'Moins de 18 ans' " +
+                        "  WHEN DATEDIFF(CURDATE(), DATE_NAISSANCE) / 365 < 30 THEN '18-29 ans' " +
+                        "  WHEN DATEDIFF(CURDATE(), DATE_NAISSANCE) / 365 < 40 THEN '30-39 ans' " +
+                        "  WHEN DATEDIFF(CURDATE(), DATE_NAISSANCE) / 365 < 50 THEN '40-49 ans' " +
+                        "  WHEN DATEDIFF(CURDATE(), DATE_NAISSANCE) / 365 < 60 THEN '50-59 ans' " +
                         "  ELSE '60 ans et plus' " +
-                        "END")
+                        "END", nativeQuery = true)
         List<Object[]> countVolontairesActifsByTrancheAgeRaw();
 
         /**

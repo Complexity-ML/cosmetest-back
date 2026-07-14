@@ -7,12 +7,15 @@ import com.example.cosmetest.domain.model.AuditLog;
 import com.example.cosmetest.presentation.request.ChangerMotDePasseRequest;
 import com.example.cosmetest.presentation.request.LoginRequest;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.persistence.EntityNotFoundException;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.server.ResponseStatusException;
+
 
 import java.util.List;
 
@@ -37,6 +40,7 @@ public class IdentifiantController {
      * @return liste des identifiants (sans mots de passe)
      */
     @GetMapping
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<List<IdentifiantDTO>> getAllIdentifiants() {
         List<IdentifiantDTO> identifiants = identifiantService.getAllIdentifiants();
         return ResponseEntity.ok(identifiants);
@@ -49,10 +53,11 @@ public class IdentifiantController {
      * @return l'identifiant correspondant (sans mot de passe)
      */
     @GetMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN') or @identifiantAuthorization.isCurrentUser(#id, authentication)")
     public ResponseEntity<IdentifiantDTO> getIdentifiantById(@PathVariable Integer id) {
         return identifiantService.getIdentifiantById(id)
                 .map(ResponseEntity::ok)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Identifiant non trouvé avec l'ID: " + id));
+                .orElseThrow(() -> new EntityNotFoundException("Identifiant non trouvé avec l'ID: " + id));
     }
 
     /**
@@ -62,10 +67,11 @@ public class IdentifiantController {
      * @return l'identifiant correspondant (sans mot de passe)
      */
     @GetMapping("/by-login/{login}")
+    @PreAuthorize("hasRole('ADMIN') or #login == authentication.name")
     public ResponseEntity<IdentifiantDTO> getIdentifiantByLogin(@PathVariable String login) {
         return identifiantService.getIdentifiantByLogin(login)
                 .map(ResponseEntity::ok)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Identifiant non trouvé avec le login: " + login));
+                .orElseThrow(() -> new EntityNotFoundException("Identifiant non trouvé avec le login: " + login));
     }
 
     /**
@@ -75,17 +81,14 @@ public class IdentifiantController {
      * @return l'identifiant créé (sans mot de passe)
      */
     @PostMapping
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<IdentifiantDTO> createIdentifiant(@Valid @RequestBody IdentifiantDTO identifiantDTO, HttpServletRequest request) {
-        try {
-            IdentifiantDTO createdIdentifiant = identifiantService.createIdentifiant(identifiantDTO);
-            String utilisateur = SecurityContextHolder.getContext().getAuthentication().getName();
-            auditLogService.log(utilisateur, AuditLog.Action.CREATE, "IDENTIFIANT",
-                    createdIdentifiant.getIdIdentifiant() != null ? createdIdentifiant.getIdIdentifiant().toString() : null,
-                    createdIdentifiant.getIdentifiant(), request.getRemoteAddr());
-            return ResponseEntity.status(HttpStatus.CREATED).body(createdIdentifiant);
-        } catch (IllegalArgumentException e) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, e.getMessage());
-        }
+        IdentifiantDTO createdIdentifiant = identifiantService.createIdentifiant(identifiantDTO);
+        String utilisateur = SecurityContextHolder.getContext().getAuthentication().getName();
+        auditLogService.log(utilisateur, AuditLog.Action.CREATE, "IDENTIFIANT",
+                createdIdentifiant.getIdIdentifiant() != null ? createdIdentifiant.getIdIdentifiant().toString() : null,
+                createdIdentifiant.getIdentifiant(), request.getRemoteAddr());
+        return ResponseEntity.status(HttpStatus.CREATED).body(createdIdentifiant);
     }
 
     /**
@@ -96,18 +99,15 @@ public class IdentifiantController {
      * @return l'identifiant mis à jour (sans mot de passe)
      */
     @PutMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN') or @identifiantAuthorization.canUpdateOwnAccount(#id, #identifiantDTO, authentication)")
     public ResponseEntity<IdentifiantDTO> updateIdentifiant(@PathVariable Integer id, @Valid @RequestBody IdentifiantDTO identifiantDTO, HttpServletRequest request) {
-        try {
-            return identifiantService.updateIdentifiant(id, identifiantDTO)
-                    .map(updated -> {
-                        String utilisateur = SecurityContextHolder.getContext().getAuthentication().getName();
-                        auditLogService.log(utilisateur, AuditLog.Action.UPDATE, "IDENTIFIANT", id.toString(), updated.getIdentifiant(), request.getRemoteAddr());
-                        return ResponseEntity.ok(updated);
-                    })
-                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Identifiant non trouvé avec l'ID: " + id));
-        } catch (IllegalArgumentException e) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, e.getMessage());
-        }
+        return identifiantService.updateIdentifiant(id, identifiantDTO)
+                .map(updated -> {
+                    String utilisateur = SecurityContextHolder.getContext().getAuthentication().getName();
+                    auditLogService.log(utilisateur, AuditLog.Action.UPDATE, "IDENTIFIANT", id.toString(), updated.getIdentifiant(), request.getRemoteAddr());
+                    return ResponseEntity.ok(updated);
+                })
+                .orElseThrow(() -> new EntityNotFoundException("Identifiant non trouvé avec l'ID: " + id));
     }
 
     /**
@@ -117,13 +117,14 @@ public class IdentifiantController {
      * @return statut de la suppression
      */
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Void> deleteIdentifiant(@PathVariable Integer id, HttpServletRequest request) {
         if (identifiantService.deleteIdentifiant(id)) {
             String utilisateur = SecurityContextHolder.getContext().getAuthentication().getName();
             auditLogService.log(utilisateur, AuditLog.Action.DELETE, "IDENTIFIANT", id.toString(), "id:" + id, request.getRemoteAddr());
             return ResponseEntity.noContent().build();
         } else {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Identifiant non trouvé avec l'ID: " + id);
+            throw new EntityNotFoundException("Identifiant non trouvé avec l'ID: " + id);
         }
     }
 
@@ -135,19 +136,15 @@ public class IdentifiantController {
      * @return statut du changement
      */
     @PostMapping("/{id}/changer-mot-de-passe")
+    @PreAuthorize("hasRole('ADMIN') or @identifiantAuthorization.isCurrentUser(#id, authentication)")
     public ResponseEntity<Void> changerMotDePasse(@PathVariable Integer id, @Valid @RequestBody ChangerMotDePasseRequest changeRequest, HttpServletRequest request) {
-        try {
-            boolean success = identifiantService.changerMotDePasse(id, changeRequest.getAncienMotDePasse(), changeRequest.getNouveauMotDePasse());
-            if (success) {
-                String utilisateur = SecurityContextHolder.getContext().getAuthentication().getName();
-                auditLogService.log(utilisateur, AuditLog.Action.UPDATE, "IDENTIFIANT", id.toString(), "changement mot de passe", request.getRemoteAddr());
-                return ResponseEntity.ok().build();
-            } else {
-                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Échec du changement de mot de passe, ancien mot de passe incorrect");
-            }
-        } catch (IllegalArgumentException e) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, e.getMessage());
+        boolean success = identifiantService.changerMotDePasse(id, changeRequest.getAncienMotDePasse(), changeRequest.getNouveauMotDePasse());
+        if (success) {
+            String utilisateur = SecurityContextHolder.getContext().getAuthentication().getName();
+            auditLogService.log(utilisateur, AuditLog.Action.UPDATE, "IDENTIFIANT", id.toString(), "changement mot de passe", request.getRemoteAddr());
+            return ResponseEntity.ok().build();
         }
+        throw new IllegalArgumentException("Échec du changement de mot de passe, ancien mot de passe incorrect");
     }
 
     /**
@@ -157,6 +154,7 @@ public class IdentifiantController {
      * @return la liste des identifiants (sans mots de passe)
      */
     @GetMapping("/by-role/{role}")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<List<IdentifiantDTO>> getIdentifiantsByRole(@PathVariable String role) {
         List<IdentifiantDTO> identifiants = identifiantService.getIdentifiantsByRole(role);
         return ResponseEntity.ok(identifiants);
@@ -169,6 +167,7 @@ public class IdentifiantController {
      * @return true si le login existe, false sinon
      */
     @GetMapping("/check-login/{login}")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Boolean> checkLoginExists(@PathVariable String login) {
         boolean exists = identifiantService.loginExiste(login);
         return ResponseEntity.ok(exists);
@@ -181,6 +180,7 @@ public class IdentifiantController {
      * @return true si l'email existe, false sinon
      */
     @GetMapping("/check-email/{email}")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Boolean> checkEmailExists(@PathVariable String email) {
         boolean exists = identifiantService.emailExiste(email);
         return ResponseEntity.ok(exists);
@@ -193,9 +193,10 @@ public class IdentifiantController {
      * @return l'identifiant authentifié (sans mot de passe)
      */
     @PostMapping("/login")
+    @PreAuthorize("hasRole('ADMIN') or #request.login == authentication.name")
     public ResponseEntity<IdentifiantDTO> login(@Valid @RequestBody LoginRequest request) {
         return identifiantService.authentifier(request.getLogin(), request.getMotDePasse())
                 .map(ResponseEntity::ok)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Identifiants incorrects"));
+                .orElseThrow(() -> new BadCredentialsException("Identifiants incorrects"));
     }
 }

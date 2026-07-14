@@ -67,7 +67,7 @@ class PaymentBatchServiceImplTest {
 
         when(etudeVolontaireService.getEtudeVolontairesByEtude(idEtude)).thenReturn(associations);
         when(annulationService.getAnnulationsByEtude(idEtude)).thenReturn(Collections.emptyList());
-        when(etudeVolontaireService.updatePaye(any(EtudeVolontaireId.class), eq(1))).thenReturn(vol1);
+        when(etudeVolontaireService.updatePaye(anyLong(), eq(1))).thenReturn(vol1);
         when(etudeService.updatePayeStatus(idEtude, 2)).thenReturn(true);
 
         // Act
@@ -83,7 +83,7 @@ class PaymentBatchServiceImplTest {
         assertThat(result.getErrorCount()).isEqualTo(0);
         assertThat(result.getErrors()).isEmpty();
         
-        verify(etudeVolontaireService, atLeast(3)).updatePaye(any(EtudeVolontaireId.class), eq(1));
+        verify(etudeVolontaireService, atLeast(3)).updatePaye(anyLong(), eq(1));
         verify(etudeService, times(1)).updatePayeStatus(eq(idEtude), anyInt());
     }
 
@@ -103,7 +103,7 @@ class PaymentBatchServiceImplTest {
         assertThat(result.getProcessedCount()).isEqualTo(0);
         assertThat(result.getUpdatedCount()).isEqualTo(0);
         verify(etudeService, times(1)).updatePayeStatus(idEtude, 0);
-        verify(etudeVolontaireService, never()).updatePaye(any(), anyInt());
+        verify(etudeVolontaireService, never()).updatePaye(anyLong(), anyInt());
     }
 
     @Test
@@ -137,7 +137,7 @@ class PaymentBatchServiceImplTest {
 
         when(etudeVolontaireService.getEtudeVolontairesByEtude(idEtude)).thenReturn(associations);
         when(annulationService.getAnnulationsByEtude(idEtude)).thenReturn(Collections.emptyList());
-        when(etudeVolontaireService.updatePaye(any(EtudeVolontaireId.class), eq(1))).thenReturn(vol1);
+        when(etudeVolontaireService.updatePaye(anyLong(), eq(1))).thenReturn(vol1);
         when(etudeService.updatePayeStatus(idEtude, 2)).thenReturn(true);
 
         // Act
@@ -149,7 +149,7 @@ class PaymentBatchServiceImplTest {
         assertThat(result.getAlreadyPaidCount()).isEqualTo(2); // vol2 et vol3
         assertThat(result.getSkippedAnnules()).isEqualTo(0);
         
-        verify(etudeVolontaireService, times(1)).updatePaye(any(EtudeVolontaireId.class), eq(1));
+        verify(etudeVolontaireService, times(1)).updatePaye(anyLong(), eq(1));
     }
 
     @Test
@@ -171,7 +171,7 @@ class PaymentBatchServiceImplTest {
         // Assert
         assertThat(result.getUpdatedCount()).isEqualTo(0);
         assertThat(result.getAlreadyPaidCount()).isEqualTo(2);
-        verify(etudeVolontaireService, never()).updatePaye(any(), anyInt());
+        verify(etudeVolontaireService, never()).updatePaye(anyLong(), anyInt());
         verify(etudeService, times(1)).updatePayeStatus(idEtude, 2);
     }
 
@@ -196,7 +196,7 @@ class PaymentBatchServiceImplTest {
 
         when(etudeVolontaireService.getEtudeVolontairesByEtude(idEtude)).thenReturn(associations);
         when(annulationService.getAnnulationsByEtude(idEtude)).thenReturn(annulations);
-        when(etudeVolontaireService.updatePaye(any(EtudeVolontaireId.class), eq(1))).thenReturn(vol1);
+        when(etudeVolontaireService.updatePaye(anyLong(), eq(1))).thenReturn(vol1);
         when(etudeService.updatePayeStatus(idEtude, 2)).thenReturn(true);
 
         // Act
@@ -208,7 +208,7 @@ class PaymentBatchServiceImplTest {
         assertThat(result.getSkippedAnnules()).isEqualTo(1); // vol2 annulé
         assertThat(result.getAlreadyPaidCount()).isEqualTo(0);
         
-        verify(etudeVolontaireService, times(2)).updatePaye(any(EtudeVolontaireId.class), eq(1));
+        verify(etudeVolontaireService, times(2)).updatePaye(anyLong(), eq(1));
     }
 
     @Test
@@ -237,7 +237,9 @@ class PaymentBatchServiceImplTest {
         // Assert
         assertThat(result.getUpdatedCount()).isEqualTo(0);
         assertThat(result.getSkippedAnnules()).isEqualTo(2);
-        verify(etudeVolontaireService, never()).updatePaye(any(), anyInt());
+        verify(etudeVolontaireService, never()).updatePaye(anyLong(), anyInt());
+        verify(etudeService).updatePayeStatus(idEtude, 0);
+        verify(etudeService, never()).updatePayeStatus(idEtude, 2);
     }
 
     @Test
@@ -249,7 +251,7 @@ class PaymentBatchServiceImplTest {
 
         when(etudeVolontaireService.getEtudeVolontairesByEtude(idEtude)).thenReturn(associations);
         when(annulationService.getAnnulationsByEtude(idEtude)).thenReturn(null);
-        when(etudeVolontaireService.updatePaye(any(EtudeVolontaireId.class), eq(1))).thenReturn(vol1);
+        when(etudeVolontaireService.updatePaye(anyLong(), eq(1))).thenReturn(vol1);
         when(etudeService.updatePayeStatus(idEtude, 2)).thenReturn(true);
 
         // Act
@@ -263,9 +265,8 @@ class PaymentBatchServiceImplTest {
     // ==================== Tests markAllAsPaid() - Gestion des erreurs ====================
 
     @Test
-    @DisplayName("markAllAsPaid() - Erreur lors de la mise à jour d'un paiement")
+    @DisplayName("markAllAsPaid() - Une erreur de paiement fait échouer atomiquement le lot")
     void testMarkAllAsPaid_UpdateError() {
-        // Arrange
         EtudeVolontaireDTO vol1 = createVolontaireDTO(1, 10, 0);
         EtudeVolontaireDTO vol2 = createVolontaireDTO(1, 20, 0);
         EtudeVolontaireDTO vol3 = createVolontaireDTO(1, 30, 0);
@@ -275,24 +276,16 @@ class PaymentBatchServiceImplTest {
 
         when(etudeVolontaireService.getEtudeVolontairesByEtude(idEtude)).thenReturn(associations);
         when(annulationService.getAnnulationsByEtude(idEtude)).thenReturn(Collections.emptyList());
-        
-        // Premier appel : succès, deuxième : erreur, troisième : succès
-        when(etudeVolontaireService.updatePaye(any(EtudeVolontaireId.class), eq(1)))
+        when(etudeVolontaireService.updatePaye(anyLong(), eq(1)))
             .thenReturn(vol1)
-            .thenThrow(new RuntimeException("Erreur base de données"))
-            .thenReturn(vol3);
+            .thenThrow(new RuntimeException("Erreur base de données"));
 
-        when(etudeService.updatePayeStatus(idEtude, 0)).thenReturn(true);
+        assertThatThrownBy(() -> paymentBatchService.markAllAsPaid(idEtude))
+            .isInstanceOf(RuntimeException.class)
+            .hasMessage("Erreur base de données");
 
-        // Act
-        PaymentBatchResultDTO result = paymentBatchService.markAllAsPaid(idEtude);
-
-        // Assert
-        assertThat(result.getProcessedCount()).isEqualTo(3);
-        assertThat(result.getUpdatedCount()).isEqualTo(2); // vol1 et vol3
-        assertThat(result.getErrorCount()).isEqualTo(1); // vol2
-        assertThat(result.getErrors()).hasSize(1);
-        assertThat(result.getErrors().get(0)).contains("Volontaire 20");
+        verify(etudeVolontaireService, times(2)).updatePaye(anyLong(), eq(1));
+        verify(etudeService, never()).updatePayeStatus(anyInt(), anyInt());
     }
 
     @Test
@@ -306,17 +299,14 @@ class PaymentBatchServiceImplTest {
 
         when(etudeVolontaireService.getEtudeVolontairesByEtude(idEtude)).thenReturn(associations);
         when(annulationService.getAnnulationsByEtude(idEtude)).thenReturn(Collections.emptyList());
-        when(etudeVolontaireService.updatePaye(any(EtudeVolontaireId.class), eq(1)))
+        when(etudeVolontaireService.updatePaye(anyLong(), eq(1)))
             .thenThrow(new RuntimeException("Erreur"));
-        when(etudeService.updatePayeStatus(idEtude, 0)).thenReturn(true);
+        assertThatThrownBy(() -> paymentBatchService.markAllAsPaid(idEtude))
+            .isInstanceOf(RuntimeException.class)
+            .hasMessage("Erreur");
 
-        // Act
-        PaymentBatchResultDTO result = paymentBatchService.markAllAsPaid(idEtude);
-
-        // Assert
-        assertThat(result.getUpdatedCount()).isEqualTo(0);
-        assertThat(result.getErrorCount()).isEqualTo(2);
-        assertThat(result.getErrors()).hasSize(2);
+        verify(etudeVolontaireService, times(1)).updatePaye(anyLong(), eq(1));
+        verify(etudeService, never()).updatePayeStatus(anyInt(), anyInt());
     }
 
     @Test
@@ -328,16 +318,29 @@ class PaymentBatchServiceImplTest {
 
         when(etudeVolontaireService.getEtudeVolontairesByEtude(idEtude)).thenReturn(associations);
         when(annulationService.getAnnulationsByEtude(idEtude)).thenReturn(Collections.emptyList());
-        when(etudeVolontaireService.updatePaye(any(EtudeVolontaireId.class), eq(1))).thenReturn(vol1);
+        when(etudeVolontaireService.updatePaye(anyLong(), eq(1))).thenReturn(vol1);
+        when(etudeService.updatePayeStatus(idEtude, 2)).thenReturn(false);
+
+        assertThatThrownBy(() -> paymentBatchService.markAllAsPaid(idEtude))
+            .isInstanceOf(IllegalStateException.class)
+            .hasMessage("Échec de mise à jour du statut PAYE de l'étude 1 à 2");
+    }
+
+    @Test
+    @DisplayName("markAllAsPaid() - Exception lors de la mise à jour du statut étude")
+    void testMarkAllAsPaid_EtudeStatusUpdateException() {
+        EtudeVolontaireDTO vol1 = createVolontaireDTO(1, 10, 0);
+        associations.add(vol1);
+
+        when(etudeVolontaireService.getEtudeVolontairesByEtude(idEtude)).thenReturn(associations);
+        when(annulationService.getAnnulationsByEtude(idEtude)).thenReturn(Collections.emptyList());
+        when(etudeVolontaireService.updatePaye(anyLong(), eq(1))).thenReturn(vol1);
         when(etudeService.updatePayeStatus(idEtude, 2))
             .thenThrow(new RuntimeException("Erreur statut"));
 
-        // Act - Ne doit pas lever d'exception (erreur loggée seulement)
-        PaymentBatchResultDTO result = paymentBatchService.markAllAsPaid(idEtude);
-
-        // Assert
-        assertThat(result.getUpdatedCount()).isEqualTo(1);
-        assertThat(result.getErrorCount()).isEqualTo(0); // Erreur statut étude != erreur paiement
+        assertThatThrownBy(() -> paymentBatchService.markAllAsPaid(idEtude))
+            .isInstanceOf(RuntimeException.class)
+            .hasMessage("Erreur statut");
     }
 
     // ==================== Tests markAllAsPaid() - Scénarios mixtes ====================
@@ -363,7 +366,7 @@ class PaymentBatchServiceImplTest {
 
         when(etudeVolontaireService.getEtudeVolontairesByEtude(idEtude)).thenReturn(associations);
         when(annulationService.getAnnulationsByEtude(idEtude)).thenReturn(annulations);
-        when(etudeVolontaireService.updatePaye(any(EtudeVolontaireId.class), eq(1))).thenReturn(vol1);
+        when(etudeVolontaireService.updatePaye(anyLong(), eq(1))).thenReturn(vol1);
         when(etudeService.updatePayeStatus(idEtude, 2)).thenReturn(true);
 
         // Act
@@ -376,13 +379,30 @@ class PaymentBatchServiceImplTest {
         assertThat(result.getSkippedAnnules()).isEqualTo(1);    // vol3
         assertThat(result.getErrorCount()).isEqualTo(0);
         
-        verify(etudeVolontaireService, times(2)).updatePaye(any(EtudeVolontaireId.class), eq(1));
+        verify(etudeVolontaireService, times(2)).updatePaye(anyLong(), eq(1));
+    }
+
+    @Test
+    @DisplayName("markAllAsPaid() - Refuse explicitement les doublons métier")
+    void testMarkAllAsPaid_RefusesDuplicateBusinessPair() {
+        associations.add(createVolontaireDTO(1, 10, 0));
+        EtudeVolontaireDTO duplicate = createVolontaireDTO(1, 10, 1);
+        duplicate.setId(999L);
+        associations.add(duplicate);
+        when(etudeVolontaireService.getEtudeVolontairesByEtude(idEtude)).thenReturn(associations);
+
+        assertThatThrownBy(() -> paymentBatchService.markAllAsPaid(idEtude))
+                .isInstanceOf(com.example.cosmetest.exception.AmbiguousEtudeVolontaireException.class)
+                .hasMessageContaining("10");
+        verify(etudeVolontaireService, never()).updatePaye(anyLong(), anyInt());
+        verify(etudeService, never()).updatePayeStatus(anyInt(), anyInt());
     }
 
     // ==================== Méthode utilitaire ====================
 
     private EtudeVolontaireDTO createVolontaireDTO(int idEtude, int idVolontaire, int paye) {
         EtudeVolontaireDTO dto = new EtudeVolontaireDTO();
+        dto.setId((long) idVolontaire);
         dto.setIdEtude(idEtude);
         dto.setIdVolontaire(idVolontaire);
         dto.setIdGroupe(1);

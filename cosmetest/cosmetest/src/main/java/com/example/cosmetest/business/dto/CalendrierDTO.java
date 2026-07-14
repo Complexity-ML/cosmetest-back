@@ -99,6 +99,7 @@ public class CalendrierDTO {
     @JsonInclude(JsonInclude.Include.NON_NULL)
     public static class RendezVousEnrichiDTO {
         // Identifiants
+        private Long rdvPk;
         private Integer idRdv;
         private Integer idEtude;
         private Integer idVolontaire;
@@ -125,12 +126,24 @@ public class CalendrierDTO {
         }
 
         // Getters et Setters
+        public Long getRdvPk() {
+            return rdvPk;
+        }
+
+        public void setRdvPk(Long rdvPk) {
+            this.rdvPk = rdvPk;
+        }
+
         public Integer getIdRdv() {
             return idRdv;
         }
 
         public void setIdRdv(Integer idRdv) {
             this.idRdv = idRdv;
+        }
+
+        public Integer getNumeroRdv() {
+            return idRdv;
         }
 
         public Integer getIdEtude() {

@@ -43,6 +43,9 @@ class AnnulationServiceImplTest {
     @Mock
     private RdvRepository rdvRepository;
 
+    @Mock
+    private RdvIdAllocator rdvIdAllocator;
+
     @InjectMocks
     private AnnulationServiceImpl annulationService;
 
@@ -51,6 +54,7 @@ class AnnulationServiceImplTest {
 
     @BeforeEach
     void setUp() {
+        lenient().when(rdvIdAllocator.nextForStudy(anyInt())).thenReturn(2);
         annulation = new Annulation();
         annulation.setIdAnnuler(1);
         annulation.setIdVol(10);
@@ -301,15 +305,14 @@ class AnnulationServiceImplTest {
         
         // Mock des RDV à libérer
         Rdv rdv1 = new Rdv();
-        RdvId rdvId1 = new RdvId();
-        rdvId1.setIdRdv(1);
-        rdvId1.setIdEtude(5);
-        rdv1.setId(rdvId1);
+        long rdvPk1 = 1001L;
+        rdv1.setId(rdvPk1);
+        rdv1.setIdRdv(1);
+        rdv1.setIdEtude(5);
         rdv1.setIdVolontaire(10);
         
         when(rdvRepository.findByIdVolontaireAndIdEtude(10, 5))
             .thenReturn(Collections.singletonList(rdv1));
-        when(rdvRepository.findMaxRdvIdForEtude(5)).thenReturn(1);
         when(rdvRepository.save(any(Rdv.class))).thenReturn(rdv1);
 
         // Act
@@ -320,17 +323,41 @@ class AnnulationServiceImplTest {
         assertThat(result.getIdAnnuler()).isEqualTo(1);
         verify(annulationRepository, times(1)).save(annulation);
         verify(rdvRepository, times(1)).findByIdVolontaireAndIdEtude(10, 5);
+        verify(rdvIdAllocator).nextForStudy(5);
         ArgumentCaptor<Rdv> rdvCaptor = ArgumentCaptor.forClass(Rdv.class);
         verify(rdvRepository, times(2)).save(rdvCaptor.capture());
 
         List<Rdv> savedRdvs = rdvCaptor.getAllValues();
-        assertThat(savedRdvs.get(0).getId()).isEqualTo(rdvId1);
+        assertThat(savedRdvs.get(0).getId()).isEqualTo(rdvPk1);
         assertThat(savedRdvs.get(0).getIdVolontaire()).isEqualTo(10);
         assertThat(savedRdvs.get(0).getEtat()).isEqualTo("ANNULE");
-        assertThat(savedRdvs.get(1).getId().getIdEtude()).isEqualTo(5);
-        assertThat(savedRdvs.get(1).getId().getIdRdv()).isEqualTo(2);
+        assertThat(savedRdvs.get(1).getIdEtude()).isEqualTo(5);
+        assertThat(savedRdvs.get(1).getIdRdv()).isEqualTo(2);
         assertThat(savedRdvs.get(1).getIdVolontaire()).isNull();
         assertThat(savedRdvs.get(1).getEtat()).isEqualTo("PLANIFIE");
+    }
+
+    @Test
+    @DisplayName("saveAnnulation() - Propage l'échec RDV pour annuler toute la transaction")
+    void testSaveAnnulation_RdvFailureIsPropagated() {
+        when(annulationMapper.toEntity(annulationDTO)).thenReturn(annulation);
+        when(annulationRepository.save(annulation)).thenReturn(annulation);
+
+        Rdv rdv = new Rdv();
+        rdv.setId(1001L);
+        rdv.setIdEtude(5);
+        rdv.setIdRdv(1);
+        rdv.setIdVolontaire(10);
+        rdv.setEtat("PLANIFIE");
+        when(rdvRepository.findByIdVolontaireAndIdEtude(10, 5))
+                .thenReturn(Collections.singletonList(rdv));
+        when(rdvRepository.save(rdv)).thenThrow(new IllegalStateException("échec sauvegarde RDV"));
+
+        assertThatThrownBy(() -> annulationService.saveAnnulation(annulationDTO))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("échec sauvegarde RDV");
+
+        verify(annulationMapper, never()).toDto(any(Annulation.class));
     }
 
     @Test
@@ -370,7 +397,50 @@ class AnnulationServiceImplTest {
     }
 
     @Test
-    @DisplayName("saveAnnulation() - Données nulles")
+    @DisplayName("saveAnnulation() - Enregistre l'annulation volontaire meme si le RDV est deja annule")
+    void testSaveAnnulation_RecordsVolunteerCancellationFromAlreadyCancelledRdv() {
+        // Arrange
+        annulationDTO.setIdAnnuler(null);
+        annulationDTO.setIdVol(20);
+        annulationDTO.setIdEtude(5);
+        annulationDTO.setIdRdv(null);
+
+        Rdv oldCancelledRdv = new Rdv();
+        oldCancelledRdv.setId(1001L);
+        oldCancelledRdv.setIdEtude(5);
+        oldCancelledRdv.setIdRdv(1);
+        oldCancelledRdv.setIdVolontaire(20);
+        oldCancelledRdv.setEtat("ANNULE");
+
+        when(rdvRepository.findByIdVolontaireAndIdEtude(20, 5))
+            .thenReturn(Collections.singletonList(oldCancelledRdv));
+        when(annulationMapper.toEntity(annulationDTO)).thenAnswer(invocation -> {
+            AnnulationDTO dto = invocation.getArgument(0);
+            Annulation mapped = new Annulation();
+            mapped.setIdVol(dto.getIdVol());
+            mapped.setIdEtude(dto.getIdEtude());
+            mapped.setIdRdv(dto.getIdRdv());
+            mapped.setDateAnnulation(dto.getDateAnnulation());
+            mapped.setCommentaire(dto.getCommentaire());
+            mapped.setAnnulePar(dto.getAnnulePar());
+            return mapped;
+        });
+        when(annulationRepository.save(any(Annulation.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(annulationMapper.toDto(any(Annulation.class))).thenReturn(annulationDTO);
+
+        // Act
+        annulationService.saveAnnulation(annulationDTO);
+
+        // Assert: l'ancien RDV est trace dans annulation, mais pas re-sauve/remplace.
+        verify(annulationRepository).save(argThat(saved ->
+                saved.getIdVol() == 20
+                        && saved.getIdEtude() == 5
+                        && Integer.valueOf(1).equals(saved.getIdRdv())));
+        verify(rdvRepository, never()).save(any(Rdv.class));
+    }
+
+    @Test
+    @DisplayName("saveAnnulation() - Donnees nulles")
     void testSaveAnnulation_NullData() {
         // Act & Assert - NullPointerException car le logger essaie d'accéder aux propriétés avant validation
         assertThatThrownBy(() -> annulationService.saveAnnulation(null))

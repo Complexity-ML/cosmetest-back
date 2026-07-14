@@ -2,6 +2,7 @@ package com.example.cosmetest.business.service;
 
 import com.example.cosmetest.business.dto.VolontaireDTO;
 import com.example.cosmetest.business.dto.VolontaireDetailDTO;
+import com.example.cosmetest.business.dto.VolontaireNotificationDTO;
 import com.example.cosmetest.domain.model.Volontaire;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -263,6 +264,8 @@ public interface VolontaireService {
     int countVolontairesAddedToday();
 
     List<VolontaireDTO> getRecentVolontaires(int limit);
+
+    List<VolontaireNotificationDTO> getTodayNotifications(int limit);
 
     /**
      * Récupère les informations d'une photo pour un volontaire

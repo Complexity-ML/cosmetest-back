@@ -2,7 +2,7 @@ package com.example.cosmetest.business.mapper;
 
 import com.example.cosmetest.business.dto.RdvDTO;
 import com.example.cosmetest.domain.model.Rdv;
-import com.example.cosmetest.domain.model.RdvId;
+
 
 import org.springframework.stereotype.Component;
 
@@ -28,8 +28,9 @@ public class RdvMapper {
         }
 
         RdvDTO dto = new RdvDTO();
-        dto.setIdEtude(rdv.getId().getIdEtude());
-        dto.setIdRdv(rdv.getId().getIdRdv());
+        dto.setRdvPk(rdv.getRdvPk());
+        dto.setIdEtude(rdv.getIdEtude());
+        dto.setIdRdv(rdv.getIdRdv());
         dto.setIdVolontaire(rdv.getIdVolontaire());
         dto.setIdGroupe(rdv.getIdGroupe());
         dto.setDate(rdv.getDate());
@@ -57,14 +58,10 @@ public class RdvMapper {
             return null;
         }
 
-        RdvId rdvId = new RdvId();
-        rdvId.setIdEtude(dto.getIdEtude());
-        rdvId.setIdRdv(dto.getIdRdv());
-        // rdvId.setSequence(1); // Valeur par défaut ou dto.getSequence() si vous avez
-        // ajouté ce champ au DTO
-
         Rdv rdv = new Rdv();
-        rdv.setId(rdvId);
+        rdv.setRdvPk(dto.getRdvPk());
+        rdv.setIdEtude(dto.getIdEtude());
+        rdv.setIdRdv(dto.getIdRdv());
         rdv.setIdVolontaire(dto.getIdVolontaire());
         rdv.setIdGroupe(dto.getIdGroupe());
         rdv.setDate(Date.valueOf(dto.getDate()));

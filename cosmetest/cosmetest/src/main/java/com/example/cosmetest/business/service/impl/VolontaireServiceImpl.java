@@ -2,14 +2,15 @@ package com.example.cosmetest.business.service.impl;
 
 import com.example.cosmetest.business.dto.VolontaireDTO;
 import com.example.cosmetest.business.dto.VolontaireDetailDTO;
+import com.example.cosmetest.business.dto.VolontaireNotificationDTO;
 import com.example.cosmetest.business.mapper.VolontaireMapper;
+import com.example.cosmetest.business.service.PhotoProxyService;
 import com.example.cosmetest.business.service.VolontaireService;
 import com.example.cosmetest.domain.model.Volontaire;
 import com.example.cosmetest.data.repository.AnnulationRepository;
 import com.example.cosmetest.data.repository.EtudeVolontaireRepository;
 import com.example.cosmetest.data.repository.RdvRepository;
 import com.example.cosmetest.data.repository.VolontaireRepository;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.data.domain.Page;
@@ -22,17 +23,10 @@ import java.time.Period;
 import java.util.*;
 import java.util.stream.Collectors;
 
-import java.net.HttpURLConnection;
-import java.net.URI;
-import java.net.URL;
-import java.net.UnknownHostException;
-import java.nio.charset.StandardCharsets;
 import java.time.format.DateTimeFormatter;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.net.URLEncoder;
 
 /**
  * Implémentation des services métier pour l'entité Volontaire
@@ -46,28 +40,18 @@ public class VolontaireServiceImpl implements VolontaireService {
     private final RdvRepository rdvRepository;
     private final EtudeVolontaireRepository etudeVolontaireRepository;
     private final AnnulationRepository annulationRepository;
+    private final PhotoProxyService photoProxyService;
     private static final Logger logger = LoggerFactory.getLogger(VolontaireServiceImpl.class);
-
-    @Value("${photo.server.url}")
-    private String photoServerUrl;
-
-    @Value("${photo.check.enabled:true}") // true par défaut
-    private boolean photoCheckEnabled;
-
-    @Value("${photo.connection.timeout:5000}") // 5000ms par défaut
-    private int photoConnectionTimeout;
-
-    @Value("${photo.read.timeout:5000}") // 5000ms par défaut
-    private int photoReadTimeout;
 
     public VolontaireServiceImpl(VolontaireRepository volontaireRepository, VolontaireMapper volontaireMapper,
                                  RdvRepository rdvRepository, EtudeVolontaireRepository etudeVolontaireRepository,
-                                 AnnulationRepository annulationRepository) {
+                                 AnnulationRepository annulationRepository, PhotoProxyService photoProxyService) {
         this.volontaireRepository = volontaireRepository;
         this.volontaireMapper = volontaireMapper;
         this.rdvRepository = rdvRepository;
         this.etudeVolontaireRepository = etudeVolontaireRepository;
         this.annulationRepository = annulationRepository;
+        this.photoProxyService = photoProxyService;
     }
 
     @Override
@@ -711,12 +695,7 @@ public class VolontaireServiceImpl implements VolontaireService {
 
     @Override
     public int countVolontairesAddedToday() {
-        LocalDate today = LocalDate.now();
-        // Convertir en java.sql.Date pour la compatibilité
-        Date startOfDay = Date.valueOf(today);
-        Date endOfDay = Date.valueOf(today.plusDays(1));
-
-        return volontaireRepository.countByDateIBetween(startOfDay, endOfDay);
+        return volontaireRepository.countByDateI(Date.valueOf(LocalDate.now()));
     }
 
     @Override
@@ -728,6 +707,23 @@ public class VolontaireServiceImpl implements VolontaireService {
         return volontaires.stream()
                 .map(this::convertToDTO)
                 .collect(Collectors.toList());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<VolontaireNotificationDTO> getTodayNotifications(int limit) {
+        int boundedLimit = Math.max(1, Math.min(limit, 100));
+        Date today = Date.valueOf(LocalDate.now());
+
+        return volontaireRepository
+                .findByDateIOrderByIdVolDesc(today, PageRequest.of(0, boundedLimit))
+                .stream()
+                .map(volontaire -> new VolontaireNotificationDTO(
+                        volontaire.getIdVol(),
+                        volontaire.getNomVol(),
+                        volontaire.getPrenomVol(),
+                        volontaire.getDateI() == null ? null : volontaire.getDateI().toString()))
+                .toList();
     }
 
     private VolontaireDTO convertToDTO(Volontaire volontaire) {
@@ -809,7 +805,7 @@ public class VolontaireServiceImpl implements VolontaireService {
                             if (checkPhotoExists(fileName)) {
                                 logger.debug("Photo trouvée: '{}'", fileName);
                                 Map<String, Object> result = new HashMap<>();
-                                result.put("photoUrl", photoServerUrl + fileName);
+                                result.put("photoUrl", photoProxyService.publicUrl(fileName));
                                 result.put("fileName", fileName);
                                 result.put("exists", true);
                                 return result;
@@ -865,47 +861,7 @@ public class VolontaireServiceImpl implements VolontaireService {
     }
 
     private boolean checkPhotoExists(String fileName) {
-        if (!photoCheckEnabled) {
-            logger.debug("Vérification photo désactivée, retour true pour: {}", fileName);
-            return true;
-        }
-
-        // IMPORTANT : Encoder correctement l'URL pour gérer les espaces et caractères
-        // spéciaux
-        String encodedFileName;
-        try {
-            // Encoder seulement le nom du fichier, pas l'URL complète
-            encodedFileName = URLEncoder.encode(fileName, StandardCharsets.UTF_8)
-                    .replace("+", "%20"); // URLEncoder remplace espaces par +, on veut %20
-        } catch (Exception e) {
-            logger.warn("Erreur lors de l'encodage du nom de fichier '{}': {}", fileName, e.getMessage());
-            return false;
-        }
-
-        String photoUrl = photoServerUrl + encodedFileName;
-        logger.debug("URL encodée: {}", photoUrl);
-
-        try {
-            URL url = URI.create(photoUrl).toURL();
-            HttpURLConnection connection = (HttpURLConnection) url.openConnection();
-            connection.setRequestMethod("HEAD");
-            connection.setConnectTimeout(photoConnectionTimeout);
-            connection.setReadTimeout(photoReadTimeout);
-
-            int responseCode = connection.getResponseCode();
-            boolean exists = (responseCode == HttpURLConnection.HTTP_OK);
-            logger.debug("Vérification photo '{}': {}", fileName, exists ? "trouvée" : "non trouvée");
-
-            return exists;
-
-        } catch (UnknownHostException e) {
-            logger.debug("Serveur photo inaccessible ({}), arrêt des vérifications", e.getMessage());
-            throw new IllegalStateException("PHOTO_SERVER_UNREACHABLE");
-        } catch (Exception e) {
-            logger.warn("Erreur lors de la vérification de '{}': {} - {}",
-                    photoUrl, e.getClass().getSimpleName(), e.getMessage());
-            return false;
-        }
+        return photoProxyService.exists(fileName);
     }
 
     @Override
@@ -984,7 +940,7 @@ public class VolontaireServiceImpl implements VolontaireService {
                             Map<String, Object> photoInfo = new HashMap<>();
                             photoInfo.put("type", photoType);
                             photoInfo.put("code", photoCode);
-                            photoInfo.put("photoUrl", photoServerUrl + fileName);
+                            photoInfo.put("photoUrl", photoProxyService.publicUrl(fileName));
                             photoInfo.put("fileName", fileName);
                             photos.add(photoInfo);
                         }

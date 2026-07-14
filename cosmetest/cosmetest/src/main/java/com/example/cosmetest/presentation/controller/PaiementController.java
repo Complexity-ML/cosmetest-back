@@ -6,10 +6,9 @@ import com.example.cosmetest.business.service.PaiementStatsService;
 import com.example.cosmetest.business.service.PaymentBatchService;
 import com.example.cosmetest.domain.model.AuditLog;
 import jakarta.servlet.http.HttpServletRequest;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.web.bind.annotation.CrossOrigin;
+
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -23,7 +22,6 @@ import java.util.List;
  */
 @RestController
 @RequestMapping("/api/paiements")
-@CrossOrigin(origins = "*")
 public class PaiementController {
 
     private final PaymentBatchService paymentBatchService;
@@ -63,27 +61,10 @@ public class PaiementController {
      */
     @PostMapping("/etudes/{idEtude}/mark-all-paid")
     public ResponseEntity<?> markAllAsPaid(@PathVariable int idEtude, HttpServletRequest request) {
-        try {
-            PaymentBatchResultDTO result = paymentBatchService.markAllAsPaid(idEtude);
-            String utilisateur = SecurityContextHolder.getContext().getAuthentication().getName();
-            auditLogService.log(utilisateur, AuditLog.Action.PAYE, "PAIEMENT",
-                    String.valueOf(idEtude), result.toString(), request.getRemoteAddr());
-            return ResponseEntity.ok(result);
-        } catch (IllegalArgumentException e) {
-            return ResponseEntity.badRequest().body(
-                java.util.Map.of(
-                    "success", false,
-                    "message", e.getMessage()
-                )
-            );
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(
-                java.util.Map.of(
-                    "success", false,
-                    "message", "Erreur lors de l'opération de paiement en masse",
-                    "error", e.getMessage()
-                )
-            );
-        }
+        PaymentBatchResultDTO result = paymentBatchService.markAllAsPaid(idEtude);
+        String utilisateur = SecurityContextHolder.getContext().getAuthentication().getName();
+        auditLogService.log(utilisateur, AuditLog.Action.PAYE, "PAIEMENT",
+                String.valueOf(idEtude), result.toString(), request.getRemoteAddr());
+        return ResponseEntity.ok(result);
     }
 }

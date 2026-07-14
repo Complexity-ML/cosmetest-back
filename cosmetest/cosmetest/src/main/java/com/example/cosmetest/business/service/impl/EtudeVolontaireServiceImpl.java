@@ -6,606 +6,102 @@ import com.example.cosmetest.business.service.EtudeVolontaireService;
 import com.example.cosmetest.data.repository.EtudeVolontaireRepository;
 import com.example.cosmetest.domain.model.EtudeVolontaire;
 import com.example.cosmetest.domain.model.EtudeVolontaireId;
-import com.example.cosmetest.domain.model.Etude;
-import com.example.cosmetest.domain.model.Volontaire;
-
+import com.example.cosmetest.exception.AmbiguousEtudeVolontaireException;
+import jakarta.persistence.EntityNotFoundException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.transaction.annotation.Isolation;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
-import java.util.stream.Collectors;
-import jakarta.persistence.EntityManager;
-import jakarta.persistence.PersistenceContext;
 
-/**
- * Implémentation améliorée compatible avec votre interface existante
- * 
- * Corrections apportées :
- * - Méthode updateNumSujet complétée et fonctionnelle
- * - Gestion d'erreurs robuste avec logs détaillés
- * - Validation intégrée pour tous les paramètres
- * - Optimisations de performance (évite les mises à jour inutiles)
- * - Méthodes utilitaires pour réduire la duplication de code
- * - Vérification d'unicité des numéros de sujets
- */
 @Service
-@Transactional(readOnly = true) // Par défaut, lectures seules
+@Transactional(readOnly = true)
 public class EtudeVolontaireServiceImpl implements EtudeVolontaireService {
+    private final EtudeVolontaireRepository repository;
+    private final EtudeVolontaireMapper mapper;
 
-    private static final Logger log = LoggerFactory.getLogger(EtudeVolontaireServiceImpl.class);
-
-    private final EtudeVolontaireRepository etudeVolontaireRepository;
-    private final EtudeVolontaireMapper etudeVolontaireMapper;
-
-    @PersistenceContext
-    private EntityManager entityManager;
-
-    public EtudeVolontaireServiceImpl(
-            EtudeVolontaireRepository etudeVolontaireRepository,
-            EtudeVolontaireMapper etudeVolontaireMapper) {
-        this.etudeVolontaireRepository = etudeVolontaireRepository;
-        this.etudeVolontaireMapper = etudeVolontaireMapper;
+    public EtudeVolontaireServiceImpl(EtudeVolontaireRepository repository, EtudeVolontaireMapper mapper) {
+        this.repository = repository; this.mapper = mapper;
     }
-
-    // ===============================
-    // OPÉRATIONS DE LECTURE
-    // ===============================
-
-    @Override
-    public List<EtudeVolontaireDTO> getAllEtudeVolontaires() {
-        log.debug("Récupération de toutes les associations étude-volontaire");
-        return convertToDto(etudeVolontaireRepository.findAll());
+    public List<EtudeVolontaireDTO> getAllEtudeVolontaires(){return map(repository.findAll());}
+    public Page<EtudeVolontaireDTO> getAllEtudeVolontairesPaginated(Pageable p){return repository.findAll(p).map(mapper::toDto);}
+    public Optional<EtudeVolontaireDTO> getEtudeVolontaireById(Long id){return repository.findById(id).map(mapper::toDto);}
+    public Optional<EtudeVolontaireDTO> getEtudeVolontaireById(EtudeVolontaireId id){
+        List<EtudeVolontaire> matches=legacyMatches(id); if(matches.isEmpty()) return Optional.empty();
+        return Optional.of(mapper.toDto(requireSingle(matches,id)));
     }
+    public List<EtudeVolontaireDTO> getEtudeVolontairesByEtude(int id){positive(id,"idEtude");return map(repository.findByIdEtude(id));}
+    public List<EtudeVolontaireDTO> getEtudeVolontairesByVolontaire(int id){positive(id,"idVolontaire");return map(repository.findByIdVolontaire(id));}
+    public List<EtudeVolontaireDTO> getEtudeVolontairesByGroupe(int id){nonNegative(id,"idGroupe");return map(repository.findByIdGroupe(id));}
+    public List<EtudeVolontaireDTO> getEtudeVolontairesByEtudeAndVolontaire(int e,int v){positive(e,"idEtude");positive(v,"idVolontaire");return map(repository.findByIdEtudeAndIdVolontaire(e,v));}
+    public List<EtudeVolontaireDTO> getEtudeVolontairesByEtudeAndGroupe(int e,int g){positive(e,"idEtude");nonNegative(g,"idGroupe");return map(repository.findByIdEtudeAndIdGroupe(e,g));}
+    public List<EtudeVolontaireDTO> getEtudeVolontairesByStatut(String s){return map(repository.findByStatut(s));}
+    public List<EtudeVolontaireDTO> getEtudeVolontairesByPaye(int p){paye(p);return map(repository.findByPaye(p));}
 
-    @Override
-    public Page<EtudeVolontaireDTO> getAllEtudeVolontairesPaginated(Pageable pageable) {
-        log.debug("Récupération paginée - page: {}, taille: {}",
-                pageable.getPageNumber(), pageable.getPageSize());
-        return etudeVolontaireRepository.findAll(pageable)
-                .map(etudeVolontaireMapper::toDto);
-    }
-
-    @Override
-    public Optional<EtudeVolontaireDTO> getEtudeVolontaireById(EtudeVolontaireId id) {
-        log.debug("Recherche association par ID: {}", id);
-        return etudeVolontaireRepository.findById(id)
-                .map(etudeVolontaireMapper::toDto);
-    }
-
-    @Override
-    public List<EtudeVolontaireDTO> getEtudeVolontairesByEtude(int idEtude) {
-        log.debug("Récupération des volontaires pour l'étude: {}", idEtude);
-        validatePositiveId(idEtude, "idEtude");
-        return convertToDto(etudeVolontaireRepository.findByIdEtude(idEtude));
-    }
-
-    @Override
-    public List<EtudeVolontaireDTO> getEtudeVolontairesByVolontaire(int idVolontaire) {
-        log.debug("Récupération des études pour le volontaire: {}", idVolontaire);
-        validatePositiveId(idVolontaire, "idVolontaire");
-        return convertToDto(keepOneAssociationPerStudy(etudeVolontaireRepository.findByIdVolontaire(idVolontaire)));
-    }
-
-    @Override
-    public List<EtudeVolontaireDTO> getEtudeVolontairesByGroupe(int idGroupe) {
-        log.debug("Récupération des volontaires pour le groupe: {}", idGroupe);
-        validateNonNegativeId(idGroupe, "idGroupe");
-        return convertToDto(etudeVolontaireRepository.findByIdGroupe(idGroupe));
-    }
-
-    @Override
-    public List<EtudeVolontaireDTO> getEtudeVolontairesByEtudeAndVolontaire(int idEtude, int idVolontaire) {
-        log.debug("Recherche étude: {} et volontaire: {}", idEtude, idVolontaire);
-        validatePositiveId(idEtude, "idEtude");
-        validatePositiveId(idVolontaire, "idVolontaire");
-        return convertToDto(keepOneAssociationPerStudy(etudeVolontaireRepository.findByIdEtudeAndIdVolontaire(idEtude, idVolontaire)));
-    }
-
-    @Override
-    public List<EtudeVolontaireDTO> getEtudeVolontairesByEtudeAndGroupe(int idEtude, int idGroupe) {
-        log.debug("Recherche étude: {} et groupe: {}", idEtude, idGroupe);
-        validatePositiveId(idEtude, "idEtude");
-        validateNonNegativeId(idGroupe, "idGroupe");
-        return convertToDto(etudeVolontaireRepository.findByIdEtudeAndIdGroupe(idEtude, idGroupe));
-    }
-
-    @Override
-    public List<EtudeVolontaireDTO> getEtudeVolontairesByStatut(String statut) {
-        log.debug("Recherche par statut: {}", statut);
-        validateStatut(statut);
-        return convertToDto(etudeVolontaireRepository.findByStatut(statut));
-    }
-
-    @Override
-    public List<EtudeVolontaireDTO> getEtudeVolontairesByPaye(int paye) {
-        log.debug("Recherche par paye: {}", paye);
-        validatePayeValue(paye);
-        return convertToDto(etudeVolontaireRepository.findByPaye(paye));
-    }
-
-    // ===============================
-    // OPÉRATIONS D'ÉCRITURE
-    // ===============================
-
-    @Override
     @Transactional
-    public EtudeVolontaireDTO saveEtudeVolontaire(EtudeVolontaireDTO etudeVolontaireDTO) {
-        log.info("Sauvegarde association: étude={}, volontaire={}",
-                etudeVolontaireDTO.getIdEtude(), etudeVolontaireDTO.getIdVolontaire());
-
-        // Validation complète
-        validateEtudeVolontaireData(etudeVolontaireDTO);
-
-        try {
-            List<EtudeVolontaire> existingAssociations = etudeVolontaireRepository.findByIdEtudeAndIdVolontaire(
-                    etudeVolontaireDTO.getIdEtude(),
-                    etudeVolontaireDTO.getIdVolontaire());
-
-            if (!existingAssociations.isEmpty()) {
-                int deleted = etudeVolontaireRepository.deleteByIdEtudeAndIdVolontaire(
-                        etudeVolontaireDTO.getIdEtude(),
-                        etudeVolontaireDTO.getIdVolontaire());
-                etudeVolontaireRepository.flush();
-                log.info("{} ancienne(s) association(s) remplacee(s) pour etude={} volontaire={}",
-                        deleted, etudeVolontaireDTO.getIdEtude(), etudeVolontaireDTO.getIdVolontaire());
-            }
-
-            EtudeVolontaire entity = etudeVolontaireMapper.toEntity(etudeVolontaireDTO);
-            EtudeVolontaire saved = etudeVolontaireRepository.save(entity);
-
-            log.info("Association sauvegardée: {}", saved.getId());
-            return etudeVolontaireMapper.toDto(saved);
-        } catch (Exception e) {
-            log.error("Erreur sauvegarde: {}", e.getMessage());
-            throw new RuntimeException("Erreur lors de la sauvegarde", e);
+    public EtudeVolontaireDTO saveEtudeVolontaire(EtudeVolontaireDTO dto){
+        validate(dto);
+        EtudeVolontaire entity;
+        if(dto.getId()!=null){
+            entity=required(dto.getId());
+            mapper.updateEntityFromDto(dto,entity);
+        } else {
+            List<EtudeVolontaire> samePair=repository.findByIdEtudeAndIdVolontaire(dto.getIdEtude(),dto.getIdVolontaire());
+            if(!samePair.isEmpty()) throw new AmbiguousEtudeVolontaireException("Association existante: utiliser son ID technique; "+samePair.size()+" ligne(s) trouvée(s)");
+            entity=mapper.toEntity(dto);
         }
+        return mapper.toDto(repository.save(entity));
+    }
+    @Transactional public void deleteEtudeVolontaire(Long id){repository.delete(required(id));}
+    @Transactional public void deleteEtudeVolontaire(EtudeVolontaireId id){deleteEtudeVolontaire(requireSingle(legacyMatches(id),id).getId());}
+
+    public boolean existsByEtudeAndVolontaire(int e,int v){positive(e,"idEtude");positive(v,"idVolontaire");return repository.existsByIdEtudeAndIdVolontaire(e,v);}
+    public Long countVolontairesByEtude(int e){positive(e,"idEtude");return repository.countVolontairesByEtude(e);}
+    public Long countEtudesByVolontaire(int v){positive(v,"idVolontaire");return repository.countEtudesByVolontaire(v);}
+
+    @Transactional public EtudeVolontaireDTO updateStatut(Long id,String s){EtudeVolontaire e=required(id);e.setStatut(s);return saved(e);}
+    @Transactional public EtudeVolontaireDTO updatePaye(Long id,int p){paye(p);EtudeVolontaire e=required(id);e.setPaye(p);return saved(e);}
+    @Transactional public EtudeVolontaireDTO updateIV(Long id,int iv){nonNegative(iv,"iv");EtudeVolontaire e=required(id);e.setIv(iv);return saved(e);}
+    @Transactional public EtudeVolontaireDTO updatePayeAndIV(Long id,int p,int iv){paye(p);nonNegative(iv,"iv");EtudeVolontaire e=required(id);e.setPaye(p);e.setIv(iv);return saved(e);}
+    public int getIVById(Long id){Integer iv=required(id).getIv();return iv==null?0:iv;}
+    @Transactional public EtudeVolontaireDTO updateNumSujet(Long id,int n){
+        nonNegative(n,"numSujet"); EtudeVolontaire e=required(id);
+        if(n>0 && repository.countNumSujetUsedByOtherVolontaire(e.getIdEtude(),n,e.getIdVolontaire())>0)
+            throw new IllegalArgumentException("Le numéro de sujet est déjà utilisé dans cette étude");
+        e.setNumSujet(n); return saved(e);
+    }
+    @Transactional public EtudeVolontaireDTO updateVolontaire(Long id,Integer v){
+        if(v!=null) positive(v,"idVolontaire"); EtudeVolontaire e=required(id); e.setIdVolontaire(v==null?0:v); return saved(e);
     }
 
-    @Override
-    @Transactional
-    public void deleteEtudeVolontaire(EtudeVolontaireId id) {
-        log.info("Suppression association: {}", id);
-
-        if (!etudeVolontaireRepository.existsById(id)) {
-            throw new IllegalArgumentException("Association non trouvée: " + id);
-        }
-
-        try {
-            etudeVolontaireRepository.deleteById(id);
-            log.info("Association supprimée: {}", id);
-        } catch (Exception e) {
-            log.error("Erreur suppression: {}", e.getMessage());
-            throw new RuntimeException("Erreur lors de la suppression", e);
-        }
+    public EtudeVolontaireDTO updateStatut(EtudeVolontaireId id,String s){return updateStatut(resolveLegacyId(id),s);}
+    public EtudeVolontaireDTO updatePaye(EtudeVolontaireId id,int p){return updatePaye(resolveLegacyId(id),p);}
+    public EtudeVolontaireDTO updateIV(EtudeVolontaireId id,int iv){return updateIV(resolveLegacyId(id),iv);}
+    public EtudeVolontaireDTO updatePayeAndIV(EtudeVolontaireId id,int p,int iv){return updatePayeAndIV(resolveLegacyId(id),p,iv);}
+    public int getIVById(EtudeVolontaireId id){return getIVById(resolveLegacyId(id));}
+    public EtudeVolontaireDTO updateNumSujet(EtudeVolontaireId id,int n){return updateNumSujet(resolveLegacyId(id),n);}
+    public EtudeVolontaireDTO updateVolontaire(EtudeVolontaireId id,Integer v){return updateVolontaire(resolveLegacyId(id),v);}
+    @Transactional public int deleteByEtudeAndVolontaire(int e,int v){
+        List<EtudeVolontaire> matches=repository.findByIdEtudeAndIdVolontaire(e,v);
+        EtudeVolontaire one=requireSingle(matches,"étude="+e+", volontaire="+v);
+        repository.deleteById(one.getId()); return 1;
     }
 
-    // ===============================
-    // OPÉRATIONS DE MISE À JOUR CORRIGÉES
-    // ===============================
-
-    @Override
-    @Transactional(isolation = Isolation.READ_COMMITTED)
-    public EtudeVolontaireDTO updateStatut(EtudeVolontaireId id, String nouveauStatut) {
-        log.info("Mise à jour statut: {} -> {}", id.getStatut(), nouveauStatut);
-
-        validateStatut(nouveauStatut);
-        EtudeVolontaire entity = findEntityById(id);
-
-        // Optimisation: éviter mise à jour inutile
-        if (nouveauStatut.equals(id.getStatut())) {
-            log.debug("Statut inchangé, aucune action");
-            return etudeVolontaireMapper.toDto(entity);
-        }
-
-        return performEntityRecreation(id, nouveauStatut, id.getPaye(), id.getIv(), id.getNumsujet(),
-                "Mise à jour du statut");
+    private Long resolveLegacyId(EtudeVolontaireId id){return requireSingle(legacyMatches(id),id).getId();}
+    private List<EtudeVolontaire> legacyMatches(EtudeVolontaireId id){
+        return repository.findByLegacyKey(id.getIdEtude(),id.getIdGroupe(),id.getIdVolontaire(),id.getIv(),id.getNumsujet(),id.getPaye(),id.getStatut());
     }
-
-    @Override
-    @Transactional(isolation = Isolation.READ_COMMITTED)
-    public EtudeVolontaireDTO updatePaye(EtudeVolontaireId id, int nouveauPaye) {
-        log.info("Mise à jour paye: {} -> {}", id.getPaye(), nouveauPaye);
-
-        validatePayeValue(nouveauPaye);
-        EtudeVolontaire entity = findEntityById(id);
-
-        if (nouveauPaye == id.getPaye()) {
-            log.debug("Paye inchangé, aucune action");
-            return etudeVolontaireMapper.toDto(entity);
-        }
-
-        return performEntityRecreation(id, id.getStatut(), nouveauPaye, id.getIv(), id.getNumsujet(),
-                "Mise à jour du paiement");
+    private <T> T requireSingle(List<T> matches,Object key){
+        if(matches.isEmpty()) throw new EntityNotFoundException("Association non trouvée: "+key);
+        if(matches.size()>1) throw new AmbiguousEtudeVolontaireException("Association ambiguë ("+matches.size()+" lignes): "+key);
+        return matches.get(0);
     }
-
-    @Override
-    @Transactional(isolation = Isolation.READ_COMMITTED)
-    public EtudeVolontaireDTO updateIV(EtudeVolontaireId id, int nouvelIV) {
-        log.info("Mise à jour IV: {} -> {}", id.getIv(), nouvelIV);
-
-        validateIVValue(nouvelIV);
-        EtudeVolontaire entity = findEntityById(id);
-
-        if (nouvelIV == id.getIv()) {
-            log.debug("IV inchangé, aucune action");
-            return etudeVolontaireMapper.toDto(entity);
-        }
-
-        return performEntityRecreation(id, id.getStatut(), id.getPaye(), nouvelIV, id.getNumsujet(),
-                "Mise à jour de l'indemnité");
-    }
-
-    @Override
-    @Transactional(isolation = Isolation.READ_COMMITTED)
-    public EtudeVolontaireDTO updateNumSujet(EtudeVolontaireId id, int nouveauNumSujet) {
-        log.info("Mise à jour numéro sujet: {} -> {}", id.getNumsujet(), nouveauNumSujet);
-
-        validateNumSujetValue(nouveauNumSujet);
-        EtudeVolontaire entity = findEntityById(id);
-
-        if (nouveauNumSujet == id.getNumsujet()) {
-            log.debug("Numéro de sujet inchangé, aucune action");
-            return etudeVolontaireMapper.toDto(entity);
-        }
-
-        // IMPORTANT: Vérifier l'unicité du numéro de sujet dans l'étude
-        if (nouveauNumSujet > 0) {
-            checkNumSujetUniqueness(id.getIdEtude(), nouveauNumSujet, id.getIdVolontaire());
-        }
-
-        return performEntityRecreation(id, id.getStatut(), id.getPaye(), id.getIv(), nouveauNumSujet,
-                "Mise à jour du numéro de sujet");
-    }
-
-    @Override
-    @Transactional(isolation = Isolation.READ_COMMITTED)
-    public EtudeVolontaireDTO updatePayeAndIV(EtudeVolontaireId id, int nouveauPaye, int nouvelIV) {
-        log.info("Mise à jour paye et IV: paye {} -> {}, IV {} -> {}",
-                id.getPaye(), nouveauPaye, id.getIv(), nouvelIV);
-
-        validatePayeValue(nouveauPaye);
-        validateIVValue(nouvelIV);
-        EtudeVolontaire entity = findEntityById(id);
-
-        if (nouveauPaye == id.getPaye() && nouvelIV == id.getIv()) {
-            log.debug("Paye et IV inchangés, aucune action");
-            return etudeVolontaireMapper.toDto(entity);
-        }
-
-        return performEntityRecreation(id, id.getStatut(), nouveauPaye, nouvelIV, id.getNumsujet(),
-                "Mise à jour du paiement et de l'indemnité");
-    }
-
-    @Override
-    @Transactional(isolation = Isolation.READ_COMMITTED)
-    public EtudeVolontaireDTO updateVolontaire(EtudeVolontaireId id, Integer nouveauVolontaireId) {
-        log.info("Mise à jour volontaire: {} -> {}", id.getIdVolontaire(), nouveauVolontaireId);
-
-        // Validation : nouveauVolontaireId peut être null (pour désassigner)
-        if (nouveauVolontaireId != null && nouveauVolontaireId <= 0) {
-            throw new IllegalArgumentException("L'ID volontaire doit être positif ou null");
-        }
-
-        EtudeVolontaire entity = findEntityById(id);
-
-        // Optimisation: éviter mise à jour inutile
-        int newVolId = nouveauVolontaireId != null ? nouveauVolontaireId : 0;
-        if (newVolId == id.getIdVolontaire()) {
-            log.debug("Volontaire inchangé, aucune action");
-            return etudeVolontaireMapper.toDto(entity);
-        }
-
-        // Créer le nouvel ID avec le nouveau volontaire
-        EtudeVolontaireId nouveauId = new EtudeVolontaireId(
-                id.getIdEtude(),
-                id.getIdGroupe(),
-                newVolId, // 0 si null, sinon la nouvelle valeur
-                id.getIv(),
-                id.getNumsujet(),
-                id.getPaye(),
-                id.getStatut());
-
-        try {
-            // Vérifier si association avec nouvel ID existe déjà
-            if (etudeVolontaireRepository.existsById(nouveauId)) {
-                throw new IllegalArgumentException("Une association avec ces paramètres existe déjà: " + nouveauId);
-            }
-
-            // Supprimer ancienne association
-            etudeVolontaireRepository.deleteById(id);
-            etudeVolontaireRepository.flush();
-
-            // Créer nouvelle association
-            EtudeVolontaire nouvelleAssociation = new EtudeVolontaire();
-            nouvelleAssociation.setId(nouveauId);
-
-            // Renseigner les associations @MapsId (obligatoires pour Hibernate)
-            if (nouveauId.getIdEtude() != null) {
-                Etude etudeRef = entityManager.getReference(Etude.class, nouveauId.getIdEtude());
-                nouvelleAssociation.setEtude(etudeRef);
-            }
-            if (nouveauId.getIdVolontaire() != null && nouveauId.getIdVolontaire() > 0) {
-                Volontaire volRef = entityManager.getReference(Volontaire.class, nouveauId.getIdVolontaire());
-                nouvelleAssociation.setVolontaire(volRef);
-            }
-
-            // Sauvegarder la nouvelle entité
-            EtudeVolontaire saved = etudeVolontaireRepository.save(nouvelleAssociation);
-            log.info(" Volontaire mis à jour: {} -> {}", id.getIdVolontaire(), newVolId);
-            return etudeVolontaireMapper.toDto(saved);
-
-        } catch (IllegalArgumentException e) {
-            log.warn(" Erreur validation lors de la mise à jour du volontaire: {}", e.getMessage());
-            throw e;
-        } catch (Exception e) {
-            log.error(" Erreur technique lors de la mise à jour du volontaire: {}", e.getMessage(), e);
-            throw new RuntimeException("Erreur lors de la mise à jour du volontaire: " + e.getMessage(), e);
-        }
-    }
-
-    // ===============================
-    // OPÉRATIONS UTILITAIRES
-    // ===============================
-
-    @Override
-    public boolean existsByEtudeAndVolontaire(int idEtude, int idVolontaire) {
-        if (idEtude <= 0 || idVolontaire <= 0) {
-            throw new IllegalArgumentException("Les IDs doivent être positifs");
-        }
-        return etudeVolontaireRepository.existsByIdEtudeAndIdVolontaire(idEtude, idVolontaire);
-    }
-
-    @Override
-    public Long countVolontairesByEtude(int idEtude) {
-        if (idEtude <= 0) {
-            throw new IllegalArgumentException("L'ID étude doit être positif");
-        }
-        return etudeVolontaireRepository.countVolontairesByEtude(idEtude);
-    }
-
-    @Override
-    public Long countEtudesByVolontaire(int idVolontaire) {
-        if (idVolontaire <= 0) {
-            throw new IllegalArgumentException("L'ID volontaire doit être positif");
-        }
-        return etudeVolontaireRepository.countEtudesByVolontaire(idVolontaire);
-    }
-
-    @Override
-    public int getIVById(EtudeVolontaireId id) {
-        Optional<EtudeVolontaire> entity = etudeVolontaireRepository.findById(id);
-        if (!entity.isPresent()) {
-            throw new IllegalArgumentException("Association non trouvée: " + id);
-        }
-        return entity.get().getId().getIv();
-    }
-
-    // ===============================
-    // MÉTHODES PRIVÉES SIMPLIFIÉES
-    // ===============================
-
-    /**
-     * Convertit une liste d'entités en DTOs
-     */
-    private List<EtudeVolontaireDTO> convertToDto(List<EtudeVolontaire> entities) {
-        return entities.stream()
-                .map(etudeVolontaireMapper::toDto)
-                .collect(Collectors.toList());
-    }
-
-    private List<EtudeVolontaire> keepOneAssociationPerStudy(List<EtudeVolontaire> entities) {
-        Map<Integer, EtudeVolontaire> byStudy = new LinkedHashMap<>();
-        for (EtudeVolontaire entity : entities) {
-            if (entity == null || entity.getId() == null || entity.getId().getIdEtude() == null) {
-                continue;
-            }
-
-            Integer idEtude = entity.getId().getIdEtude();
-            EtudeVolontaire current = byStudy.get(idEtude);
-            byStudy.put(idEtude, chooseVisibleAssociation(current, entity));
-        }
-        return List.copyOf(byStudy.values());
-    }
-
-    private EtudeVolontaire chooseVisibleAssociation(EtudeVolontaire current, EtudeVolontaire candidate) {
-        if (current == null) {
-            return candidate;
-        }
-
-        if (isAnnule(current) && !isAnnule(candidate)) {
-            return candidate;
-        }
-        if (!isAnnule(current) && isAnnule(candidate)) {
-            return current;
-        }
-        if (candidate.getId().getIv() > current.getId().getIv()) {
-            return candidate;
-        }
-        if (candidate.getId().getNumsujet() > 0 && current.getId().getNumsujet() <= 0) {
-            return candidate;
-        }
-        return current;
-    }
-
-    private boolean isAnnule(EtudeVolontaire association) {
-        return association != null
-                && association.getId() != null
-                && association.getId().getStatut() != null
-                && "ANNULE".equalsIgnoreCase(association.getId().getStatut());
-    }
-
-    /**
-     * VERSION CORRIGÉE - Recréation d'entité SANS setters individuels
-     * (pour entités qui n'ont que l'ID composite)
-     */
-    private EtudeVolontaireDTO performEntityRecreation(
-            EtudeVolontaireId ancienId,
-            String statut,
-            int paye,
-            int iv,
-            int numsujet,
-            String operationDescription) {
-
-        try {
-            // Rechercher l'entité existante AVANT de la supprimer
-            Optional<EtudeVolontaire> existingOpt = etudeVolontaireRepository.findById(ancienId);
-            if (!existingOpt.isPresent()) {
-                throw new IllegalArgumentException("Association non trouvée: " + ancienId);
-            }
-
-            EtudeVolontaire existing = existingOpt.get();
-
-            // Créer le nouvel ID
-            EtudeVolontaireId nouveauId = new EtudeVolontaireId(
-                    ancienId.getIdEtude(),
-                    ancienId.getIdGroupe(),
-                    ancienId.getIdVolontaire(),
-                    iv, numsujet, paye, statut);
-
-            // Si l'ID n'a pas changé, pas besoin de recréer
-            if (nouveauId.equals(ancienId)) {
-                return etudeVolontaireMapper.toDto(existing);
-            }
-
-            // Vérifier si association avec nouvel ID existe déjà
-            if (etudeVolontaireRepository.existsById(nouveauId)) {
-                throw new IllegalArgumentException("Une association avec ces paramètres existe déjà: " + nouveauId);
-            }
-
-            // Supprimer ancienne association
-            etudeVolontaireRepository.deleteById(ancienId);
-            etudeVolontaireRepository.flush(); // S'assurer que la suppression est effectuée
-
-            // Créer nouvelle association avec l'ID composite
-            EtudeVolontaire nouvelleAssociation = new EtudeVolontaire();
-            nouvelleAssociation.setId(nouveauId);
-
-            // Renseigner les associations @MapsId (obligatoires pour Hibernate)
-            if (nouveauId.getIdEtude() != null) {
-                Etude etudeRef = entityManager.getReference(Etude.class, nouveauId.getIdEtude());
-                nouvelleAssociation.setEtude(etudeRef);
-            }
-            if (nouveauId.getIdVolontaire() != null && nouveauId.getIdVolontaire() > 0) {
-                Volontaire volRef = entityManager.getReference(Volontaire.class, nouveauId.getIdVolontaire());
-                nouvelleAssociation.setVolontaire(volRef);
-            }
-
-            // Sauvegarder la nouvelle entité
-            EtudeVolontaire saved = etudeVolontaireRepository.save(nouvelleAssociation);
-            return etudeVolontaireMapper.toDto(saved);
-
-        } catch (IllegalArgumentException e) {
-            log.warn(" Erreur validation lors de {}: {}", operationDescription, e.getMessage());
-            throw e;
-        } catch (Exception e) {
-            log.error(" Erreur technique lors de {}: {}", operationDescription, e.getMessage(), e);
-            throw new RuntimeException("Erreur lors de " + operationDescription.toLowerCase() + ": " + e.getMessage(),
-                    e);
-        }
-    }
-
-    // ===============================
-    // VALIDATION SIMPLIFIÉE (optionnel - vous pouvez supprimer)
-    // ===============================
-
-    private void validatePositiveId(int id, String fieldName) {
-        if (id <= 0) {
-            throw new IllegalArgumentException(fieldName + " doit être un nombre positif");
-        }
-    }
-
-    private void validateNonNegativeId(int id, String fieldName) {
-        if (id < 0) {
-            throw new IllegalArgumentException(fieldName + " doit être positif ou zéro");
-        }
-    }
-
-    private void validateStatut(String statut) {
-        // Validation très permissive pour éviter les erreurs
-        if (statut == null) {
-            return; // Accepter null
-        }
-
-        String statutNormalise = statut.trim();
-
-        // Accepter les statuts vides comme valides
-        if (statutNormalise.isEmpty() || statutNormalise.equals("-")) {
-            return;
-        }
-
-        log.debug(" Validation statut: '{}'", statutNormalise);
-        // Pas de validation stricte pour le moment
-    }
-
-    private void validatePayeValue(int paye) {
-        // Validation simple
-        if (paye < 0 || paye > 1) {
-            throw new IllegalArgumentException("La valeur de paye doit être 0 ou 1");
-        }
-    }
-
-    private void validateIVValue(int iv) {
-        if (iv < 0) {
-            throw new IllegalArgumentException("L'indemnité doit être positive ou nulle");
-        }
-    }
-
-    private void validateNumSujetValue(int numSujet) {
-        if (numSujet < 0) {
-            throw new IllegalArgumentException("Le numéro de sujet doit être positif ou zéro");
-        }
-    }
-
-    private EtudeVolontaire findEntityById(EtudeVolontaireId id) {
-        return etudeVolontaireRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Association non trouvée: " + id));
-    }
-
-    private void validateEtudeVolontaireData(EtudeVolontaireDTO dto) {
-        if (dto == null) {
-            throw new IllegalArgumentException("Les données ne peuvent pas être nulles");
-        }
-        // Validation minimale
-        if (dto.getIdEtude() <= 0) {
-            throw new IllegalArgumentException("ID étude invalide");
-        }
-        if (dto.getIdVolontaire() <= 0) {
-            throw new IllegalArgumentException("ID volontaire invalide");
-        }
-    }
-
-    @Override
-    @Transactional
-    public int deleteByEtudeAndVolontaire(int idEtude, int idVolontaire) {
-        log.info("Suppression associations pour étude={} et volontaire={}", idEtude, idVolontaire);
-        validatePositiveId(idEtude, "idEtude");
-        validatePositiveId(idVolontaire, "idVolontaire");
-        int deleted = etudeVolontaireRepository.deleteByIdEtudeAndIdVolontaire(idEtude, idVolontaire);
-        log.info("{} association(s) supprimée(s)", deleted);
-        return deleted;
-    }
-
-    private void checkNumSujetUniqueness(int idEtude, int numSujet, int idVolontaire) {
-        if (numSujet <= 0)
-            return; // Les numéros <= 0 ne sont pas soumis à l'unicité
-
-        // Vérification simplifiée
-        boolean hasConflict = etudeVolontaireRepository.findByIdEtude(idEtude).stream()
-                .anyMatch(assoc -> assoc.getId().getNumsujet() == numSujet &&
-                        assoc.getId().getIdVolontaire() != idVolontaire);
-
-        if (hasConflict) {
-            throw new IllegalArgumentException(
-                    String.format("Le numéro de sujet %d est déjà utilisé dans l'étude %d", numSujet, idEtude));
-        }
-    }
+    private EtudeVolontaire required(Long id){return repository.findById(id).orElseThrow(()->new EntityNotFoundException("Association non trouvée: "+id));}
+    private EtudeVolontaireDTO saved(EtudeVolontaire e){return mapper.toDto(repository.save(e));}
+    private List<EtudeVolontaireDTO> map(List<EtudeVolontaire> e){return e.stream().map(mapper::toDto).toList();}
+    private void validate(EtudeVolontaireDTO d){if(d==null)throw new IllegalArgumentException("Données requises");positive(d.getIdEtude(),"idEtude");positive(d.getIdVolontaire(),"idVolontaire");}
+    private void positive(int n,String f){if(n<=0)throw new IllegalArgumentException(f+" doit être positif");}
+    private void nonNegative(int n,String f){if(n<0)throw new IllegalArgumentException(f+" doit être positif ou nul");}
+    private void paye(int p){if(p<0||p>1)throw new IllegalArgumentException("La valeur de paye doit être 0 ou 1");}
 }

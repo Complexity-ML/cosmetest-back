@@ -3,206 +3,125 @@ package com.example.cosmetest.business.service.impl;
 import com.example.cosmetest.business.dto.PreetudevolDTO;
 import com.example.cosmetest.business.mapper.PreetudevolMapper;
 import com.example.cosmetest.business.service.PreetudevolService;
-import com.example.cosmetest.domain.model.Preetudevol;
-import com.example.cosmetest.domain.model.PreetudevolId;
 import com.example.cosmetest.data.repository.PreetudevolRepository;
+import com.example.cosmetest.domain.model.Preetudevol;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Optional;
 
-/**
- * Implémentation des services métier pour l'entité Preetudevol
- */
 @Service
 @Transactional
 public class PreetudevolServiceImpl implements PreetudevolService {
+    private final PreetudevolRepository repository;
+    private final PreetudevolMapper mapper;
 
-    private final PreetudevolRepository preetudevolRepository;
-    private final PreetudevolMapper preetudevolMapper;
-
-    public PreetudevolServiceImpl(PreetudevolRepository preetudevolRepository, PreetudevolMapper preetudevolMapper) {
-        this.preetudevolRepository = preetudevolRepository;
-        this.preetudevolMapper = preetudevolMapper;
+    public PreetudevolServiceImpl(PreetudevolRepository repository, PreetudevolMapper mapper) {
+        this.repository = repository;
+        this.mapper = mapper;
     }
 
-    @Override
-    @Transactional(readOnly = true)
-    public List<PreetudevolDTO> getAllPreetudevols() {
-        List<Preetudevol> preetudevols = preetudevolRepository.findAll();
-        return preetudevolMapper.toDTOList(preetudevols);
+    @Override @Transactional(readOnly = true)
+    public List<PreetudevolDTO> getAllPreetudevols() { return mapper.toDTOList(repository.findAll()); }
+
+    @Override @Transactional(readOnly = true)
+    public Optional<PreetudevolDTO> getPreetudevolById(Long id) {
+        return id == null ? Optional.empty() : repository.findById(id).map(mapper::toDTO);
     }
 
-    @Override
-    @Transactional(readOnly = true)
+    @Override @Transactional(readOnly = true)
     public Optional<PreetudevolDTO> getPreetudevolById(int idEtude, int idGroupe, int idVolontaire) {
-        PreetudevolId id = new PreetudevolId(idEtude, idGroupe, idVolontaire);
-        return preetudevolRepository.findById(id)
-                .map(preetudevolMapper::toDTO);
+        return repository.findByIdEtudeAndIdGroupeAndIdVolontaire(idEtude, idGroupe, idVolontaire).map(mapper::toDTO);
     }
 
-    @Override
-    @Transactional(readOnly = true)
-    public List<PreetudevolDTO> getPreetudevolsByIdEtude(int idEtude) {
-        List<Preetudevol> preetudevols = preetudevolRepository.findByIdIdEtude(idEtude);
-        return preetudevolMapper.toDTOList(preetudevols);
-    }
+    @Override @Transactional(readOnly = true)
+    public List<PreetudevolDTO> getPreetudevolsByIdEtude(int idEtude) { return mapper.toDTOList(repository.findByIdEtude(idEtude)); }
+    @Override @Transactional(readOnly = true)
+    public List<PreetudevolDTO> getPreetudevolsByIdGroupe(int idGroupe) { return mapper.toDTOList(repository.findByIdGroupe(idGroupe)); }
+    @Override @Transactional(readOnly = true)
+    public List<PreetudevolDTO> getPreetudevolsByIdVolontaire(int idVolontaire) { return mapper.toDTOList(repository.findByIdVolontaire(idVolontaire)); }
+    @Override @Transactional(readOnly = true)
+    public List<PreetudevolDTO> getPreetudevolsByEtudeAndGroupe(int idEtude, int idGroupe) { return mapper.toDTOList(repository.findByIdEtudeAndIdGroupe(idEtude, idGroupe)); }
+    @Override @Transactional(readOnly = true)
+    public List<PreetudevolDTO> getPreetudevolsByEtudeAndVolontaire(int idEtude, int idVolontaire) { return mapper.toDTOList(repository.findByIdEtudeAndIdVolontaire(idEtude, idVolontaire)); }
 
     @Override
-    @Transactional(readOnly = true)
-    public List<PreetudevolDTO> getPreetudevolsByIdGroupe(int idGroupe) {
-        List<Preetudevol> preetudevols = preetudevolRepository.findByIdIdGroupe(idGroupe);
-        return preetudevolMapper.toDTOList(preetudevols);
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public List<PreetudevolDTO> getPreetudevolsByIdVolontaire(int idVolontaire) {
-        List<Preetudevol> preetudevols = preetudevolRepository.findByIdIdVolontaire(idVolontaire);
-        return preetudevolMapper.toDTOList(preetudevols);
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public List<PreetudevolDTO> getPreetudevolsByEtudeAndGroupe(int idEtude, int idGroupe) {
-        List<Preetudevol> preetudevols = preetudevolRepository.findByIdIdEtudeAndIdIdGroupe(idEtude, idGroupe);
-        return preetudevolMapper.toDTOList(preetudevols);
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public List<PreetudevolDTO> getPreetudevolsByEtudeAndVolontaire(int idEtude, int idVolontaire) {
-        List<Preetudevol> preetudevols = preetudevolRepository.findByIdIdEtudeAndIdIdVolontaire(idEtude, idVolontaire);
-        return preetudevolMapper.toDTOList(preetudevols);
-    }
-
-    @Override
-    public PreetudevolDTO createPreetudevol(PreetudevolDTO preetudevolDTO) {
-        validatePreetudevol(preetudevolDTO);
-
-        // Vérifier si la pré-étude-volontaire existe déjà
-        PreetudevolId id = new PreetudevolId(
-                preetudevolDTO.getIdEtude(),
-                preetudevolDTO.getIdGroupe(),
-                preetudevolDTO.getIdVolontaire()
-        );
-
-        if (preetudevolRepository.existsById(id)) {
+    public PreetudevolDTO createPreetudevol(PreetudevolDTO dto) {
+        validate(dto);
+        if (repository.existsByIdEtudeAndIdGroupeAndIdVolontaire(dto.getIdEtude(), dto.getIdGroupe(), dto.getIdVolontaire())) {
             throw new IllegalArgumentException("Cette pré-étude-volontaire existe déjà");
         }
-
-        Preetudevol preetudevol = preetudevolMapper.toEntity(preetudevolDTO);
-        Preetudevol savedPreetudevol = preetudevolRepository.save(preetudevol);
-        return preetudevolMapper.toDTO(savedPreetudevol);
+        Preetudevol entity = mapper.toEntity(dto);
+        entity.setIdPreetudevol(null);
+        return mapper.toDTO(repository.save(entity));
     }
 
     @Override
-    public Optional<PreetudevolDTO> updatePreetudevol(int idEtude, int idGroupe, int idVolontaire, PreetudevolDTO preetudevolDTO) {
-        validatePreetudevol(preetudevolDTO);
-
-        PreetudevolId id = new PreetudevolId(idEtude, idGroupe, idVolontaire);
-
-        // Vérifier si l'entité à mettre à jour existe
-        if (!preetudevolRepository.existsById(id)) {
-            return Optional.empty();
-        }
-
-        // Vérifier si la nouvelle clé existe déjà (si elle est différente de l'ancienne)
-        PreetudevolId newId = new PreetudevolId(
-                preetudevolDTO.getIdEtude(),
-                preetudevolDTO.getIdGroupe(),
-                preetudevolDTO.getIdVolontaire()
-        );
-
-        if (!id.equals(newId) && preetudevolRepository.existsById(newId)) {
-            throw new IllegalArgumentException("La nouvelle pré-étude-volontaire existe déjà");
-        }
-
-        // Pour les entités avec une clé composite qui contient toutes les données,
-        // il est souvent plus simple de supprimer l'ancienne et de créer une nouvelle
-        preetudevolRepository.deleteById(id);
-        Preetudevol newPreetudevol = preetudevolMapper.toEntity(preetudevolDTO);
-        Preetudevol savedPreetudevol = preetudevolRepository.save(newPreetudevol);
-        return Optional.of(preetudevolMapper.toDTO(savedPreetudevol));
+    public Optional<PreetudevolDTO> updatePreetudevol(Long id, PreetudevolDTO dto) {
+        if (id == null) return Optional.empty();
+        validate(dto);
+        return repository.findById(id).map(entity -> updateExisting(entity, dto));
     }
 
     @Override
-    public boolean deletePreetudevol(int idEtude, int idGroupe, int idVolontaire) {
-        PreetudevolId id = new PreetudevolId(idEtude, idGroupe, idVolontaire);
+    public Optional<PreetudevolDTO> updatePreetudevol(int idEtude, int idGroupe, int idVolontaire, PreetudevolDTO dto) {
+        validate(dto);
+        return repository.findByIdEtudeAndIdGroupeAndIdVolontaire(idEtude, idGroupe, idVolontaire)
+                .map(entity -> updateExisting(entity, dto));
+    }
 
-        if (!preetudevolRepository.existsById(id)) {
-            return false;
-        }
+    private PreetudevolDTO updateExisting(Preetudevol entity, PreetudevolDTO dto) {
+        repository.findByIdEtudeAndIdGroupeAndIdVolontaire(dto.getIdEtude(), dto.getIdGroupe(), dto.getIdVolontaire())
+                .filter(other -> !other.getIdPreetudevol().equals(entity.getIdPreetudevol()))
+                .ifPresent(other -> { throw new IllegalArgumentException("La nouvelle pré-étude-volontaire existe déjà"); });
+        mapper.updateEntityFromDTO(entity, dto);
+        return mapper.toDTO(repository.save(entity));
+    }
 
-        preetudevolRepository.deleteById(id);
+    @Override
+    public boolean deletePreetudevol(Long id) {
+        if (id == null || !repository.existsById(id)) return false;
+        repository.deleteById(id);
         return true;
     }
 
     @Override
-    public int deletePreetudevolsByIdEtude(int idEtude) {
-        List<Preetudevol> preetudevols = preetudevolRepository.findByIdIdEtude(idEtude);
-        int count = preetudevols.size();
-
-        if (count > 0) {
-            preetudevolRepository.deleteByIdIdEtude(idEtude);
-        }
-
-        return count;
+    public boolean deletePreetudevol(int idEtude, int idGroupe, int idVolontaire) {
+        return repository.findByIdEtudeAndIdGroupeAndIdVolontaire(idEtude, idGroupe, idVolontaire).map(entity -> {
+            repository.deleteById(entity.getIdPreetudevol());
+            return true;
+        }).orElse(false);
     }
 
+    @Override
+    public int deletePreetudevolsByIdEtude(int idEtude) {
+        int count = repository.findByIdEtude(idEtude).size();
+        if (count > 0) repository.deleteByIdEtude(idEtude);
+        return count;
+    }
     @Override
     public int deletePreetudevolsByIdGroupe(int idGroupe) {
-        List<Preetudevol> preetudevols = preetudevolRepository.findByIdIdGroupe(idGroupe);
-        int count = preetudevols.size();
-
-        if (count > 0) {
-            preetudevolRepository.deleteByIdIdGroupe(idGroupe);
-        }
-
+        int count = repository.findByIdGroupe(idGroupe).size();
+        if (count > 0) repository.deleteByIdGroupe(idGroupe);
         return count;
     }
-
     @Override
     public int deletePreetudevolsByIdVolontaire(int idVolontaire) {
-        List<Preetudevol> preetudevols = preetudevolRepository.findByIdIdVolontaire(idVolontaire);
-        int count = preetudevols.size();
-
-        if (count > 0) {
-            preetudevolRepository.deleteByIdIdVolontaire(idVolontaire);
-        }
-
+        int count = repository.findByIdVolontaire(idVolontaire).size();
+        if (count > 0) repository.deleteByIdVolontaire(idVolontaire);
         return count;
     }
 
-    @Override
-    @Transactional(readOnly = true)
+    @Override @Transactional(readOnly = true)
     public boolean existsById(int idEtude, int idGroupe, int idVolontaire) {
-        PreetudevolId id = new PreetudevolId(idEtude, idGroupe, idVolontaire);
-        return preetudevolRepository.existsById(id);
+        return repository.existsByIdEtudeAndIdGroupeAndIdVolontaire(idEtude, idGroupe, idVolontaire);
     }
 
-    /**
-     * Valide les données d'un PreetudevolDTO
-     *
-     * @param preetudevolDTO le DTO à valider
-     * @throws IllegalArgumentException si les données sont invalides
-     */
-    private void validatePreetudevol(PreetudevolDTO preetudevolDTO) {
-        if (preetudevolDTO == null) {
-            throw new IllegalArgumentException("La pré-étude-volontaire ne peut pas être null");
-        }
-
-        if (preetudevolDTO.getIdEtude() == null || preetudevolDTO.getIdEtude() <= 0) {
-            throw new IllegalArgumentException("L'ID de l'étude doit être un nombre positif");
-        }
-
-        if (preetudevolDTO.getIdGroupe() == null || preetudevolDTO.getIdGroupe() <= 0) {
-            throw new IllegalArgumentException("L'ID du groupe doit être un nombre positif");
-        }
-
-        if (preetudevolDTO.getIdVolontaire() == null || preetudevolDTO.getIdVolontaire() <= 0) {
-            throw new IllegalArgumentException("L'ID du volontaire doit être un nombre positif");
-        }
+    private void validate(PreetudevolDTO dto) {
+        if (dto == null) throw new IllegalArgumentException("La pré-étude-volontaire ne peut pas être null");
+        if (dto.getIdEtude() == null || dto.getIdEtude() <= 0) throw new IllegalArgumentException("L'ID de l'étude doit être un nombre positif");
+        if (dto.getIdGroupe() == null || dto.getIdGroupe() <= 0) throw new IllegalArgumentException("L'ID du groupe doit être un nombre positif");
+        if (dto.getIdVolontaire() == null || dto.getIdVolontaire() <= 0) throw new IllegalArgumentException("L'ID du volontaire doit être un nombre positif");
     }
 }

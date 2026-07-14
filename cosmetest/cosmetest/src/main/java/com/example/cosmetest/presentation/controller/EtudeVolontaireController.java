@@ -12,12 +12,14 @@ import com.example.cosmetest.domain.model.AuditLog;
 import com.example.cosmetest.domain.model.EtudeVolontaireId;
 
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.persistence.EntityNotFoundException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import jakarta.validation.Valid;
@@ -30,8 +32,10 @@ import java.util.stream.Collectors;
  */
 @RestController
 @RequestMapping("/api/etude-volontaires")
-@CrossOrigin(origins = "*")
 public class EtudeVolontaireController {
+
+    private static final int DEFAULT_PAGE_SIZE = 50;
+    private static final int MAX_PAGE_SIZE = 100;
 
     private final EtudeVolontaireService etudeVolontaireService;
     private final RdvService rdvService;
@@ -61,17 +65,59 @@ public class EtudeVolontaireController {
     // ENDPOINTS DE LECTURE
     // ===============================
 
+    @GetMapping("/{id}")
+    public ResponseEntity<ApiResponse<EtudeVolontaireDTO>> getByTechnicalId(@PathVariable Long id) {
+        return etudeVolontaireService.getEtudeVolontaireById(id)
+                .map(dto -> ResponseEntity.ok(ApiResponse.success(dto, "Association trouvée")))
+                .orElseGet(() -> ResponseEntity.status(HttpStatus.NOT_FOUND)
+                        .body(ApiResponse.error("Association non trouvée", "ID technique " + id)));
+    }
+
+    @PatchMapping("/{id}/statut")
+    public ResponseEntity<ApiResponse<EtudeVolontaireDTO>> updateStatutByTechnicalId(
+            @PathVariable Long id, @RequestParam String nouveauStatut) {
+        return ResponseEntity.ok(ApiResponse.success(etudeVolontaireService.updateStatut(id, nouveauStatut),
+                "Statut mis à jour avec succès"));
+    }
+
+    @PatchMapping("/{id}/paye")
+    public ResponseEntity<ApiResponse<EtudeVolontaireDTO>> updatePayeByTechnicalId(
+            @PathVariable Long id, @RequestParam int nouveauPaye) {
+        return ResponseEntity.ok(ApiResponse.success(etudeVolontaireService.updatePaye(id, nouveauPaye),
+                "Statut de paiement mis à jour avec succès"));
+    }
+
+    @PatchMapping("/{id}/iv")
+    public ResponseEntity<ApiResponse<EtudeVolontaireDTO>> updateIvByTechnicalId(
+            @PathVariable Long id, @RequestParam int nouvelIV) {
+        return ResponseEntity.ok(ApiResponse.success(etudeVolontaireService.updateIV(id, nouvelIV),
+                "Indemnité mise à jour avec succès"));
+    }
+
+    @PatchMapping("/{id}/numsujet")
+    public ResponseEntity<ApiResponse<EtudeVolontaireDTO>> updateNumSujetByTechnicalId(
+            @PathVariable Long id, @RequestParam int nouveauNumSujet) {
+        return ResponseEntity.ok(ApiResponse.success(etudeVolontaireService.updateNumSujet(id, nouveauNumSujet),
+                "Numéro de sujet mis à jour avec succès"));
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<ApiResponse<Void>> deleteByTechnicalId(@PathVariable Long id) {
+        etudeVolontaireService.deleteEtudeVolontaire(id);
+        return ResponseEntity.ok(ApiResponse.success(null, "Association supprimée avec succès"));
+    }
+
     @GetMapping
-    public ResponseEntity<ApiResponse<List<EtudeVolontaireDTO>>> getAllEtudeVolontaires() {
+    public ResponseEntity<ApiResponse<Page<EtudeVolontaireDTO>>> getAllEtudeVolontaires(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "50") int size) {
         try {
-            Pageable pageable = PageRequest.of(0, Integer.MAX_VALUE);
+            Pageable pageable = boundedPageable(page, size);
             Page<EtudeVolontaireDTO> etudeVolontairesPage = etudeVolontaireService
                     .getAllEtudeVolontairesPaginated(pageable);
-            List<EtudeVolontaireDTO> etudeVolontaires = etudeVolontairesPage.getContent();
-            return ResponseEntity.ok(ApiResponse.success(etudeVolontaires, "Associations récupérées avec succès"));
+            return ResponseEntity.ok(ApiResponse.success(etudeVolontairesPage, "Associations récupérées avec succès"));
         } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(ApiResponse.error("Erreur lors de la récupération des associations", e.getMessage()));
+            throw new RuntimeException("Impossible de récupérer les associations", e);
         }
     }
 
@@ -80,13 +126,12 @@ public class EtudeVolontaireController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
         try {
-            Pageable pageable = PageRequest.of(page, size);
+            Pageable pageable = boundedPageable(page, size);
             Page<EtudeVolontaireDTO> etudeVolontairesPage = etudeVolontaireService
                     .getAllEtudeVolontairesPaginated(pageable);
             return ResponseEntity.ok(ApiResponse.success(etudeVolontairesPage, "Page récupérée avec succès"));
         } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(ApiResponse.error("Erreur lors de la récupération paginée", e.getMessage()));
+            throw new RuntimeException("Impossible de récupérer la page d'associations", e);
         }
     }
 
@@ -110,8 +155,7 @@ public class EtudeVolontaireController {
                         .body(ApiResponse.error("Association non trouvée", "Aucune association avec ces identifiants"));
             }
         } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(ApiResponse.error("Erreur lors de la recherche", e.getMessage()));
+            throw new RuntimeException("Impossible de rechercher l'association", e);
         }
     }
 
@@ -157,8 +201,7 @@ public class EtudeVolontaireController {
             return ResponseEntity.badRequest()
                     .body(ApiResponse.error("Données invalides", e.getMessage()));
         } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(ApiResponse.error("Erreur lors de la création", e.getMessage()));
+            throw new RuntimeException("Impossible de créer l'association", e);
         }
     }
 
@@ -291,8 +334,7 @@ public class EtudeVolontaireController {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
                     .body(ApiResponse.error("Association non trouvée", e.getMessage()));
         } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(ApiResponse.error("Erreur lors de la suppression", e.getMessage()));
+            throw new RuntimeException("Impossible de supprimer l'association", e);
         }
     }
 
@@ -319,8 +361,7 @@ public class EtudeVolontaireController {
             return ResponseEntity.badRequest()
                     .body(ApiResponse.error("Paramètres invalides", e.getMessage()));
         } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(ApiResponse.error("Erreur lors de la suppression", e.getMessage()));
+            throw new RuntimeException("Impossible de supprimer l'association", e);
         }
     }
 
@@ -351,21 +392,66 @@ public class EtudeVolontaireController {
         return response;
     }
 
+    /**
+     * Contrat simplifié utilisé par l'interface de paiements. La clé composite
+     * courante est résolue côté serveur afin d'éviter les fragments obsolètes.
+     */
+    @PatchMapping("/update-paiement")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<ApiResponse<EtudeVolontaireDTO>> updatePaiement(
+            @RequestParam(required = false) Long id,
+            @RequestParam int idEtude,
+            @RequestParam int idVolontaire,
+            @RequestParam int nouveauStatutPaiement,
+            HttpServletRequest request) {
+        if (nouveauStatutPaiement != 0 && nouveauStatutPaiement != 1) {
+            throw new IllegalArgumentException("Le statut de paiement doit être 0 ou 1");
+        }
+        if (id != null) {
+            EtudeVolontaireDTO updated = etudeVolontaireService.updatePaye(id, nouveauStatutPaiement);
+            return ResponseEntity.ok(ApiResponse.success(updated, "Paiement mis à jour avec succès"));
+        }
+
+        List<EtudeVolontaireDTO> matches = etudeVolontaireService
+                .getEtudeVolontairesByEtude(idEtude)
+                .stream()
+                .filter(item -> item.getIdVolontaire() == idVolontaire)
+                .toList();
+        if (matches.isEmpty()) {
+            throw new EntityNotFoundException("Association étude-volontaire non trouvée");
+        }
+        if (matches.size() > 1) {
+            throw new com.example.cosmetest.exception.AmbiguousEtudeVolontaireException(
+                    "La route historique étude/volontaire correspond à " + matches.size() + " lignes; fournir id");
+        }
+
+        EtudeVolontaireDTO current = matches.get(0);
+        EtudeVolontaireId legacyId = new EtudeVolontaireId(
+                current.getIdEtude(), current.getIdGroupe(), current.getIdVolontaire(),
+                current.getIv(), current.getNumsujet(), current.getPaye(), current.getStatut());
+        EtudeVolontaireDTO updated = etudeVolontaireService.updatePaye(legacyId, nouveauStatutPaiement);
+
+        var authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication != null) {
+            auditLogService.log(authentication.getName(), AuditLog.Action.PAYE, "ETUDE_VOLONTAIRE",
+                    idEtude + "-" + current.getIdGroupe() + "-" + idVolontaire,
+                    evDetails(idEtude, current.getIdGroupe(), idVolontaire, "paiement update"),
+                    request.getRemoteAddr());
+        }
+        return ResponseEntity.ok(ApiResponse.success(updated, "Paiement mis à jour avec succès"));
+    }
+
     // Ajoutez aussi cet endpoint si vous l'utilisez dans votre React :
     @GetMapping("/paiements")
-    public ResponseEntity<ApiResponse<List<EtudeVolontaireDTO>>> getAllPaiements() {
-        try {
-            // Utiliser la même logique que getAllEtudeVolontaires mais avec un nom plus
-            // explicite
-            Pageable pageable = PageRequest.of(0, Integer.MAX_VALUE);
-            Page<EtudeVolontaireDTO> etudeVolontairesPage = etudeVolontaireService
-                    .getAllEtudeVolontairesPaginated(pageable);
-            List<EtudeVolontaireDTO> paiements = etudeVolontairesPage.getContent();
-            return ResponseEntity.ok(ApiResponse.success(paiements, "Données de paiements récupérées avec succès"));
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(ApiResponse.error("Erreur lors de la récupération des paiements", e.getMessage()));
-        }
+    public ResponseEntity<ApiResponse<Page<EtudeVolontaireDTO>>> getAllPaiements(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "50") int size) {
+        Pageable pageable = boundedPageable(page, size);
+        Page<EtudeVolontaireDTO> etudeVolontairesPage = etudeVolontaireService
+                .getAllEtudeVolontairesPaginated(pageable);
+        return ResponseEntity.ok(ApiResponse.success(
+                etudeVolontairesPage,
+                "Données de paiements récupérées avec succès"));
     }
 
     // ===============================
@@ -392,21 +478,19 @@ public class EtudeVolontaireController {
     // MÉTHODES UTILITAIRES PRIVÉES
     // ===============================
 
+    private Pageable boundedPageable(int page, int size) {
+        int safePage = Math.max(0, page);
+        int safeSize = Math.min(MAX_PAGE_SIZE, Math.max(1, size > 0 ? size : DEFAULT_PAGE_SIZE));
+        return PageRequest.of(safePage, safeSize);
+    }
+
     /**
      * Méthode générique pour gérer les appels de service avec gestion d'erreurs
      * uniforme
      */
     private <T> ResponseEntity<ApiResponse<T>> handleServiceCall(ServiceCall<T> serviceCall, String successMessage) {
-        try {
-            T result = serviceCall.call();
-            return ResponseEntity.ok(ApiResponse.success(result, successMessage));
-        } catch (IllegalArgumentException e) {
-            return ResponseEntity.badRequest()
-                    .body(ApiResponse.error("Paramètres invalides", e.getMessage()));
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(ApiResponse.error("Erreur interne", e.getMessage()));
-        }
+        T result = serviceCall.call();
+        return ResponseEntity.ok(ApiResponse.success(result, successMessage));
     }
 
     /**
@@ -430,8 +514,7 @@ public class EtudeVolontaireController {
                         .body(ApiResponse.error("VALIDATION", e.getMessage()));
             }
         } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(ApiResponse.error("ERREUR_INTERNE", e.getMessage()));
+            throw new RuntimeException("Impossible de mettre à jour l'association", e);
         }
     }
 
@@ -510,7 +593,7 @@ public class EtudeVolontaireController {
                     etudeVolontaireService.saveEtudeVolontaire(dto);
                     repaired++;
                 } catch (Exception e) {
-                    errors.add("Volontaire " + volontaireId + ": " + e.getMessage());
+                    errors.add("Volontaire " + volontaireId + ": échec de réparation");
                 }
             }
 
@@ -527,7 +610,7 @@ public class EtudeVolontaireController {
             return ResponseEntity.ok(result);
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(Map.of("error", "Erreur lors de la réparation: " + e.getMessage()));
+                    .body(Map.of("error", "Erreur lors de la réparation"));
         }
     }
 
@@ -536,7 +619,7 @@ public class EtudeVolontaireController {
      */
     @FunctionalInterface
     private interface ServiceCall<T> {
-        T call() throws Exception;
+        T call();
     }
 }
 

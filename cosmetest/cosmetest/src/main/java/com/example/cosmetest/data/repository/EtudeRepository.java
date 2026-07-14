@@ -173,7 +173,7 @@ public interface EtudeRepository extends JpaRepository<Etude, Integer> {
          * Trouve les études avec le nombre de RDV dans une période donnée
          */
         @Query("SELECT e, COUNT(r) as rdvCount FROM Etude e " +
-                        "LEFT JOIN Rdv r ON r.id.idEtude = e.idEtude " +
+                        "LEFT JOIN Rdv r ON r.idEtude = e.idEtude " +
                         "AND r.date BETWEEN :dateDebut AND :dateFin " +
                         "AND (r.etat IS NULL OR UPPER(r.etat) <> 'ANNULE') " +
                         "WHERE (e.dateDebut <= :dateFinEtude AND e.dateFin >= :dateDebutEtude) " +
@@ -217,7 +217,7 @@ public interface EtudeRepository extends JpaRepository<Etude, Integer> {
          * Trouve les études avec le plus de RDV
          */
         @Query("SELECT e.ref, e.titre, COUNT(r) as rdvCount FROM Etude e " +
-                        "LEFT JOIN Rdv r ON r.id.idEtude = e.idEtude " +
+                        "LEFT JOIN Rdv r ON r.idEtude = e.idEtude " +
                         "AND (r.etat IS NULL OR UPPER(r.etat) <> 'ANNULE') " +
                         "GROUP BY e.idEtude, e.ref, e.titre " +
                         "ORDER BY COUNT(r) DESC")
@@ -229,7 +229,7 @@ public interface EtudeRepository extends JpaRepository<Etude, Integer> {
         @Query("SELECT e FROM Etude e " +
                         "WHERE NOT EXISTS (" +
                         "   SELECT 1 FROM Rdv r " +
-                        "   WHERE r.id.idEtude = e.idEtude " +
+                        "   WHERE r.idEtude = e.idEtude " +
                         "   AND r.date BETWEEN :dateDebut AND :dateFin " +
                         "   AND (r.etat IS NULL OR UPPER(r.etat) <> 'ANNULE')" +
                         ") " +
@@ -245,14 +245,14 @@ public interface EtudeRepository extends JpaRepository<Etude, Integer> {
          */
         @Query("SELECT " +
                         "COUNT(DISTINCT e.idEtude) as totalEtudes, " +
-                        "COUNT(DISTINCT CASE WHEN r.id.idEtude IS NOT NULL THEN e.idEtude END) as etudesAvecRdv, " +
+                        "COUNT(DISTINCT CASE WHEN r.idEtude IS NOT NULL THEN e.idEtude END) as etudesAvecRdv, " +
                         "AVG(CAST(rdvCounts.rdvCount AS double)) as moyenneRdvParEtude " +
                         "FROM Etude e " +
-                        "LEFT JOIN (SELECT r.id.idEtude as etudeId, COUNT(r) as rdvCount " +
+                        "LEFT JOIN (SELECT r.idEtude as etudeId, COUNT(r) as rdvCount " +
                         "          FROM Rdv r WHERE r.date BETWEEN :dateDebut AND :dateFin " +
                         "          AND (r.etat IS NULL OR UPPER(r.etat) <> 'ANNULE') " +
-                        "          GROUP BY r.id.idEtude) rdvCounts ON rdvCounts.etudeId = e.idEtude " +
-                        "LEFT JOIN Rdv r ON r.id.idEtude = e.idEtude AND r.date BETWEEN :dateDebut AND :dateFin " +
+                        "          GROUP BY r.idEtude) rdvCounts ON rdvCounts.etudeId = e.idEtude " +
+                        "LEFT JOIN Rdv r ON r.idEtude = e.idEtude AND r.date BETWEEN :dateDebut AND :dateFin " +
                         "AND (r.etat IS NULL OR UPPER(r.etat) <> 'ANNULE') " +
                         "WHERE (e.dateDebut <= :dateFinEtude AND e.dateFin >= :dateDebutEtude)")
         List<Object[]> getStatistiquesEtudesPourPeriode(
@@ -425,7 +425,7 @@ public interface EtudeRepository extends JpaRepository<Etude, Integer> {
          * Remplace le pattern N+1 (1 query RDV + N queries Etude) par un seul JOIN
          */
         @Query("SELECT DISTINCT e FROM Etude e " +
-                        "INNER JOIN Rdv r ON r.id.idEtude = e.idEtude " +
+                        "INNER JOIN Rdv r ON r.idEtude = e.idEtude " +
                         "WHERE r.idVolontaire = :idVolontaire " +
                         "AND (r.etat IS NULL OR UPPER(r.etat) <> 'ANNULE')")
         List<Etude> findEtudesByVolontaireId(@Param("idVolontaire") Integer idVolontaire);
@@ -434,7 +434,7 @@ public interface EtudeRepository extends JpaRepository<Etude, Integer> {
          * Récupère les dates avec RDV pour une étude (format d'affichage simple)
          */
         @Query("SELECT DISTINCT r.date FROM Rdv r " +
-                        "WHERE r.id.idEtude = :idEtude " +
+                        "WHERE r.idEtude = :idEtude " +
                         "AND (r.etat IS NULL OR UPPER(r.etat) <> 'ANNULE') " +
                         "ORDER BY r.date ASC")
         List<Date> findRdvDatesForEtude(@Param("idEtude") Integer idEtude);
@@ -479,7 +479,7 @@ public interface EtudeRepository extends JpaRepository<Etude, Integer> {
          * Récupère les dates avec RDV pour une étude (format LocalDate)
          */
         @Query("SELECT DISTINCT r.date FROM Rdv r " +
-                        "WHERE r.id.idEtude = :idEtude " +
+                        "WHERE r.idEtude = :idEtude " +
                         "AND (r.etat IS NULL OR UPPER(r.etat) <> 'ANNULE') " +
                         "ORDER BY r.date ASC")
         List<Date> findRdvDatesForEtudeAsList(@Param("idEtude") Integer idEtude);

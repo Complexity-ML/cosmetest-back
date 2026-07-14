@@ -482,10 +482,9 @@ public class CalendrierServiceImpl implements CalendrierService {
         CalendrierDTO.RendezVousEnrichiDTO rdvEnrichi = new CalendrierDTO.RendezVousEnrichiDTO();
 
         // Copier les données de base
-        if (rdv.getId() != null) {
-            rdvEnrichi.setIdRdv(rdv.getId().getIdRdv());
-            rdvEnrichi.setIdEtude(rdv.getId().getIdEtude());
-        }
+        rdvEnrichi.setRdvPk(rdv.getRdvPk());
+        rdvEnrichi.setIdRdv(rdv.getIdRdv());
+        rdvEnrichi.setIdEtude(rdv.getIdEtude());
         rdvEnrichi.setIdVolontaire(rdv.getIdVolontaire());
         rdvEnrichi.setIdGroupe(rdv.getIdGroupe());
 
@@ -552,8 +551,8 @@ public class CalendrierServiceImpl implements CalendrierService {
 
         // 3. Créer une map des RDV groupés par idEtude
         Map<Integer, List<Rdv>> rdvsParEtude = rdvsPeriode.stream()
-                .filter(rdv -> rdv.getId() != null && rdv.getId().getIdEtude() != null)
-                .collect(Collectors.groupingBy(rdv -> rdv.getId().getIdEtude()));
+                .filter(rdv -> rdv.getIdEtude() != null)
+                .collect(Collectors.groupingBy(Rdv::getIdEtude));
 
         logger.debug(" RDV groupés par {} études différentes", rdvsParEtude.size());
 
@@ -1005,7 +1004,7 @@ public class CalendrierServiceImpl implements CalendrierService {
             }
 
             // Récupération de TOUS les RDV de l'étude (sans pagination pour permettre le tri)
-            List<Rdv> tousLesRdvs = rdvRepository.findById_IdEtudeOrderByDateDesc(idEtude);
+            List<Rdv> tousLesRdvs = rdvRepository.findByIdEtudeOrderByDateDesc(idEtude);
             
             // Collecter tous les IDs de volontaires uniques pour optimisation
             Set<Integer> idsVolontaires = tousLesRdvs.stream()
@@ -1093,7 +1092,7 @@ public class CalendrierServiceImpl implements CalendrierService {
             Date dateSQL = Date.valueOf(date);
             
             // Utiliser une méthode simple en attendant la nouvelle méthode du repository
-            List<Rdv> tousLesRdvs = rdvRepository.findById_IdEtudeOrderByDateDesc(idEtude);
+            List<Rdv> tousLesRdvs = rdvRepository.findByIdEtudeOrderByDateDesc(idEtude);
             List<Rdv> rdvsDuJour = tousLesRdvs.stream()
                     .filter(rdv -> rdv.getDate() != null && rdv.getDate().equals(dateSQL))
                     .sorted((a, b) -> {

@@ -8,6 +8,7 @@ import java.time.LocalDate;
  */
 public class RdvDTO {
 
+    private Long rdvPk;
     private Integer idEtude;
     private Integer idRdv;
     private Integer idVolontaire;
@@ -39,6 +40,14 @@ public class RdvDTO {
     }
 
     // Getters et Setters
+    public Long getRdvPk() {
+        return rdvPk;
+    }
+
+    public void setRdvPk(Long rdvPk) {
+        this.rdvPk = rdvPk;
+    }
+
     public Integer getIdEtude() {
         return idEtude;
     }
@@ -53,6 +62,14 @@ public class RdvDTO {
 
     public void setIdRdv(Integer idRdv) {
         this.idRdv = idRdv;
+    }
+
+    public Integer getNumeroRdv() {
+        return idRdv;
+    }
+
+    public void setNumeroRdv(Integer numeroRdv) {
+        this.idRdv = numeroRdv;
     }
 
     public Integer getIdVolontaire() {

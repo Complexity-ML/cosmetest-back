@@ -122,7 +122,7 @@ public class DashboardServiceImpl implements DashboardService {
             for (RdvDTO r : recentRdvs) {
                 if (r != null) {
                     ActiviteRecenteDTO activity = new ActiviteRecenteDTO();
-                    activity.setId((long) r.getIdRdv()); // Convertir int en Long
+                    activity.setId(r.getRdvPk());
                     activity.setType("rdv_planification");
 
                     // Handle null date by providing a default (today)
@@ -180,8 +180,9 @@ public class DashboardServiceImpl implements DashboardService {
     // Méthode de conversion ajoutée
     private RdvDTO mapToDTO(Rdv rdv) {
         RdvDTO dto = new RdvDTO();
-        dto.setIdEtude(rdv.getId().getIdEtude());
-        dto.setIdRdv(rdv.getId().getIdRdv());
+        dto.setRdvPk(rdv.getRdvPk());
+        dto.setIdEtude(rdv.getIdEtude());
+        dto.setIdRdv(rdv.getIdRdv());
         dto.setDate(rdv.getDate());
         dto.setHeure(rdv.getHeure());
         dto.setEtat(rdv.getEtat());

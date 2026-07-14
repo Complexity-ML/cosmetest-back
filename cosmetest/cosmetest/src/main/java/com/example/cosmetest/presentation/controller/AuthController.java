@@ -117,11 +117,7 @@ public class AuthController {
 
         } catch (AuthenticationException e) {
             connexionLogService.log(loginRequest.getLogin(), false, ip);
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body("Identifiants incorrects");
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body("Erreur interne : " + e.getMessage());
+            throw e;
         }
     }
 

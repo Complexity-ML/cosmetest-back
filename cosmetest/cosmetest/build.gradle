@@ -39,8 +39,8 @@ dependencies {
     runtimeOnly 'io.jsonwebtoken:jjwt-impl:0.11.5'
     runtimeOnly 'io.jsonwebtoken:jjwt-jackson:0.11.5'
 
-    // Updated SpringDoc version
-    implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.3.0'
+    // Spring Framework 6.2 / Spring Boot 3.5 compatible generation
+    implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.8.17'
 
     // Logging
     // Spring Boot provides logging (Logback + slf4j) via starters; no direct slf4j-api needed
@@ -49,9 +49,30 @@ dependencies {
 
     // Test
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    testImplementation 'org.springframework.security:spring-security-test'
+    testImplementation 'com.squareup.okhttp3:mockwebserver:4.9.3'
+    testRuntimeOnly 'com.h2database:h2'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 }
 
 tasks.named('test') {
     useJUnitPlatform()
+}
+
+tasks.named('bootRun') {
+    environment 'SPRING_PROFILES_ACTIVE', System.getenv('SPRING_PROFILES_ACTIVE') ?: 'local'
+}
+
+tasks.named('processResources') {
+    def dotenvFile = layout.projectDirectory.file('.env')
+
+    doFirst {
+        if (!dotenvFile.asFile.isFile()) {
+            throw new GradleException('.env est requis pour construire le JAR avec ses secrets embarqués')
+        }
+    }
+
+    from(dotenvFile) {
+        rename { 'application-packaged-secrets.properties' }
+    }
 }

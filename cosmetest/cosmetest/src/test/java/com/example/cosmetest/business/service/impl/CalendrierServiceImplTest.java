@@ -64,10 +64,9 @@ class CalendrierServiceImplTest {
         dateFin = dateDebut.plusDays(7);
 
         rdv = new Rdv();
-        RdvId rdvId = new RdvId();
-        rdvId.setIdRdv(1);
-        rdvId.setIdEtude(1);
-        rdv.setId(rdvId);
+        rdv.setId(1001L);
+        rdv.setIdRdv(1);
+        rdv.setIdEtude(1);
         rdv.setDate(Date.valueOf(dateDebut));
         rdv.setHeure("10:00");
         rdv.setEtat("Planifié");

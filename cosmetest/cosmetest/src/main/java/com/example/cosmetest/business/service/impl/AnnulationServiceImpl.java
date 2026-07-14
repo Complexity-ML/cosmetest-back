@@ -7,7 +7,7 @@ import com.example.cosmetest.data.repository.AnnulationRepository;
 import com.example.cosmetest.data.repository.RdvRepository;
 import com.example.cosmetest.domain.model.Annulation;
 import com.example.cosmetest.domain.model.Rdv;
-import com.example.cosmetest.domain.model.RdvId;
+
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -35,6 +35,7 @@ public class AnnulationServiceImpl implements AnnulationService {
     private final AnnulationRepository annulationRepository;
     private final AnnulationMapper annulationMapper;
     private final RdvRepository rdvRepository;
+    private final RdvIdAllocator rdvIdAllocator;
 
     // Format de date attendu (à adapter selon votre format)
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd");
@@ -42,10 +43,12 @@ public class AnnulationServiceImpl implements AnnulationService {
     public AnnulationServiceImpl(
             AnnulationRepository annulationRepository, 
             AnnulationMapper annulationMapper,
-            RdvRepository rdvRepository) {
+            RdvRepository rdvRepository,
+            RdvIdAllocator rdvIdAllocator) {
         this.annulationRepository = annulationRepository;
         this.annulationMapper = annulationMapper;
         this.rdvRepository = rdvRepository;
+        this.rdvIdAllocator = rdvIdAllocator;
     }
 
     @Override
@@ -119,10 +122,11 @@ public class AnnulationServiceImpl implements AnnulationService {
         
         // Validation des données avant sauvegarde
         preserveExistingRdvTrace(annulationDTO);
-        List<Rdv> rdvsToCancel = findRdvsToCancel(annulationDTO);
-        if (annulationDTO.getIdRdv() == null && !rdvsToCancel.isEmpty()) {
-            annulationDTO.setIdRdv(rdvsToCancel.get(0).getId().getIdRdv());
+        List<Rdv> rdvsForTrace = findRdvsForTrace(annulationDTO);
+        if (annulationDTO.getIdRdv() == null && !rdvsForTrace.isEmpty()) {
+            annulationDTO.setIdRdv(rdvsForTrace.get(0).getIdRdv());
         }
+        List<Rdv> rdvsToCancel = filterActiveRdvs(rdvsForTrace);
 
         // Conversion en entité
         Annulation annulation = annulationMapper.toEntity(annulationDTO);
@@ -131,10 +135,10 @@ public class AnnulationServiceImpl implements AnnulationService {
         Annulation savedAnnulation = annulationRepository.save(annulation);
         logger.info(" Annulation enregistrée");
 
-        //  AUTOMATIQUEMENT : Libérer tous les RDV du volontaire pour cette étude
-        try {
-            logger.debug(" Libération des créneaux RDV pour volontaire {} dans étude {}...",
-                annulationDTO.getIdVol(), annulationDTO.getIdEtude());
+        // AUTOMATIQUEMENT : libérer les RDV dans la même transaction que l'annulation.
+        // Toute erreur doit remonter afin d'éviter une annulation enregistrée avec un RDV encore actif.
+        logger.debug(" Libération des créneaux RDV pour volontaire {} dans étude {}...",
+            annulationDTO.getIdVol(), annulationDTO.getIdEtude());
             
             // Récupérer tous les RDV du volontaire dans cette étude
             List<Rdv> rdvs = rdvsToCancel;
@@ -156,22 +160,17 @@ public class AnnulationServiceImpl implements AnnulationService {
                 logger.debug(" Créneau RDV {} libéré", rdv.getId());
             }
             
-            logger.debug(" {} créneaux RDV libérés avec succès", rdvsLiberes);
-            
-        } catch (Exception e) {
-            logger.error(" Erreur lors de la libération des créneaux RDV: {}", e.getMessage(), e);
-            // On ne propage pas l'erreur pour ne pas bloquer l'annulation
-            // L'annulation est déjà enregistrée, c'est le plus important
-        }
+        logger.debug(" {} créneaux RDV libérés avec succès", rdvsLiberes);
 
         // Conversion en DTO pour retour
         return annulationMapper.toDto(savedAnnulation);
     }
 
     private Rdv createEmptyReplacementRdv(Rdv cancelledRdv) {
-        Integer idEtude = cancelledRdv.getId().getIdEtude();
+        Integer idEtude = cancelledRdv.getIdEtude();
         Rdv replacement = new Rdv();
-        replacement.setId(new RdvId(idEtude, generateNextRdvId(idEtude)));
+        replacement.setIdEtude(idEtude);
+        replacement.setIdRdv(rdvIdAllocator.nextForStudy(idEtude));
         replacement.setEtude(cancelledRdv.getEtude());
         replacement.setIdVolontaire(null);
         replacement.setIdGroupe(cancelledRdv.getIdGroupe());
@@ -183,16 +182,8 @@ public class AnnulationServiceImpl implements AnnulationService {
         return replacement;
     }
 
-    private Integer generateNextRdvId(Integer idEtude) {
-        Integer maxId = rdvRepository.findMaxRdvIdForEtude(idEtude);
-        int nextId = maxId == null ? 1 : maxId + 1;
-        while (rdvRepository.existsById(new RdvId(idEtude, nextId))) {
-            nextId++;
-        }
-        return nextId;
-    }
 
-    private List<Rdv> findRdvsToCancel(AnnulationDTO annulationDTO) {
+    private List<Rdv> findRdvsForTrace(AnnulationDTO annulationDTO) {
         List<Rdv> rdvs = rdvRepository.findByIdVolontaireAndIdEtude(
                 annulationDTO.getIdVol(),
                 annulationDTO.getIdEtude());
@@ -202,8 +193,13 @@ public class AnnulationServiceImpl implements AnnulationService {
         }
 
         return rdvs.stream()
-                .filter(rdv -> rdv.getId() != null
-                        && annulationDTO.getIdRdv().equals(rdv.getId().getIdRdv()))
+                .filter(rdv -> annulationDTO.getIdRdv().equals(rdv.getIdRdv()))
+                .collect(Collectors.toList());
+    }
+
+    private List<Rdv> filterActiveRdvs(List<Rdv> rdvs) {
+        return rdvs.stream()
+                .filter(rdv -> rdv.getEtat() == null || !"ANNULE".equalsIgnoreCase(rdv.getEtat()))
                 .collect(Collectors.toList());
     }
 
