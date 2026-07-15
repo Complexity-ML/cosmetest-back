@@ -23,6 +23,9 @@ import jakarta.validation.ConstraintViolationException;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.time.Instant;
+import java.util.Collections;
+import java.util.UUID;
 
 /**
  * Gestionnaire global d'exceptions pour l'application
@@ -76,13 +79,19 @@ public class GlobalExceptionHandler {
      */
     @ExceptionHandler(MethodArgumentNotValidException.class)
     @ResponseStatus(HttpStatus.BAD_REQUEST)
-    public ResponseEntity<Map<String, String>> handleValidationExceptions(MethodArgumentNotValidException ex) {
+    public ResponseEntity<ErrorResponse> handleValidationExceptions(MethodArgumentNotValidException ex) {
         Map<String, String> errors = new HashMap<>();
         ex.getBindingResult().getAllErrors().forEach(error -> {
             String key = error instanceof FieldError fieldError ? fieldError.getField() : "_global";
             errors.put(key, error.getDefaultMessage());
         });
-        return new ResponseEntity<>(errors, HttpStatus.BAD_REQUEST);
+        ErrorResponse error = new ErrorResponse(
+                "VALIDATION_ERROR",
+                HttpStatus.BAD_REQUEST.value(),
+                "Données invalides",
+                "Un ou plusieurs champs sont invalides",
+                errors);
+        return new ResponseEntity<>(error, HttpStatus.BAD_REQUEST);
     }
 
     @ExceptionHandler({
@@ -100,30 +109,27 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(AuthenticationException.class)
-    public ResponseEntity<Map<String, Object>> handleAuthenticationException(
+    public ResponseEntity<ErrorResponse> handleAuthenticationException(
             AuthenticationException ex, HttpServletRequest request) {
-        return new ResponseEntity<>(securityError(
-                "Unauthorized", "Identifiants incorrects", HttpStatus.UNAUTHORIZED, request),
-                HttpStatus.UNAUTHORIZED);
+        return new ResponseEntity<>(new ErrorResponse(
+                "UNAUTHORIZED",
+                HttpStatus.UNAUTHORIZED.value(),
+                "Identifiants incorrects",
+                "Authentification requise",
+                Collections.emptyMap(),
+                request.getRequestURI()), HttpStatus.UNAUTHORIZED);
     }
 
     @ExceptionHandler(AccessDeniedException.class)
-    public ResponseEntity<Map<String, Object>> handleAccessDeniedException(
+    public ResponseEntity<ErrorResponse> handleAccessDeniedException(
             AccessDeniedException ex, HttpServletRequest request) {
-        return new ResponseEntity<>(securityError(
-                "Forbidden", "Accès refusé", HttpStatus.FORBIDDEN, request),
-                HttpStatus.FORBIDDEN);
-    }
-
-    private Map<String, Object> securityError(
-            String error, String message, HttpStatus status, HttpServletRequest request) {
-        Map<String, Object> body = new LinkedHashMap<>();
-        body.put("error", error);
-        body.put("message", message);
-        body.put("status", status.value());
-        body.put("timestamp", System.currentTimeMillis());
-        body.put("path", request.getRequestURI());
-        return body;
+        return new ResponseEntity<>(new ErrorResponse(
+                "FORBIDDEN",
+                HttpStatus.FORBIDDEN.value(),
+                "Accès refusé",
+                "Droits insuffisants",
+                Collections.emptyMap(),
+                request.getRequestURI()), HttpStatus.FORBIDDEN);
     }
 
     /**
@@ -136,6 +142,46 @@ public class GlobalExceptionHandler {
         ErrorResponse error = new ErrorResponse(
                 HttpStatus.CONFLICT.value(),
                 "Association étude-volontaire ambiguë",
+                ex.getMessage());
+        return new ResponseEntity<>(error, HttpStatus.CONFLICT);
+    }
+
+    @ExceptionHandler(AmbiguousVolontaireHcException.class)
+    public ResponseEntity<ErrorResponse> handleAmbiguousVolontaireHc(AmbiguousVolontaireHcException ex) {
+        ErrorResponse error = new ErrorResponse(
+                "AMBIGUOUS_VOLUNTEER_HABITS",
+                HttpStatus.CONFLICT.value(),
+                "Habitudes cosmétiques ambiguës",
+                ex.getMessage());
+        return new ResponseEntity<>(error, HttpStatus.CONFLICT);
+    }
+
+    @ExceptionHandler(AmbiguousVolontaireException.class)
+    public ResponseEntity<ErrorResponse> handleAmbiguousVolontaire(AmbiguousVolontaireException ex) {
+        ErrorResponse error = new ErrorResponse(
+                "AMBIGUOUS_VOLUNTEER",
+                HttpStatus.CONFLICT.value(),
+                "Volontaire ambigu",
+                ex.getMessage());
+        return new ResponseEntity<>(error, HttpStatus.CONFLICT);
+    }
+
+    @ExceptionHandler(AmbiguousRdvTraceException.class)
+    public ResponseEntity<ErrorResponse> handleAmbiguousRdvTrace(AmbiguousRdvTraceException ex) {
+        ErrorResponse error = new ErrorResponse(
+                "AMBIGUOUS_APPOINTMENT_TRACE",
+                HttpStatus.CONFLICT.value(),
+                "Rendez-vous ambigu pour l'annulation",
+                ex.getMessage());
+        return new ResponseEntity<>(error, HttpStatus.CONFLICT);
+    }
+
+    @ExceptionHandler(AmbiguousRepairGroupException.class)
+    public ResponseEntity<ErrorResponse> handleAmbiguousRepairGroup(AmbiguousRepairGroupException ex) {
+        ErrorResponse error = new ErrorResponse(
+                "AMBIGUOUS_REPAIR_GROUP",
+                HttpStatus.CONFLICT.value(),
+                "Groupe ambigu pour la réparation",
                 ex.getMessage());
         return new ResponseEntity<>(error, HttpStatus.CONFLICT);
     }
@@ -170,14 +216,64 @@ public class GlobalExceptionHandler {
      * Classe interne pour les réponses d'erreur
      */
     public static class ErrorResponse {
+        private final String code;
         private int status;
         private String message;
         private String details;
+        private final Map<String, String> fieldErrors;
+        private final String correlationId;
+        private final Instant timestamp;
+        private final String path;
 
         public ErrorResponse(int status, String message, String details) {
+            this(defaultCode(status), status, message, details, Collections.emptyMap());
+        }
+
+        public ErrorResponse(String code, int status, String message, String details) {
+            this(code, status, message, details, Collections.emptyMap());
+        }
+
+        public ErrorResponse(
+                String code,
+                int status,
+                String message,
+                String details,
+                Map<String, String> fieldErrors) {
+            this(code, status, message, details, fieldErrors, null);
+        }
+
+        public ErrorResponse(
+                String code,
+                int status,
+                String message,
+                String details,
+                Map<String, String> fieldErrors,
+                String path) {
+            this.code = code;
             this.status = status;
             this.message = message;
             this.details = details;
+            this.fieldErrors = fieldErrors == null
+                    ? Collections.emptyMap()
+                    : Collections.unmodifiableMap(new LinkedHashMap<>(fieldErrors));
+            this.correlationId = UUID.randomUUID().toString();
+            this.timestamp = Instant.now();
+            this.path = path;
+        }
+
+        private static String defaultCode(int status) {
+            return switch (status) {
+                case 400 -> "BAD_REQUEST";
+                case 401 -> "UNAUTHORIZED";
+                case 403 -> "FORBIDDEN";
+                case 404 -> "RESOURCE_NOT_FOUND";
+                case 409 -> "RESOURCE_CONFLICT";
+                default -> status >= 500 ? "INTERNAL_ERROR" : "REQUEST_REJECTED";
+            };
+        }
+
+        public String getCode() {
+            return code;
         }
 
         public int getStatus() {
@@ -190,6 +286,32 @@ public class GlobalExceptionHandler {
 
         public String getDetails() {
             return details;
+        }
+
+        public Map<String, String> getFieldErrors() {
+            return fieldErrors;
+        }
+
+        public String getCorrelationId() {
+            return correlationId;
+        }
+
+        public Instant getTimestamp() {
+            return timestamp;
+        }
+
+        public String getPath() {
+            return path;
+        }
+
+        /** Compatibilité avec l'ancien contrat de sécurité Spring. */
+        public String getError() {
+            return switch (status) {
+                case 401 -> "Unauthorized";
+                case 403 -> "Forbidden";
+                case 404 -> "Not Found";
+                default -> status >= 500 ? "Internal Server Error" : "Bad Request";
+            };
         }
     }
 }

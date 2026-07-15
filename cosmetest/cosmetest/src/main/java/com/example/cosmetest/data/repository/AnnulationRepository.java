@@ -37,6 +37,7 @@ public interface AnnulationRepository extends JpaRepository<Annulation, Integer>
      */
     List<Annulation> findByIdVolAndIdEtude(int idVol, int idEtude);
 
+
     /**
      * Trouve les annulations par date d'annulation
      * @param dateAnnulation Date d'annulation
@@ -78,11 +79,6 @@ public interface AnnulationRepository extends JpaRepository<Annulation, Integer>
     @Query("DELETE FROM Annulation a WHERE a.idVol = :idVol")
     int deleteByIdVol(@Param("idVol") int idVol);
 
-    @Modifying
-    @Query("DELETE FROM Annulation a WHERE a.idVol = :idVol AND a.idEtude = :idEtude")
-    int deleteByIdVolAndIdEtude(
-            @Param("idVol") int idVol,
-            @Param("idEtude") int idEtude);
 
     @Query("""
             SELECT COUNT(a) > 0

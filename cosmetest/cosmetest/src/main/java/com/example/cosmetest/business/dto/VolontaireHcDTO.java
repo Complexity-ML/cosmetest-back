@@ -968,16 +968,9 @@ public class VolontaireHcDTO {
 
     private String normalizeValue(String value) {
         if (value == null) {
-            return "non"; // Valeur par défaut pour les NULL
+            return null;
         }
-
-        value = value.toLowerCase();
-
-        if (value.equals("oui") || value.equals("regulierement")) {
-            return "oui";
-        } else {
-            return "non"; // "jamais", "occasionnellement", etc.
-        }
+        return value.trim().toLowerCase(java.util.Locale.ROOT);
     }
 
 }

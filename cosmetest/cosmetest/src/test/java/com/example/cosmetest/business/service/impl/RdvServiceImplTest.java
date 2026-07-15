@@ -10,6 +10,7 @@ import com.example.cosmetest.data.repository.GroupeRepository;
 import com.example.cosmetest.data.repository.RdvRepository;
 import com.example.cosmetest.domain.model.Groupe;
 import com.example.cosmetest.domain.model.Rdv;
+import com.example.cosmetest.domain.model.Annulation;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -22,6 +23,8 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.transaction.annotation.Isolation;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.sql.Date;
 import java.time.LocalDate;
@@ -474,6 +477,42 @@ class RdvServiceImplTest {
         assertThat(association.getNumsujet()).isZero();
         assertThat(association.getPaye()).isZero();
         assertThat(association.getStatut()).isEqualTo("INSCRIT");
+        verify(annulationRepository, never()).deleteAll(anyList());
+    }
+
+    @Test
+    @DisplayName("updateRdv() - utilise READ_COMMITTED pour éviter les verrous de plage SERIALIZABLE")
+    void testUpdateRdv_UsesReadCommittedIsolation() throws NoSuchMethodException {
+        Transactional transactional = RdvServiceImpl.class
+                .getMethod("updateRdv", RdvDTO.class)
+                .getAnnotation(Transactional.class);
+
+        assertThat(transactional).isNotNull();
+        assertThat(transactional.isolation()).isEqualTo(Isolation.READ_COMMITTED);
+    }
+
+    @Test
+    @DisplayName("updateRdv() - une affectation partielle conserve la date existante")
+    void testUpdateRdv_PartialAssignmentKeepsExistingDate() {
+        testRdv1.setIdVolontaire(null);
+        testRdv1.setEtat("PLANIFIE");
+        Date existingDate = testRdv1.getDate();
+
+        RdvDTO updateDTO = new RdvDTO();
+        updateDTO.setRdvPk(testRdvId1);
+        updateDTO.setIdEtude(101);
+        updateDTO.setIdRdv(1);
+        updateDTO.setIdVolontaire(2);
+        updateDTO.setEtat("PLANIFIE");
+
+        when(rdvRepository.findById(testRdvId1)).thenReturn(Optional.of(testRdv1));
+        when(etudeVolontaireService.existsByEtudeAndVolontaire(101, 2)).thenReturn(true);
+        when(rdvRepository.save(any(Rdv.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        RdvDTO result = rdvService.updateRdv(updateDTO);
+
+        assertThat(result.getDate()).isEqualTo(existingDate.toLocalDate());
+        assertThat(testRdv1.getDate()).isEqualTo(existingDate);
     }
 
     @Test
@@ -495,11 +534,13 @@ class RdvServiceImplTest {
         when(rdvRepository.findById(testRdvId1)).thenReturn(Optional.of(testRdv1));
         when(rdvRepository.save(any(Rdv.class))).thenAnswer(invocation -> invocation.getArgument(0));
         when(etudeVolontaireService.existsByEtudeAndVolontaire(101, 2)).thenReturn(true);
-        when(annulationRepository.deleteByIdVolAndIdEtude(2, 101)).thenReturn(1);
+        Annulation cancellation = new Annulation();
+        cancellation.setIdAnnuler(77);
+        when(annulationRepository.findByIdVolAndIdEtude(2, 101)).thenReturn(List.of(cancellation));
 
         rdvService.updateRdv(updateDTO);
 
-        verify(annulationRepository).deleteByIdVolAndIdEtude(2, 101);
+        verify(annulationRepository).deleteAll(List.of(cancellation));
     }
 
     @Test
@@ -565,6 +606,9 @@ class RdvServiceImplTest {
 
         when(rdvRepository.findById(testRdvId1)).thenReturn(Optional.of(testRdv1));
         when(annulationRepository.existsRdvTraceForOtherVolunteer(101, 1, 2)).thenReturn(true);
+        Annulation cancellation = new Annulation();
+        cancellation.setIdAnnuler(78);
+        when(annulationRepository.findByIdVolAndIdEtude(2, 101)).thenReturn(List.of(cancellation));
         when(rdvRepository.save(any(Rdv.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         // When: on assigne le nouveau volontaire 2 sur ce creneau.
@@ -591,7 +635,8 @@ class RdvServiceImplTest {
         assertThat(oldRdv.getIdVolontaire()).isEqualTo(1);
         assertThat(oldRdv.getEtat()).isEqualTo("ANNULE");
         verify(annulationRepository).existsRdvTraceForOtherVolunteer(101, 1, 2);
-        verify(annulationRepository).deleteByIdVolAndIdEtude(2, 101);
+        verify(annulationRepository).findByIdVolAndIdEtude(2, 101);
+        verify(annulationRepository).deleteAll(List.of(cancellation));
         verifyNoMoreInteractions(annulationRepository);
     }
 

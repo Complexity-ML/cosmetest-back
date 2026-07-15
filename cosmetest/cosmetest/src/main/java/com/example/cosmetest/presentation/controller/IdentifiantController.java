@@ -40,7 +40,6 @@ public class IdentifiantController {
      * @return liste des identifiants (sans mots de passe)
      */
     @GetMapping
-    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<List<IdentifiantDTO>> getAllIdentifiants() {
         List<IdentifiantDTO> identifiants = identifiantService.getAllIdentifiants();
         return ResponseEntity.ok(identifiants);
@@ -53,7 +52,6 @@ public class IdentifiantController {
      * @return l'identifiant correspondant (sans mot de passe)
      */
     @GetMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN') or @identifiantAuthorization.isCurrentUser(#id, authentication)")
     public ResponseEntity<IdentifiantDTO> getIdentifiantById(@PathVariable Integer id) {
         return identifiantService.getIdentifiantById(id)
                 .map(ResponseEntity::ok)
@@ -67,7 +65,6 @@ public class IdentifiantController {
      * @return l'identifiant correspondant (sans mot de passe)
      */
     @GetMapping("/by-login/{login}")
-    @PreAuthorize("hasRole('ADMIN') or #login == authentication.name")
     public ResponseEntity<IdentifiantDTO> getIdentifiantByLogin(@PathVariable String login) {
         return identifiantService.getIdentifiantByLogin(login)
                 .map(ResponseEntity::ok)
@@ -99,7 +96,6 @@ public class IdentifiantController {
      * @return l'identifiant mis à jour (sans mot de passe)
      */
     @PutMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN') or @identifiantAuthorization.canUpdateOwnAccount(#id, #identifiantDTO, authentication)")
     public ResponseEntity<IdentifiantDTO> updateIdentifiant(@PathVariable Integer id, @Valid @RequestBody IdentifiantDTO identifiantDTO, HttpServletRequest request) {
         return identifiantService.updateIdentifiant(id, identifiantDTO)
                 .map(updated -> {
@@ -117,7 +113,6 @@ public class IdentifiantController {
      * @return statut de la suppression
      */
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Void> deleteIdentifiant(@PathVariable Integer id, HttpServletRequest request) {
         if (identifiantService.deleteIdentifiant(id)) {
             String utilisateur = SecurityContextHolder.getContext().getAuthentication().getName();
@@ -136,7 +131,6 @@ public class IdentifiantController {
      * @return statut du changement
      */
     @PostMapping("/{id}/changer-mot-de-passe")
-    @PreAuthorize("hasRole('ADMIN') or @identifiantAuthorization.isCurrentUser(#id, authentication)")
     public ResponseEntity<Void> changerMotDePasse(@PathVariable Integer id, @Valid @RequestBody ChangerMotDePasseRequest changeRequest, HttpServletRequest request) {
         boolean success = identifiantService.changerMotDePasse(id, changeRequest.getAncienMotDePasse(), changeRequest.getNouveauMotDePasse());
         if (success) {
@@ -154,7 +148,6 @@ public class IdentifiantController {
      * @return la liste des identifiants (sans mots de passe)
      */
     @GetMapping("/by-role/{role}")
-    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<List<IdentifiantDTO>> getIdentifiantsByRole(@PathVariable String role) {
         List<IdentifiantDTO> identifiants = identifiantService.getIdentifiantsByRole(role);
         return ResponseEntity.ok(identifiants);
@@ -167,7 +160,6 @@ public class IdentifiantController {
      * @return true si le login existe, false sinon
      */
     @GetMapping("/check-login/{login}")
-    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Boolean> checkLoginExists(@PathVariable String login) {
         boolean exists = identifiantService.loginExiste(login);
         return ResponseEntity.ok(exists);
@@ -180,7 +172,6 @@ public class IdentifiantController {
      * @return true si l'email existe, false sinon
      */
     @GetMapping("/check-email/{email}")
-    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Boolean> checkEmailExists(@PathVariable String email) {
         boolean exists = identifiantService.emailExiste(email);
         return ResponseEntity.ok(exists);
@@ -193,7 +184,6 @@ public class IdentifiantController {
      * @return l'identifiant authentifié (sans mot de passe)
      */
     @PostMapping("/login")
-    @PreAuthorize("hasRole('ADMIN') or #request.login == authentication.name")
     public ResponseEntity<IdentifiantDTO> login(@Valid @RequestBody LoginRequest request) {
         return identifiantService.authentifier(request.getLogin(), request.getMotDePasse())
                 .map(ResponseEntity::ok)

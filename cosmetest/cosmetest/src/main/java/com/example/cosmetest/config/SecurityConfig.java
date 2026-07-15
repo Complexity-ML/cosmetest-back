@@ -81,8 +81,7 @@ public class SecurityConfig {
                 // Matrice minimale issue des règles déjà présentes dans les contrôleurs
                 .requestMatchers(
                         "/api/audit/**",
-                        "/api/connexions/**",
-                        "/api/etude-volontaires/repair/**")
+                        "/api/connexions/**")
                 .hasRole("ADMIN")
                 // Toutes les autres requêtes API nécessitent une authentification
                 .anyRequest().authenticated()

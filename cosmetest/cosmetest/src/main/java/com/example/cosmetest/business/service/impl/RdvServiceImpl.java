@@ -421,8 +421,17 @@ public class RdvServiceImpl implements RdvService {
 
         logger.debug("Début création batch de {} RDV", rdvDTOs.size());
 
-        // Pré-charger l'étude une seule fois (optimisation)
+        if (rdvDTOs.stream().anyMatch(dto -> dto == null || dto.getIdEtude() == null)) {
+            throw new IllegalArgumentException("Chaque RDV du lot doit référencer une étude");
+        }
         Integer idEtude = rdvDTOs.get(0).getIdEtude();
+        boolean mixedStudies = rdvDTOs.stream()
+                .anyMatch(dto -> !Objects.equals(idEtude, dto.getIdEtude()));
+        if (mixedStudies) {
+            throw new IllegalArgumentException("Tous les RDV d'un lot doivent appartenir à la même étude");
+        }
+
+        // Pré-charger l'étude unique du lot.
         Optional<Etude> etudeOpt = etudeRepository.findById(idEtude);
         if (etudeOpt.isEmpty()) {
             throw new EntityNotFoundException("L'étude spécifiée n'existe pas : " + idEtude);
@@ -486,7 +495,7 @@ public class RdvServiceImpl implements RdvService {
     }
 
     @Override
-    @Transactional(isolation = Isolation.SERIALIZABLE)
+    @Transactional(isolation = Isolation.READ_COMMITTED)
     public RdvDTO updateRdv(RdvDTO rdvDTO) {
         Optional<Rdv> rdvOpt = rdvDTO.getRdvPk() != null
                 ? rdvRepository.findById(rdvDTO.getRdvPk())
@@ -534,15 +543,25 @@ public class RdvServiceImpl implements RdvService {
                     nextVolontaireId,
                     rdvDTO.getIdEtude());
 
-            rdv.setDate(Date.valueOf(rdvDTO.getDate()));
-            rdv.setHeure(rdvDTO.getHeure());
-            rdv.setDuree(rdvDTO.getDuree());
+            if (rdvDTO.getDate() != null) {
+                rdv.setDate(Date.valueOf(rdvDTO.getDate()));
+            }
+            if (rdvDTO.getHeure() != null) {
+                rdv.setHeure(rdvDTO.getHeure());
+            }
+            if (rdvDTO.getDuree() != null) {
+                rdv.setDuree(rdvDTO.getDuree());
+            }
             rdv.setEtat(nextEtat);
-            rdv.setCommentaires(rdvDTO.getCommentaires());
-            rdv.setIdGroupe(rdvDTO.getIdGroupe());
+            if (rdvDTO.getCommentaires() != null) {
+                rdv.setCommentaires(rdvDTO.getCommentaires());
+            }
+            if (rdvDTO.getIdGroupe() != null) {
+                rdv.setIdGroupe(rdvDTO.getIdGroupe());
+            }
             rdv.setIdVolontaire(rdvDTO.getIdVolontaire());
             ensureEtudeVolontaireAssociation(
-                    rdvDTO.getIdEtude(), rdvDTO.getIdGroupe(), nextVolontaireId);
+                    rdv.getIdEtude(), rdv.getIdGroupe(), nextVolontaireId);
             Rdv savedRdv = rdvRepository.save(rdv);
             removeCancellationForReassignment(
                     rdvDTO.getIdEtude(), nextVolontaireId, volontaireChanged);
@@ -562,12 +581,14 @@ public class RdvServiceImpl implements RdvService {
         replacement.setIdRdv(rdvIdAllocator.nextForStudy(idEtude));
         replacement.setEtude(existingRdv.getEtude());
         replacement.setIdVolontaire(rdvDTO.getIdVolontaire());
-        replacement.setIdGroupe(rdvDTO.getIdGroupe());
-        replacement.setDate(Date.valueOf(rdvDTO.getDate()));
-        replacement.setHeure(rdvDTO.getHeure());
-        replacement.setDuree(rdvDTO.getDuree());
+        replacement.setIdGroupe(rdvDTO.getIdGroupe() != null ? rdvDTO.getIdGroupe() : existingRdv.getIdGroupe());
+        replacement.setDate(rdvDTO.getDate() != null ? Date.valueOf(rdvDTO.getDate()) : existingRdv.getDate());
+        replacement.setHeure(rdvDTO.getHeure() != null ? rdvDTO.getHeure() : existingRdv.getHeure());
+        replacement.setDuree(rdvDTO.getDuree() != null ? rdvDTO.getDuree() : existingRdv.getDuree());
         replacement.setEtat(hasText(rdvDTO.getEtat()) && !isCancelledEtat(rdvDTO.getEtat()) ? rdvDTO.getEtat().trim().toUpperCase() : "PLANIFIE");
-        replacement.setCommentaires(rdvDTO.getCommentaires());
+        replacement.setCommentaires(rdvDTO.getCommentaires() != null
+                ? rdvDTO.getCommentaires()
+                : existingRdv.getCommentaires());
         return replacement;
     }
 
@@ -624,12 +645,20 @@ public class RdvServiceImpl implements RdvService {
             return;
         }
 
-        int deleted = annulationRepository.deleteByIdVolAndIdEtude(nextVolontaireId, idEtude);
-        if (deleted > 0) {
-            logger.info(
-                    "Annulation supprimee lors de la reaffectation transactionnelle: etude={}, volontaire={}, lignes={}",
-                    idEtude, nextVolontaireId, deleted);
+        // L'affectation ordinaire ne doit pas exécuter un DELETE de plage sur la table
+        // annulation. Sous MySQL, ce DELETE inutile combiné à SERIALIZABLE provoquait
+        // des deadlocks et annulait toute l'affectation du RDV.
+        var cancellations = annulationRepository.findByIdVolAndIdEtude(nextVolontaireId, idEtude);
+        if (cancellations.isEmpty()) {
+            return;
         }
+
+        // Suppression par clés primaires : les verrous restent limités aux traces
+        // réellement trouvées au lieu d'un DELETE de plage concurrent.
+        annulationRepository.deleteAll(cancellations);
+        logger.info(
+                "Annulation supprimee lors de la reaffectation transactionnelle: etude={}, volontaire={}, lignes={}",
+                idEtude, nextVolontaireId, cancellations.size());
     }
 
 

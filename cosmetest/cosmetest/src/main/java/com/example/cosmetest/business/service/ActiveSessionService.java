@@ -72,7 +72,7 @@ public class ActiveSessionService {
                     new SessionHistory(login, info.loginTime, Instant.now(), "LOGOUT")
                 );
             } catch (Exception ex) {
-                logger.error("Échec de persistance du logout pour '{}': {}", login, ex.getMessage());
+                logger.error("Échec de persistance du logout: {}", ex.getMessage());
             }
         }
     }
@@ -89,7 +89,7 @@ public class ActiveSessionService {
                             new SessionHistory(login, info.loginTime, Instant.now(), "TIMEOUT")
                         );
                     } catch (Exception ex) {
-                        logger.error("Échec de persistance du timeout pour '{}': {}", login, ex.getMessage());
+                        logger.error("Échec de persistance du timeout: {}", ex.getMessage());
                     }
                 }
             }

@@ -7,6 +7,7 @@ import com.example.cosmetest.data.repository.AnnulationRepository;
 import com.example.cosmetest.data.repository.RdvRepository;
 import com.example.cosmetest.domain.model.Annulation;
 import com.example.cosmetest.domain.model.Rdv;
+import com.example.cosmetest.exception.AmbiguousRdvTraceException;
 
 
 import org.slf4j.Logger;
@@ -123,6 +124,10 @@ public class AnnulationServiceImpl implements AnnulationService {
         // Validation des données avant sauvegarde
         preserveExistingRdvTrace(annulationDTO);
         List<Rdv> rdvsForTrace = findRdvsForTrace(annulationDTO);
+        if (annulationDTO.getIdRdv() == null && rdvsForTrace.size() > 1) {
+            throw new AmbiguousRdvTraceException(
+                    annulationDTO.getIdVol(), annulationDTO.getIdEtude(), rdvsForTrace.size());
+        }
         if (annulationDTO.getIdRdv() == null && !rdvsForTrace.isEmpty()) {
             annulationDTO.setIdRdv(rdvsForTrace.get(0).getIdRdv());
         }

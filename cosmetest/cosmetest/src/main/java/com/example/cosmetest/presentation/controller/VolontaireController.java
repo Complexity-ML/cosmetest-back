@@ -19,7 +19,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.annotation.Isolation;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+
 import org.springframework.web.server.ResponseStatusException;
 import java.time.LocalDate;
 import java.util.Arrays;
@@ -40,7 +40,7 @@ import org.slf4j.LoggerFactory;
  * Contrôleur REST pour la gestion des volontaires
  */
 @RestController
-@RequestMapping("/api/volontaires")
+@RequestMapping({"/api/volontaires", "/api/v1/volontaires"})
 public class VolontaireController {
 
     private static final Logger logger = LoggerFactory.getLogger(VolontaireController.class);
@@ -61,7 +61,6 @@ public class VolontaireController {
      * @return liste des volontaires
      */
     @GetMapping
-    @Transactional(readOnly = true)
     public ResponseEntity<Page<VolontaireDTO>> getAllVolontaires(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size,
@@ -81,7 +80,6 @@ public class VolontaireController {
      * Chaque champ filtre indépendamment (2 lettres minimum recommandé)
      */
     @GetMapping("/search/multi")
-    @Transactional(readOnly = true)
     public ResponseEntity<Page<VolontaireDTO>> searchMultiField(
             @RequestParam(required = false) String nom,
             @RequestParam(required = false) String prenom,
@@ -104,7 +102,6 @@ public class VolontaireController {
      * Filtres : date de mise à jour (range) + sansEtude + sansEtudeAnneeEnCours.
      */
     @GetMapping("/suivi")
-    @Transactional(readOnly = true)
     public ResponseEntity<Page<VolontaireDTO>> searchSuivi(
             @RequestParam(required = false) @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE) java.time.LocalDate dateModifFrom,
             @RequestParam(required = false) @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE) java.time.LocalDate dateModifTo,
@@ -125,7 +122,6 @@ public class VolontaireController {
      * @return liste complète des volontaires
      */
     @GetMapping("/allstats")
-    @Transactional(readOnly = true)
     public ResponseEntity<List<VolontaireDTO>> getAllVolontairesForMatching(
             @RequestParam(defaultValue = "false") boolean includeArchived) {
 
@@ -153,31 +149,9 @@ public class VolontaireController {
      * @return liste des volontaires actifs
      */
     @GetMapping("/actifs")
-    @Transactional(readOnly = true)
     public ResponseEntity<List<VolontaireDTO>> getAllActiveVolontaires() {
         List<VolontaireDTO> volontaires = volontaireService.getAllActiveVolontaires();
         return ResponseEntity.ok(volontaires);
-    }
-
-    @GetMapping("/notifications/today")
-    @Transactional(readOnly = true)
-    public ResponseEntity<TodayNotificationsResponse> getTodayNotifications(
-            @RequestParam(defaultValue = "50") int limit) {
-        int boundedLimit = Math.max(1, Math.min(limit, 100));
-        List<VolontaireNotificationDTO> notifications = volontaireService.getTodayNotifications(boundedLimit);
-        if (notifications == null) {
-            notifications = List.of();
-        }
-        return ResponseEntity.ok(new TodayNotificationsResponse(
-                notifications,
-                volontaireService.countVolontairesAddedToday(),
-                LocalDate.now().toString()));
-    }
-
-    public record TodayNotificationsResponse(
-            List<VolontaireNotificationDTO> data,
-            int total,
-            String date) {
     }
 
     /**
@@ -187,7 +161,6 @@ public class VolontaireController {
      * @return le volontaire correspondant
      */
     @GetMapping("/{id}")
-    @Transactional(readOnly = true, isolation = Isolation.READ_COMMITTED)
     public ResponseEntity<?> getVolontaireById(@PathVariable Integer id) {
         logger.debug("Recherche du volontaire avec l'ID: {}", id);
 
@@ -223,7 +196,6 @@ public class VolontaireController {
      * @return le volontaire détaillé correspondant
      */
     @GetMapping("/details/{id}")
-    @Transactional(readOnly = true, isolation = Isolation.READ_COMMITTED)
     public ResponseEntity<VolontaireDetailDTO> getVolontaireDetailById(@PathVariable Integer id) {
         logger.debug("Recherche des détails du volontaire avec l'ID: {}", id);
 
@@ -519,6 +491,7 @@ public class VolontaireController {
                 });
     }
 
+
     @PutMapping("/{id}/observations")
     @Transactional
     public ResponseEntity<VolontaireDTO> updateObservations(@PathVariable Integer id,
@@ -580,7 +553,6 @@ public class VolontaireController {
      * @return liste des volontaires correspondants au critère de recherche
      */
     @GetMapping("/search")
-    @Transactional(readOnly = true)
     public ResponseEntity<?> searchVolontaires(
             @RequestParam String keyword,
             @RequestParam(defaultValue = "0") int page,
@@ -639,9 +611,8 @@ public class VolontaireController {
      * @return le volontaire correspondant ou 404
      */
     @GetMapping("/by-email")
-    @Transactional(readOnly = true)
     public ResponseEntity<?> getVolontaireByEmail(@RequestParam String email) {
-        logger.info("Recherche du volontaire par email: {}", email);
+        logger.debug("Recherche d'un volontaire par email");
 
         if (email == null || email.trim().isEmpty()) {
             return ResponseEntity.badRequest().body(Map.of(
@@ -651,58 +622,15 @@ public class VolontaireController {
         return volontaireService.findByEmail(email.trim())
                 .map(volontaire -> {
                     Map<String, Object> frontendData = ReflectionUtils.convertDtoToFrontendMap(volontaire);
-                    logger.info("Volontaire trouvé par email: {}", email);
+                    logger.debug("Volontaire trouvé par email");
                     return ResponseEntity.ok(frontendData);
                 })
                 .orElseGet(() -> {
-                    logger.info("Aucun volontaire trouvé avec l'email: {}", email);
+                    logger.debug("Aucun volontaire trouvé avec cet email");
                     return ResponseEntity.notFound().build();
                 });
     }
 
-    /**
-     * Gestionnaire d'exception pour les erreurs de conversion de type de paramètre
-     */
-    @ExceptionHandler(MethodArgumentTypeMismatchException.class)
-    public ResponseEntity<Map<String, Object>> handleMethodArgumentTypeMismatch(
-            MethodArgumentTypeMismatchException ex) {
-        String paramName = ex.getName();
-        String value = (ex.getValue() != null) ? ex.getValue().toString() : "null";
-
-        // Log détaillé de l'erreur
-        logger.error("Erreur de conversion du paramètre '{}' avec la valeur '{}': {}",
-                paramName, value, ex.getMessage());
-
-        // Vérification spécifique pour le cas 'undefined'
-        if ("undefined".equals(value)) {
-            logger.error("Tentative d'accès avec ID 'undefined'. Cette erreur provient généralement du frontend.");
-
-            Map<String, Object> responseBody = Map.of(
-                    "timestamp", LocalDate.now(),
-                    "status", HttpStatus.BAD_REQUEST.value(),
-                    "error", "Bad Request",
-                    "message", "ID invalide: 'undefined'. Veuillez fournir un ID valide.",
-                    "path", (ex.getParameter() != null && ex.getParameter().getMethod() != null)
-                            ? ex.getParameter().getMethod().toString()
-                            : "unknown");
-
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(responseBody);
-        }
-
-        // Réponse pour les autres types d'erreurs de conversion
-        Map<String, Object> responseBody = Map.of(
-                "timestamp", LocalDate.now(),
-                "status", HttpStatus.BAD_REQUEST.value(),
-                "error", "Bad Request",
-                "message",
-                "Erreur de format pour le paramètre: " + paramName + ". La valeur '" + value
-                        + "' ne peut pas être convertie.",
-                "path", (ex.getParameter() != null && ex.getParameter().getMethod() != null)
-                        ? ex.getParameter().getMethod().toString()
-                        : "unknown");
-
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(responseBody);
-    }
 
     /**
      * Récupère les informations d'une photo d'un volontaire
@@ -712,7 +640,6 @@ public class VolontaireController {
      * @return l'URL de la photo ou une réponse appropriée si la photo n'existe pas
      */
     @GetMapping("/{id}/photos/{type}")
-    @Transactional(readOnly = true)
     public ResponseEntity<?> getVolontairePhoto(@PathVariable Integer id, @PathVariable String type) {
         logger.info("Récupération de la photo de type '{}' pour le volontaire avec l'ID: {}", type, id);
 
@@ -744,7 +671,6 @@ public class VolontaireController {
      * @return la liste des photos disponibles pour ce volontaire
      */
     @GetMapping("/{id}/photos")
-    @Transactional(readOnly = true)
     public ResponseEntity<?> getAllVolontairePhotos(@PathVariable Integer id) {
         logger.info("Récupération de toutes les photos pour le volontaire avec l'ID: {}", id);
 
@@ -791,7 +717,6 @@ public class VolontaireController {
      * @return l'image de la photo ou une réponse 404 si elle n'existe pas
      */
     @GetMapping("/{id}/photos/{type}/image")
-    @Transactional(readOnly = true)
     public ResponseEntity<byte[]> getVolontairePhotoImage(@PathVariable Integer id, @PathVariable String type) {
         return proxyPhoto(id, type, "image");
     }
@@ -804,7 +729,6 @@ public class VolontaireController {
      * @return la miniature de la photo ou une réponse 404 si elle n'existe pas
      */
     @GetMapping("/{id}/photos/{type}/thumbnail")
-    @Transactional(readOnly = true)
     public ResponseEntity<byte[]> getVolontairePhotoThumbnail(@PathVariable Integer id, @PathVariable String type) {
         return proxyPhoto(id, type, "miniature");
     }
@@ -849,7 +773,6 @@ public class VolontaireController {
      * @return Liste de volontaires
      */
     @GetMapping("/ids/{ids}")
-    @Transactional(readOnly = true)
     public ResponseEntity<List<Volontaire>> getVolontairesByIds(@PathVariable String ids) {
         try {
             // Convertir la chaîne d'IDs en liste d'entiers

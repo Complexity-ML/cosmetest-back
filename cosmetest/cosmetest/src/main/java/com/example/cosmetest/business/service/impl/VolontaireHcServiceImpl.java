@@ -5,14 +5,13 @@ import com.example.cosmetest.business.mapper.VolontaireHcMapper;
 import com.example.cosmetest.business.service.VolontaireHcService;
 import com.example.cosmetest.domain.model.VolontaireHc;
 import com.example.cosmetest.data.repository.VolontaireHcRepository;
+import com.example.cosmetest.exception.AmbiguousVolontaireHcException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import jakarta.persistence.Column;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 
-import java.lang.reflect.Field;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -40,14 +39,14 @@ public class VolontaireHcServiceImpl implements VolontaireHcService {
     }
 
     @Override
+    @Transactional(isolation = org.springframework.transaction.annotation.Isolation.SERIALIZABLE)
     public VolontaireHcDTO saveVolontaireHc(VolontaireHcDTO volontaireHcDTO) {
         validateVolontaireHc(volontaireHcDTO);
 
         // Normaliser les valeurs NULL avant la persistence
-        normalizeNullValues(volontaireHcDTO);
 
         // Vérifier si une entrée existe déjà pour ce volontaire
-        Optional<VolontaireHc> existingEntity = volontaireHcRepository.findByIdVol(volontaireHcDTO.getIdVol());
+        Optional<VolontaireHc> existingEntity = findUniqueByIdVol(volontaireHcDTO.getIdVol());
 
         VolontaireHc volontaireHc;
         if (existingEntity.isPresent()) {
@@ -62,7 +61,6 @@ public class VolontaireHcServiceImpl implements VolontaireHcService {
         VolontaireHcDTO savedDto = volontaireHcMapper.toDTO(savedVolontaireHc);
 
         // Normaliser à nouveau après la conversion
-        normalizeNullValues(savedDto);
 
         return savedDto;
     }
@@ -73,7 +71,7 @@ public class VolontaireHcServiceImpl implements VolontaireHcService {
             return false;
         }
 
-        Optional<VolontaireHc> volontaireHc = volontaireHcRepository.findByIdVol(idVol);
+        Optional<VolontaireHc> volontaireHc = findUniqueByIdVol(idVol);
         if (volontaireHc.isPresent()) {
             volontaireHcRepository.delete(volontaireHc.get());
             return true;
@@ -130,19 +128,11 @@ public class VolontaireHcServiceImpl implements VolontaireHcService {
         validateProduitParameter(produit);
         validateValeurParameter(valeur);
 
-        return volontaireHcRepository.findByIdVol(idVol)
+        return findUniqueByIdVol(idVol)
                 .map(volontaireHc -> {
-                    // Utiliser la réflexion pour mettre à jour la propriété spécifique
-                    try {
-                        Field field = VolontaireHc.class.getDeclaredField(produit);
-                        field.setAccessible(true);
-                        field.set(volontaireHc, valeur);
-
-                        VolontaireHc savedVolontaireHc = volontaireHcRepository.save(volontaireHc);
-                        return volontaireHcMapper.toDTO(savedVolontaireHc);
-                    } catch (NoSuchFieldException | IllegalAccessException e) {
-                        throw new IllegalArgumentException("Produit invalide: " + produit, e);
-                    }
+                    VolontaireHcFieldRegistry.require(produit).set(volontaireHc, valeur);
+                    VolontaireHc savedVolontaireHc = volontaireHcRepository.save(volontaireHc);
+                    return volontaireHcMapper.toDTO(savedVolontaireHc);
                 });
     }
 
@@ -158,18 +148,10 @@ public class VolontaireHcServiceImpl implements VolontaireHcService {
             validateValeurParameter(valeur);
         });
 
-        return volontaireHcRepository.findByIdVol(idVol)
+        return findUniqueByIdVol(idVol)
                 .map(volontaireHc -> {
-                    // Mettre à jour chaque produit
-                    produits.forEach((produit, valeur) -> {
-                        try {
-                            Field field = VolontaireHc.class.getDeclaredField(produit);
-                            field.setAccessible(true);
-                            field.set(volontaireHc, valeur);
-                        } catch (NoSuchFieldException | IllegalAccessException e) {
-                            throw new IllegalArgumentException("Produit invalide: " + produit, e);
-                        }
-                    });
+                    produits.forEach((produit, valeur) ->
+                            VolontaireHcFieldRegistry.require(produit).set(volontaireHc, valeur));
 
                     VolontaireHc savedVolontaireHc = volontaireHcRepository.save(volontaireHc);
                     return volontaireHcMapper.toDTO(savedVolontaireHc);
@@ -204,14 +186,8 @@ public class VolontaireHcServiceImpl implements VolontaireHcService {
 
         Map<String, Long> produitsUtilisation = new HashMap<>();
 
-        // Pour chaque champ produit, faire un COUNT en base au lieu de charger toutes les lignes
-        Field[] fields = VolontaireHc.class.getDeclaredFields();
-        for (Field field : fields) {
-            String produit = field.getName();
-            if (produit.equals("idVol") || !field.getType().equals(String.class)) {
-                continue;
-            }
-
+        // Pour chaque champ explicitement autorisé, faire un COUNT en base.
+        for (String produit : VolontaireHcFieldRegistry.names()) {
             String columnName = getColumnName(produit);
             Number count = (Number) entityManager.createNativeQuery(
                     "SELECT COUNT(*) FROM volontaire_hc WHERE " + columnName + " IN ('oui', 'regulierement')")
@@ -292,15 +268,8 @@ public class VolontaireHcServiceImpl implements VolontaireHcService {
                                 String produit = entry.getKey();
                                 String valeurRecherchee = entry.getValue();
 
-                                try {
-                                    Field field = VolontaireHc.class.getDeclaredField(produit);
-                                    field.setAccessible(true);
-                                    String valeurActuelle = (String) field.get(target);
-
-                                    return valeurRecherchee.equals(valeurActuelle);
-                                } catch (NoSuchFieldException | IllegalAccessException e) {
-                                    return false;
-                                }
+                                String valeurActuelle = VolontaireHcFieldRegistry.require(produit).get(target);
+                                return Objects.equals(valeurRecherchee, valeurActuelle);
                             });
                 })
                 .collect(Collectors.toList());
@@ -323,28 +292,11 @@ public class VolontaireHcServiceImpl implements VolontaireHcService {
             throw new IllegalArgumentException("L'ID du volontaire doit être un nombre positif");
         }
 
-        // Valider toutes les valeurs non null
-        Field[] fields = VolontaireHcDTO.class.getDeclaredFields();
-        for (Field field : fields) {
-            field.setAccessible(true);
-            try {
-                String fieldName = field.getName();
-
-                // Ignorer l'ID du volontaire et les champs null
-                if (fieldName.equals("idVol")) {
-                    continue;
-                }
-
-                Object value = field.get(volontaireHcDTO);
-                if (value != null && value instanceof String) {
-                    String stringValue = (String) value;
-                    if (!VALEURS_AUTORISEES.contains(stringValue)) {
-                        throw new IllegalArgumentException(
-                                "Valeur non autorisée pour " + fieldName + ": " + stringValue);
-                    }
-                }
-            } catch (IllegalAccessException e) {
-                // Ignorer cette erreur
+        for (String fieldName : VolontaireHcFieldRegistry.names()) {
+            String value = VolontaireHcFieldRegistry.require(fieldName).get(volontaireHcDTO);
+            if (!VALEURS_AUTORISEES.contains(value)) {
+                throw new IllegalArgumentException(
+                        "Valeur non autorisée pour " + fieldName + ": " + value);
             }
         }
     }
@@ -360,11 +312,7 @@ public class VolontaireHcServiceImpl implements VolontaireHcService {
             throw new IllegalArgumentException("Le produit ne peut pas être vide");
         }
 
-        try {
-            VolontaireHc.class.getDeclaredField(produit);
-        } catch (NoSuchFieldException e) {
-            throw new IllegalArgumentException("Produit non reconnu: " + produit);
-        }
+        VolontaireHcFieldRegistry.require(produit);
     }
 
     /**
@@ -373,23 +321,8 @@ public class VolontaireHcServiceImpl implements VolontaireHcService {
      * @param lieuAchat le lieu d'achat à valider
      * @throws IllegalArgumentException si le lieu d'achat est invalide
      */
-    /**
-     * Résout le nom de colonne SQL à partir du nom de champ Java.
-     * Utilise l'annotation @Column si présente, sinon convertit camelCase en snake_case.
-     * Le champ est validé par validateProduitParameter() en amont (pas d'injection possible).
-     */
     private String getColumnName(String fieldName) {
-        try {
-            Field field = VolontaireHc.class.getDeclaredField(fieldName);
-            Column columnAnnotation = field.getAnnotation(Column.class);
-            if (columnAnnotation != null && !columnAnnotation.name().isEmpty()) {
-                return columnAnnotation.name();
-            }
-        } catch (NoSuchFieldException e) {
-            // Ne devrait pas arriver car validateProduitParameter vérifie avant
-        }
-        // Fallback: camelCase → snake_case
-        return fieldName.replaceAll("([a-z])([A-Z])", "$1_$2").toLowerCase();
+        return VolontaireHcFieldRegistry.require(fieldName).columnName();
     }
 
     private void validateLieuAchatParameter(String lieuAchat) {
@@ -466,60 +399,24 @@ public class VolontaireHcServiceImpl implements VolontaireHcService {
             return Optional.empty();
         }
 
-        return volontaireHcRepository.findByIdVol(idVol)
-                .map(volontaireHc -> {
-                    VolontaireHcDTO dto = volontaireHcMapper.toDTO(volontaireHc);
-
-                    // Normalisation des valeurs NULL en "non"
-                    normalizeNullValues(dto);
-
-                    return dto;
-                });
+        return findUniqueByIdVol(idVol)
+                .map(volontaireHcMapper::toDTO);
     }
 
-    /**
-     * Normalise les valeurs NULL d'un DTO en "non"
-     * 
-     * @param dto le DTO à normaliser
-     */
-    private void normalizeNullValues(VolontaireHcDTO dto) {
-        if (dto == null) {
-            return;
+    private Optional<VolontaireHc> findUniqueByIdVol(Integer idVol) {
+        List<VolontaireHc> matches = volontaireHcRepository.findByIdVolIn(List.of(idVol));
+        if (matches.size() > 1) {
+            throw new AmbiguousVolontaireHcException(idVol, matches.size());
         }
-
-        // Utiliser la réflexion pour parcourir tous les champs et remplacer les valeurs
-        // null par "non"
-        Field[] fields = VolontaireHcDTO.class.getDeclaredFields();
-        for (Field field : fields) {
-            field.setAccessible(true);
-            try {
-                String fieldName = field.getName();
-
-                // Ignorer l'ID du volontaire
-                if (fieldName.equals("idVol")) {
-                    continue;
-                }
-
-                Object value = field.get(dto);
-                if (value == null) {
-                    field.set(dto, "non");
-                }
-            } catch (IllegalAccessException e) {
-                // Ignorer cette erreur
-            }
-        }
+        return matches.stream().findFirst();
     }
+
 
     @Override
     @Transactional(readOnly = true)
     public List<VolontaireHcDTO> getAllVolontaireHcs() {
         List<VolontaireHc> volontaireHcs = volontaireHcRepository.findAll();
-        List<VolontaireHcDTO> dtoList = volontaireHcMapper.toDTOList(volontaireHcs);
-
-        // Normaliser tous les DTOs
-        dtoList.forEach(this::normalizeNullValues);
-
-        return dtoList;
+        return volontaireHcMapper.toDTOList(volontaireHcs);
     }
 
     @Override
@@ -530,27 +427,12 @@ public class VolontaireHcServiceImpl implements VolontaireHcService {
 
         List<VolontaireHc> allVolontaireHcs = volontaireHcRepository.findAll();
 
-        // Filtrer en utilisant la réflexion pour accéder à la propriété spécifiée par
-        // 'produit'
+        VolontaireHcFieldRegistry.FieldAccess access = VolontaireHcFieldRegistry.require(produit);
         List<VolontaireHc> filteredVolontaireHcs = allVolontaireHcs.stream()
-                .filter(volontaireHc -> {
-                    try {
-                        Field field = VolontaireHc.class.getDeclaredField(produit);
-                        field.setAccessible(true);
-                        String fieldValue = (String) field.get(volontaireHc);
-                        // Considérer null comme "non" pour la comparaison
-                        if (fieldValue == null) {
-                            return "non".equals(valeur);
-                        }
-                        return valeur.equals(fieldValue);
-                    } catch (NoSuchFieldException | IllegalAccessException e) {
-                        return false;
-                    }
-                })
+                .filter(volontaireHc -> Objects.equals(valeur, access.get(volontaireHc)))
                 .collect(Collectors.toList());
 
         List<VolontaireHcDTO> dtoList = volontaireHcMapper.toDTOList(filteredVolontaireHcs);
-        dtoList.forEach(this::normalizeNullValues);
 
         return dtoList;
     }
@@ -564,7 +446,6 @@ public class VolontaireHcServiceImpl implements VolontaireHcService {
                 .collect(Collectors.toList());
 
         // Normaliser tous les DTOs
-        dtoList.forEach(this::normalizeNullValues);
 
         return dtoList;
     }

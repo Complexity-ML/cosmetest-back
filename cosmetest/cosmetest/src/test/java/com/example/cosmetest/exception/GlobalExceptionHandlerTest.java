@@ -11,9 +11,12 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.MissingServletRequestParameterException;
+import org.springframework.security.authentication.BadCredentialsException;
+import jakarta.servlet.http.HttpServletRequest;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 @DisplayName("GlobalExceptionHandler - sécurité des erreurs")
 class GlobalExceptionHandlerTest {
@@ -53,10 +56,13 @@ class GlobalExceptionHandlerTest {
         bindingResult.addError(new ObjectError("request", "Requête incohérente"));
         MethodArgumentNotValidException exception = new MethodArgumentNotValidException(mock(), bindingResult);
 
-        ResponseEntity<java.util.Map<String, String>> response = handler.handleValidationExceptions(exception);
+        ResponseEntity<GlobalExceptionHandler.ErrorResponse> response = handler.handleValidationExceptions(exception);
 
         assertThat(response.getStatusCode().value()).isEqualTo(400);
-        assertThat(response.getBody()).containsEntry("_global", "Requête incohérente");
+        assertThat(response.getBody()).isNotNull();
+        assertThat(response.getBody().getCode()).isEqualTo("VALIDATION_ERROR");
+        assertThat(response.getBody().getFieldErrors())
+                .containsEntry("_global", "Requête incohérente");
     }
 
     @Test
@@ -82,6 +88,48 @@ class GlobalExceptionHandlerTest {
         assertThat(response.getStatusCode().value()).isEqualTo(400);
         assertThat(response.getBody()).isNotNull();
         assertThat(response.getBody().getStatus()).isEqualTo(400);
+        assertThat(response.getBody().getCode()).isEqualTo("BAD_REQUEST");
         assertThat(response.getBody().getDetails()).doesNotContain("MissingServletRequestParameterException");
+    }
+
+    @Test
+    @DisplayName("Toutes les erreurs possèdent un identifiant de corrélation et un horodatage")
+    void errorsHaveCorrelationIdAndTimestamp() {
+        ResponseEntity<GlobalExceptionHandler.ErrorResponse> response =
+                handler.handleEntityNotFoundException(new jakarta.persistence.EntityNotFoundException("absent"));
+
+        assertThat(response.getBody()).isNotNull();
+        assertThat(response.getBody().getCode()).isEqualTo("RESOURCE_NOT_FOUND");
+        assertThat(response.getBody().getCorrelationId()).isNotBlank();
+        assertThat(response.getBody().getTimestamp()).isNotNull();
+    }
+
+    @Test
+    @DisplayName("Les erreurs d'authentification utilisent le même contrat structuré")
+    void authenticationUsesStructuredErrorContract() {
+        HttpServletRequest request = mock(HttpServletRequest.class);
+        when(request.getRequestURI()).thenReturn("/api/auth/login");
+
+        ResponseEntity<GlobalExceptionHandler.ErrorResponse> response =
+                handler.handleAuthenticationException(
+                        new BadCredentialsException("secret technique"), request);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
+        assertThat(response.getBody()).isNotNull();
+        assertThat(response.getBody().getCode()).isEqualTo("UNAUTHORIZED");
+        assertThat(response.getBody().getDetails()).doesNotContain("secret technique");
+        assertThat(response.getBody().getPath()).isEqualTo("/api/auth/login");
+    }
+
+    @Test
+    @DisplayName("Une recherche de volontaire ambiguë produit un conflit explicite")
+    void ambiguousVolunteerIsConflict() {
+        ResponseEntity<GlobalExceptionHandler.ErrorResponse> response =
+                handler.handleAmbiguousVolontaire(
+                        new AmbiguousVolontaireException("email", 2));
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
+        assertThat(response.getBody()).isNotNull();
+        assertThat(response.getBody().getCode()).isEqualTo("AMBIGUOUS_VOLUNTEER");
     }
 }

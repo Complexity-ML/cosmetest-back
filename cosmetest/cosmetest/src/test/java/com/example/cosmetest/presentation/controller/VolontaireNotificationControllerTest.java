@@ -1,7 +1,5 @@
 package com.example.cosmetest.presentation.controller;
 
-import com.example.cosmetest.business.service.AuditLogService;
-import com.example.cosmetest.business.service.PhotoProxyService;
 import com.example.cosmetest.business.service.VolontaireService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -22,10 +20,8 @@ class VolontaireNotificationControllerTest {
     @BeforeEach
     void setUp() {
         volontaireService = mock(VolontaireService.class);
-        VolontaireController controller = new VolontaireController(
-                volontaireService,
-                mock(AuditLogService.class),
-                mock(PhotoProxyService.class));
+        VolontaireNotificationController controller =
+                new VolontaireNotificationController(volontaireService);
         mockMvc = MockMvcBuilders.standaloneSetup(controller).build();
     }
 

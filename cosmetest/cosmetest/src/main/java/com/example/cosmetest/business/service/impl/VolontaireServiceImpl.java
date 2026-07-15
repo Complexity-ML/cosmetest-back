@@ -6,6 +6,7 @@ import com.example.cosmetest.business.dto.VolontaireNotificationDTO;
 import com.example.cosmetest.business.mapper.VolontaireMapper;
 import com.example.cosmetest.business.service.PhotoProxyService;
 import com.example.cosmetest.business.service.VolontaireService;
+import com.example.cosmetest.exception.AmbiguousVolontaireException;
 import com.example.cosmetest.domain.model.Volontaire;
 import com.example.cosmetest.data.repository.AnnulationRepository;
 import com.example.cosmetest.data.repository.EtudeVolontaireRepository;
@@ -1045,6 +1046,9 @@ public class VolontaireServiceImpl implements VolontaireService {
         List<Volontaire> volontaires = volontaireRepository.findByEmailVol(email);
         if (volontaires.isEmpty()) {
             return Optional.empty();
+        }
+        if (volontaires.size() > 1) {
+            throw new AmbiguousVolontaireException("email", volontaires.size());
         }
         return Optional.of(volontaireMapper.toDTO(volontaires.get(0)));
     }

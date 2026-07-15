@@ -26,7 +26,7 @@ import java.util.*;
  * avec intégration pour les recherches optimisées
  */
 @RestController
-@RequestMapping("/api/rdvs")
+@RequestMapping({"/api/rdvs", "/api/v1/rdvs"})
 public class RdvController {
 
     private static final Logger logger = LoggerFactory.getLogger(RdvController.class);

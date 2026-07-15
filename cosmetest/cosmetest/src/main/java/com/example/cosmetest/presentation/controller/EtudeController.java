@@ -4,12 +4,11 @@ import com.example.cosmetest.business.dto.EtudeDTO;
 import com.example.cosmetest.business.service.AuditLogService;
 import com.example.cosmetest.business.service.EtudeService;
 import com.example.cosmetest.domain.model.AuditLog;
+import com.example.cosmetest.presentation.pagination.PageRequestFactory;
 
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Sort;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -23,14 +22,18 @@ import java.sql.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 
 /**
  * Contrôleur REST pour les études
  * Fait partie de la couche de présentation et gère les requêtes HTTP
  */
 @RestController
-@RequestMapping("/api/etudes")
+@RequestMapping({"/api/etudes", "/api/v1/etudes"})
 public class EtudeController {
+
+    private static final Set<String> ALLOWED_SORT_PROPERTIES = Set.of(
+            "idEtude", "ref", "type", "titre", "dateDebut", "dateFin", "archive");
 
     private static final Logger logger = LoggerFactory.getLogger(EtudeController.class);
 
@@ -69,8 +72,8 @@ public class EtudeController {
             @RequestParam(defaultValue = "dateDebut") String sortBy,
             @RequestParam(defaultValue = "DESC") String direction) {
 
-        Sort.Direction sortDirection = Sort.Direction.fromString(direction);
-        Pageable pageable = PageRequest.of(page, size, Sort.by(sortDirection, sortBy));
+        Pageable pageable = PageRequestFactory.create(
+                page, size, sortBy, direction, ALLOWED_SORT_PROPERTIES);
 
         Page<EtudeDTO> etudesPage = etudeService.getAllEtudesPaginated(pageable);
 

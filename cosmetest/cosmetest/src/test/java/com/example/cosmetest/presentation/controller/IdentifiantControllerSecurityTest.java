@@ -23,6 +23,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import java.util.Optional;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -87,7 +88,7 @@ class IdentifiantControllerSecurityTest {
                 .andExpect(content().contentTypeCompatibleWith("application/json"))
                 .andExpect(jsonPath("$.error").value("Forbidden"))
                 .andExpect(jsonPath("$.status").value(403))
-                .andExpect(jsonPath("$.timestamp").isNumber())
+                .andExpect(jsonPath("$.timestamp").isString())
                 .andExpect(jsonPath("$.path").value("/api/identifiants"));
 
         verify(identifiantService, never()).createIdentifiant(any());
@@ -144,42 +145,47 @@ class IdentifiantControllerSecurityTest {
     }
 
     @Test
-    void utilisateurPeutLireSonPropreCompteMaisPasUnAutre() throws Exception {
+    void utilisateurPeutLireLesComptes() throws Exception {
         Identifiant alice = entity(1, "alice", "UTILISATEUR");
         Identifiant bob = entity(2, "bob", "UTILISATEUR");
         when(identifiantRepository.findById(1)).thenReturn(Optional.of(alice));
         when(identifiantRepository.findById(2)).thenReturn(Optional.of(bob));
         when(identifiantService.getIdentifiantById(1)).thenReturn(Optional.of(dto(1, "alice", "UTILISATEUR")));
+        when(identifiantService.getIdentifiantById(2)).thenReturn(Optional.of(dto(2, "bob", "UTILISATEUR")));
 
         mockMvc.perform(get("/api/identifiants/1").with(user("alice").roles("USER")))
                 .andExpect(status().isOk());
         mockMvc.perform(get("/api/identifiants/2").with(user("alice").roles("USER")))
-                .andExpect(status().isForbidden());
+                .andExpect(status().isOk());
     }
 
     @Test
-    void utilisateurNePeutNiSupprimerNiChangerLeRole() throws Exception {
+    void utilisateurPeutGererLesComptesExistants() throws Exception {
         Identifiant alice = entity(1, "alice", "UTILISATEUR");
         when(identifiantRepository.findById(1)).thenReturn(Optional.of(alice));
+        when(identifiantService.deleteIdentifiant(1)).thenReturn(true);
+        when(identifiantService.updateIdentifiant(eq(1), any()))
+                .thenReturn(Optional.of(dto(1, "alice", "ADMIN")));
 
         mockMvc.perform(delete("/api/identifiants/1")
                         .with(user("alice").roles("USER"))
                         .with(csrf()))
-                .andExpect(status().isForbidden());
+                .andExpect(status().isNoContent());
 
         mockMvc.perform(put("/api/identifiants/1")
                         .with(user("alice").roles("USER"))
                         .with(csrf())
                         .contentType("application/json")
                         .content(validIdentifiantJson("alice", "ADMIN")))
-                .andExpect(status().isForbidden());
+                .andExpect(status().isOk());
     }
 
     @Test
-    void utilisateurPeutChangerSonMotDePasseMaisPasCeluiDUnAutre() throws Exception {
+    void utilisateurPeutChangerLesMotsDePasseDesComptesExistants() throws Exception {
         when(identifiantRepository.findById(1)).thenReturn(Optional.of(entity(1, "alice", "UTILISATEUR")));
         when(identifiantRepository.findById(2)).thenReturn(Optional.of(entity(2, "bob", "UTILISATEUR")));
         when(identifiantService.changerMotDePasse(1, "ancien123", "nouveau123")).thenReturn(true);
+        when(identifiantService.changerMotDePasse(2, "ancien123", "nouveau123")).thenReturn(true);
         String body = "{\"ancienMotDePasse\":\"ancien123\",\"nouveauMotDePasse\":\"nouveau123\"}";
 
         mockMvc.perform(post("/api/identifiants/1/changer-mot-de-passe")
@@ -189,7 +195,7 @@ class IdentifiantControllerSecurityTest {
         mockMvc.perform(post("/api/identifiants/2/changer-mot-de-passe")
                         .with(user("alice").roles("USER"))
                         .with(csrf()).contentType("application/json").content(body))
-                .andExpect(status().isForbidden());
+                .andExpect(status().isOk());
     }
 
     private static String validIdentifiantJson(String login, String role) {

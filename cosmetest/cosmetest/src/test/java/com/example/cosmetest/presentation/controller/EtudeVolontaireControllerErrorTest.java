@@ -7,6 +7,7 @@ import com.example.cosmetest.business.service.EtudeVolontaireService;
 import com.example.cosmetest.business.service.GroupeService;
 import com.example.cosmetest.business.service.RdvService;
 import com.example.cosmetest.exception.GlobalExceptionHandler;
+import com.example.cosmetest.exception.AmbiguousEtudeVolontaireException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.data.domain.Pageable;
@@ -21,6 +22,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -63,6 +65,22 @@ class EtudeVolontaireControllerErrorTest {
         mockMvc.perform(get("/api/etude-volontaires/etude/12"))
                 .andExpect(status().isInternalServerError())
                 .andExpect(content().string(not(containsString("secret-host"))));
+    }
+
+    @Test
+    void createPreservesTypedConflictInsteadOfMaskingItAsRuntimeException() throws Exception {
+        when(service.saveEtudeVolontaire(any(EtudeVolontaireDTO.class)))
+                .thenThrow(new AmbiguousEtudeVolontaireException(
+                        "Association existante: utiliser son ID technique"));
+
+        mockMvc.perform(post("/api/etude-volontaires")
+                        .contentType("application/json")
+                        .content("""
+                                {"idEtude":10,"idGroupe":2,"idVolontaire":7,
+                                 "iv":50,"numsujet":4,"paye":0,"statut":"INCLUS"}
+                                """))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.message").value("Association étude-volontaire ambiguë"));
     }
 
     @Test

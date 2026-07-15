@@ -69,7 +69,7 @@ class VolontaireHcServiceImplTest {
     @Test
     void testSaveVolontaireHc_Creation_Success() {
         // Given
-        when(volontaireHcRepository.findByIdVol(1)).thenReturn(Optional.empty());
+        when(volontaireHcRepository.findByIdVolIn(List.of(1))).thenReturn(List.of());
         when(volontaireHcMapper.toEntity(any(VolontaireHcDTO.class))).thenReturn(volontaireHc);
         when(volontaireHcRepository.save(any(VolontaireHc.class))).thenReturn(volontaireHc);
         when(volontaireHcMapper.toDTO(any(VolontaireHc.class))).thenReturn(volontaireHcDTO);
@@ -80,7 +80,7 @@ class VolontaireHcServiceImplTest {
         // Then
         assertThat(result).isNotNull();
         assertThat(result.getIdVol()).isEqualTo(1);
-        verify(volontaireHcRepository).findByIdVol(1);
+        verify(volontaireHcRepository).findByIdVolIn(List.of(1));
         verify(volontaireHcMapper).toEntity(any(VolontaireHcDTO.class));
         verify(volontaireHcRepository).save(any(VolontaireHc.class));
     }
@@ -88,7 +88,7 @@ class VolontaireHcServiceImplTest {
     @Test
     void testSaveVolontaireHc_Update_Success() {
         // Given
-        when(volontaireHcRepository.findByIdVol(1)).thenReturn(Optional.of(volontaireHc));
+        when(volontaireHcRepository.findByIdVolIn(List.of(1))).thenReturn(List.of(volontaireHc));
         when(volontaireHcMapper.updateEntityFromDTO(any(VolontaireHc.class), any(VolontaireHcDTO.class)))
                 .thenReturn(volontaireHc);
         when(volontaireHcRepository.save(any(VolontaireHc.class))).thenReturn(volontaireHc);
@@ -99,7 +99,7 @@ class VolontaireHcServiceImplTest {
 
         // Then
         assertThat(result).isNotNull();
-        verify(volontaireHcRepository).findByIdVol(1);
+        verify(volontaireHcRepository).findByIdVolIn(List.of(1));
         verify(volontaireHcMapper).updateEntityFromDTO(any(VolontaireHc.class), any(VolontaireHcDTO.class));
         verify(volontaireHcRepository).save(any(VolontaireHc.class));
     }
@@ -139,7 +139,7 @@ class VolontaireHcServiceImplTest {
     @Test
     void testDeleteVolontaireHc_Success() {
         // Given
-        when(volontaireHcRepository.findByIdVol(1)).thenReturn(Optional.of(volontaireHc));
+        when(volontaireHcRepository.findByIdVolIn(List.of(1))).thenReturn(List.of(volontaireHc));
 
         // When
         boolean result = volontaireHcService.deleteVolontaireHc(1);
@@ -152,7 +152,7 @@ class VolontaireHcServiceImplTest {
     @Test
     void testDeleteVolontaireHc_NotFound_ReturnsFalse() {
         // Given
-        when(volontaireHcRepository.findByIdVol(999)).thenReturn(Optional.empty());
+        when(volontaireHcRepository.findByIdVolIn(List.of(999))).thenReturn(List.of());
 
         // When
         boolean result = volontaireHcService.deleteVolontaireHc(999);
@@ -169,7 +169,7 @@ class VolontaireHcServiceImplTest {
 
         // Then
         assertThat(result).isFalse();
-        verify(volontaireHcRepository, never()).findByIdVol(anyInt());
+        verify(volontaireHcRepository, never()).findByIdVolIn(anyList());
     }
 
     // ==================== Tests existsByIdVol ====================
@@ -264,7 +264,7 @@ class VolontaireHcServiceImplTest {
     @Test
     void testUpdateProduit_Success() {
         // Given
-        when(volontaireHcRepository.findByIdVol(1)).thenReturn(Optional.of(volontaireHc));
+        when(volontaireHcRepository.findByIdVolIn(List.of(1))).thenReturn(List.of(volontaireHc));
         when(volontaireHcRepository.save(any(VolontaireHc.class))).thenReturn(volontaireHc);
         when(volontaireHcMapper.toDTO(any(VolontaireHc.class))).thenReturn(volontaireHcDTO);
 
@@ -296,7 +296,7 @@ class VolontaireHcServiceImplTest {
     @Test
     void testUpdateProduit_VolontaireNotFound_ReturnsEmpty() {
         // Given
-        when(volontaireHcRepository.findByIdVol(999)).thenReturn(Optional.empty());
+        when(volontaireHcRepository.findByIdVolIn(List.of(999))).thenReturn(List.of());
 
         // When
         Optional<VolontaireHcDTO> result = volontaireHcService.updateProduit(999, "achatInternet", "oui");
@@ -314,7 +314,7 @@ class VolontaireHcServiceImplTest {
         produits.put("achatInternet", "oui");
         produits.put("achatGrandesSurfaces", "non");
 
-        when(volontaireHcRepository.findByIdVol(1)).thenReturn(Optional.of(volontaireHc));
+        when(volontaireHcRepository.findByIdVolIn(List.of(1))).thenReturn(List.of(volontaireHc));
         when(volontaireHcRepository.save(any(VolontaireHc.class))).thenReturn(volontaireHc);
         when(volontaireHcMapper.toDTO(any(VolontaireHc.class))).thenReturn(volontaireHcDTO);
 
@@ -498,6 +498,7 @@ class VolontaireHcServiceImplTest {
         VolontaireHc vol1 = new VolontaireHc();
         vol1.setIdVol(1);
         vol1.setAchatInternet("non");
+
         vol1.setAchatGrandesSurfaces("oui");
 
         VolontaireHc vol2 = new VolontaireHc();
@@ -600,7 +601,7 @@ class VolontaireHcServiceImplTest {
     @Test
     void testGetVolontaireHcByIdVolSingle_Success() {
         // Given
-        when(volontaireHcRepository.findByIdVol(1)).thenReturn(Optional.of(volontaireHc));
+        when(volontaireHcRepository.findByIdVolIn(List.of(1))).thenReturn(List.of(volontaireHc));
         when(volontaireHcMapper.toDTO(any(VolontaireHc.class))).thenReturn(volontaireHcDTO);
 
         // When
@@ -614,7 +615,7 @@ class VolontaireHcServiceImplTest {
     @Test
     void testGetVolontaireHcByIdVolSingle_NotFound_ReturnsEmpty() {
         // Given
-        when(volontaireHcRepository.findByIdVol(999)).thenReturn(Optional.empty());
+        when(volontaireHcRepository.findByIdVolIn(List.of(999))).thenReturn(List.of());
 
         // When
         Optional<VolontaireHcDTO> result = volontaireHcService.getVolontaireHcByIdVol(999);

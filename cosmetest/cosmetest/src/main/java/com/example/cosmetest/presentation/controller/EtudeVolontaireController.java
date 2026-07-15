@@ -6,6 +6,8 @@ import com.example.cosmetest.business.dto.RdvDTO;
 import com.example.cosmetest.business.service.AuditLogService;
 import com.example.cosmetest.business.service.EtudeService;
 import com.example.cosmetest.business.service.EtudeVolontaireService;
+import com.example.cosmetest.business.service.EtudeVolontaireCommandService;
+import com.example.cosmetest.business.service.EtudeVolontaireRepairService;
 import com.example.cosmetest.business.service.GroupeService;
 import com.example.cosmetest.business.service.RdvService;
 import com.example.cosmetest.domain.model.AuditLog;
@@ -20,6 +22,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
 import jakarta.validation.Valid;
@@ -31,7 +34,7 @@ import java.util.stream.Collectors;
  * Version améliorée avec gestion d'erreurs uniforme et validation
  */
 @RestController
-@RequestMapping("/api/etude-volontaires")
+@RequestMapping({"/api/etude-volontaires", "/api/v1/etude-volontaires"})
 public class EtudeVolontaireController {
 
     private static final int DEFAULT_PAGE_SIZE = 50;
@@ -42,17 +45,33 @@ public class EtudeVolontaireController {
     private final GroupeService groupeService;
     private final EtudeService etudeService;
     private final AuditLogService auditLogService;
+    private final EtudeVolontaireRepairService repairService;
+    private final EtudeVolontaireCommandService commandService;
 
+    @Autowired
     public EtudeVolontaireController(EtudeVolontaireService etudeVolontaireService,
                                      RdvService rdvService,
                                      GroupeService groupeService,
                                      EtudeService etudeService,
-                                     AuditLogService auditLogService) {
+                                     AuditLogService auditLogService,
+                                     EtudeVolontaireRepairService repairService,
+                                     EtudeVolontaireCommandService commandService) {
         this.etudeVolontaireService = etudeVolontaireService;
         this.rdvService = rdvService;
         this.groupeService = groupeService;
         this.etudeService = etudeService;
         this.auditLogService = auditLogService;
+        this.repairService = repairService;
+        this.commandService = commandService;
+    }
+
+    EtudeVolontaireController(EtudeVolontaireService etudeVolontaireService,
+                              RdvService rdvService,
+                              GroupeService groupeService,
+                              EtudeService etudeService,
+                              AuditLogService auditLogService) {
+        this(etudeVolontaireService, rdvService, groupeService, etudeService, auditLogService, null,
+                new EtudeVolontaireCommandService(etudeVolontaireService, auditLogService));
     }
 
     private String evDetails(int idEtude, int idGroupe, int idVolontaire, String action) {
@@ -189,20 +208,12 @@ public class EtudeVolontaireController {
     public ResponseEntity<ApiResponse<EtudeVolontaireDTO>> createEtudeVolontaire(
             @Valid @RequestBody EtudeVolontaireDTO etudeVolontaireDTO,
             HttpServletRequest request) {
-        try {
-            EtudeVolontaireDTO created = etudeVolontaireService.saveEtudeVolontaire(etudeVolontaireDTO);
-            String utilisateur = SecurityContextHolder.getContext().getAuthentication().getName();
-            String entiteId = created.getIdEtude() + "-" + created.getIdGroupe() + "-" + created.getIdVolontaire();
-            auditLogService.log(utilisateur, AuditLog.Action.ASSIGN, "ETUDE_VOLONTAIRE",
-                    entiteId, evDetails(created.getIdEtude(), created.getIdGroupe(), created.getIdVolontaire(), null), request.getRemoteAddr());
-            return ResponseEntity.status(HttpStatus.CREATED)
-                    .body(ApiResponse.success(created, "Association créée avec succès"));
-        } catch (IllegalArgumentException e) {
-            return ResponseEntity.badRequest()
-                    .body(ApiResponse.error("Données invalides", e.getMessage()));
-        } catch (Exception e) {
-            throw new RuntimeException("Impossible de créer l'association", e);
-        }
+        var authentication = SecurityContextHolder.getContext().getAuthentication();
+        String utilisateur = authentication != null ? authentication.getName() : "unknown";
+        EtudeVolontaireDTO created = commandService.create(
+                etudeVolontaireDTO, utilisateur, request.getRemoteAddr());
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(ApiResponse.success(created, "Association créée avec succès"));
     }
 
     @PatchMapping("/update-volontaire")
@@ -397,7 +408,6 @@ public class EtudeVolontaireController {
      * courante est résolue côté serveur afin d'éviter les fragments obsolètes.
      */
     @PatchMapping("/update-paiement")
-    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ApiResponse<EtudeVolontaireDTO>> updatePaiement(
             @RequestParam(required = false) Long id,
             @RequestParam int idEtude,
@@ -529,89 +539,13 @@ public class EtudeVolontaireController {
      */
     @PostMapping("/repair/{idEtude}")
     public ResponseEntity<Map<String, Object>> repairAssociations(@PathVariable int idEtude) {
-        try {
-            // 1. Récupérer tous les RDV de l'étude
-            List<RdvDTO> rdvs = rdvService.getRdvsByIdEtude(idEtude);
-
-            // 2. Extraire les volontaires uniques assignés à des RDV
-            Set<Integer> rdvVolontaireIds = rdvs.stream()
-                    .map(RdvDTO::getIdVolontaire)
-                    .filter(id -> id != null && id != 0)
-                    .collect(Collectors.toSet());
-
-            // 3. Récupérer les associations existantes
-            List<EtudeVolontaireDTO> existingAssociations = etudeVolontaireService.getEtudeVolontairesByEtude(idEtude);
-            Set<Integer> existingVolontaireIds = existingAssociations.stream()
-                    .map(EtudeVolontaireDTO::getIdVolontaire)
-                    .collect(Collectors.toSet());
-
-            // 4. Trouver les volontaires manquants
-            Set<Integer> missingVolontaireIds = new HashSet<>(rdvVolontaireIds);
-            missingVolontaireIds.removeAll(existingVolontaireIds);
-
-            // 5. Récupérer le premier groupe de l'étude pour les valeurs par défaut
-            List<GroupeDTO> groupes = groupeService.getGroupesByIdEtude(idEtude);
-            int defaultGroupeId = 0;
-            int defaultIv = 0;
-            if (!groupes.isEmpty()) {
-                GroupeDTO firstGroupe = groupes.get(0);
-                defaultGroupeId = firstGroupe.getIdGroupe() != null ? firstGroupe.getIdGroupe() : 0;
-                defaultIv = firstGroupe.getIv();
-            }
-
-            // 6. Créer les associations manquantes
-            int repaired = 0;
-            List<String> errors = new ArrayList<>();
-            for (Integer volontaireId : missingVolontaireIds) {
-                try {
-                    // Chercher le groupe réel depuis le RDV si possible
-                    int groupeId = defaultGroupeId;
-                    int iv = defaultIv;
-                    Optional<RdvDTO> rdvWithGroupe = rdvs.stream()
-                            .filter(r -> Objects.equals(r.getIdVolontaire(), volontaireId) && r.getIdGroupe() != null && r.getIdGroupe() != 0)
-                            .findFirst();
-                    if (rdvWithGroupe.isPresent()) {
-                        groupeId = rdvWithGroupe.get().getIdGroupe();
-                        // Récupérer l'IV du groupe réel
-                        for (GroupeDTO g : groupes) {
-                            if (g.getIdGroupe() != null && g.getIdGroupe() == groupeId) {
-                                iv = g.getIv();
-                                break;
-                            }
-                        }
-                    }
-
-                    EtudeVolontaireDTO dto = new EtudeVolontaireDTO(
-                            idEtude,
-                            groupeId,
-                            volontaireId,
-                            iv,
-                            0,    // numsujet
-                            0,    // paye
-                            "INSCRIT"
-                    );
-                    etudeVolontaireService.saveEtudeVolontaire(dto);
-                    repaired++;
-                } catch (Exception e) {
-                    errors.add("Volontaire " + volontaireId + ": échec de réparation");
-                }
-            }
-
-            Map<String, Object> result = new HashMap<>();
-            result.put("etudeId", idEtude);
-            result.put("volontairesInRdvs", rdvVolontaireIds.size());
-            result.put("existingAssociations", existingVolontaireIds.size());
-            result.put("missing", missingVolontaireIds.size());
-            result.put("repaired", repaired);
-            if (!errors.isEmpty()) {
-                result.put("errors", errors);
-            }
-
-            return ResponseEntity.ok(result);
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(Map.of("error", "Erreur lors de la réparation"));
-        }
+        EtudeVolontaireRepairService.RepairResult result = repairService.repair(idEtude);
+        return ResponseEntity.ok(Map.of(
+                "etudeId", result.etudeId(),
+                "volontairesInRdvs", result.volontairesInRdvs(),
+                "existingAssociations", result.existingAssociations(),
+                "missing", result.missing(),
+                "repaired", result.repaired()));
     }
 
     /**

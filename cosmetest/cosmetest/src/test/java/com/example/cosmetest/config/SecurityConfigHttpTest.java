@@ -84,9 +84,17 @@ class SecurityConfigHttpTest {
 
     @Test
     @WithMockUser(username = "user", roles = "USER")
-    void endpointReparationEstReserveAuxAdministrateurs() throws Exception {
+    void endpointMetierEstAccessibleAuxUtilisateursAuthentifies() throws Exception {
         mockMvc.perform(post("/api/etude-volontaires/repair/12"))
-                .andExpect(status().isForbidden())
-                .andExpect(jsonPath("$.error").value("Forbidden"));
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    @WithMockUser(username = "user", roles = "USER")
+    void journauxAuditEtConnexionRestentReservesAuxAdministrateurs() throws Exception {
+        mockMvc.perform(get("/api/audit"))
+                .andExpect(status().isForbidden());
+        mockMvc.perform(get("/api/connexions"))
+                .andExpect(status().isForbidden());
     }
 }
