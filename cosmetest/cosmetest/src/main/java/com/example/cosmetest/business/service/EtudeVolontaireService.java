@@ -5,6 +5,7 @@ import com.example.cosmetest.domain.model.EtudeVolontaireId;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 public interface EtudeVolontaireService {
@@ -24,6 +25,7 @@ public interface EtudeVolontaireService {
     void deleteEtudeVolontaire(EtudeVolontaireId legacyId);
     boolean existsByEtudeAndVolontaire(int idEtude, int idVolontaire);
     Long countVolontairesByEtude(int idEtude);
+    Map<Integer, Long> countActiveDistinctVolunteersByStudyIds(List<Integer> idEtudes);
     Long countEtudesByVolontaire(int idVolontaire);
     EtudeVolontaireDTO updateStatut(Long id, String statut);
     EtudeVolontaireDTO updatePaye(Long id, int paye);

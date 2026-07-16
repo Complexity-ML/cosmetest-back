@@ -21,6 +21,7 @@ import java.time.LocalDate;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.*;
@@ -48,6 +49,9 @@ class DashboardServiceImplTest {
 
     @Mock
     private RdvRepository rdvRepository;
+
+    @Mock
+    private EtudeVolontaireService etudeVolontaireService;
 
     @InjectMocks
     private DashboardServiceImpl dashboardService;
@@ -258,6 +262,8 @@ class DashboardServiceImplTest {
 
         List<EtudeDTO> etudes = Arrays.asList(etudeDTO, etude2);
         when(etudeService.getRecentEtudes(5)).thenReturn(etudes);
+        when(etudeVolontaireService.countActiveDistinctVolunteersByStudyIds(List.of(1, 2)))
+                .thenReturn(Map.of(1, 12L, 2, 4L));
 
         // Act
         List<EtudeDTO> result = dashboardService.getRecentEtudes(5);
@@ -265,7 +271,10 @@ class DashboardServiceImplTest {
         // Assert
         assertThat(result).hasSize(2);
         assertThat(result.get(0).getIdEtude()).isEqualTo(1);
+        assertThat(result.get(0).getVolontaires()).isEqualTo(12);
+        assertThat(result.get(1).getVolontaires()).isEqualTo(4);
         verify(etudeService, times(1)).getRecentEtudes(5);
+        verify(etudeVolontaireService).countActiveDistinctVolunteersByStudyIds(List.of(1, 2));
     }
 
     @Test

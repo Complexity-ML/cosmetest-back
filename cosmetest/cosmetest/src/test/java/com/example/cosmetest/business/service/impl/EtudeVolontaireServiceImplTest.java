@@ -8,6 +8,7 @@ import com.example.cosmetest.domain.model.EtudeVolontaireId;
 import com.example.cosmetest.exception.AmbiguousEtudeVolontaireException;
 import org.junit.jupiter.api.Test;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import static org.assertj.core.api.Assertions.*;
 import static org.mockito.Mockito.*;
@@ -42,6 +43,16 @@ class EtudeVolontaireServiceImplTest {
                 .isInstanceOf(AmbiguousEtudeVolontaireException.class);
         verify(repository, never()).deleteById(anyLong());
         verify(repository, never()).save(any());
+    }
+
+    @Test void compteLesVolontairesDistinctsDePlusieursEtudesEnUneRequete() {
+        when(repository.countActiveDistinctVolunteersByStudyIds(List.of(1, 2)))
+                .thenReturn(List.of(new Object[]{1, 12L}, new Object[]{2, 4L}));
+
+        Map<Integer, Long> result = service.countActiveDistinctVolunteersByStudyIds(List.of(1, 2, 1));
+
+        assertThat(result).containsExactly(entry(1, 12L), entry(2, 4L));
+        verify(repository).countActiveDistinctVolunteersByStudyIds(List.of(1, 2));
     }
 
     private static EtudeVolontaire row(Long id,int etude,int volontaire,int paye) {

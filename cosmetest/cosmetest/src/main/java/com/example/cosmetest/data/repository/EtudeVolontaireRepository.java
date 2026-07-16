@@ -24,6 +24,20 @@ public interface EtudeVolontaireRepository extends JpaRepository<EtudeVolontaire
 
     @Query("select count(ev) from EtudeVolontaire ev where ev.idEtude=:idEtude")
     Long countVolontairesByEtude(@Param("idEtude") int idEtude);
+
+    @Query("""
+            select ev.idEtude, count(distinct ev.idVolontaire)
+            from EtudeVolontaire ev
+            where ev.idEtude in :idEtudes
+              and not exists (
+                select a.idAnnuler from Annulation a
+                where a.idEtude = ev.idEtude
+                  and a.idVol = ev.idVolontaire
+              )
+            group by ev.idEtude
+            """)
+    List<Object[]> countActiveDistinctVolunteersByStudyIds(@Param("idEtudes") List<Integer> idEtudes);
+
     @Query("select count(ev) from EtudeVolontaire ev where ev.idVolontaire=:idVolontaire")
     Long countEtudesByVolontaire(@Param("idVolontaire") int idVolontaire);
     boolean existsByIdEtudeAndIdVolontaire(int idEtude, int idVolontaire);
@@ -57,15 +71,24 @@ public interface EtudeVolontaireRepository extends JpaRepository<EtudeVolontaire
 
     @Query(value="""
       SELECT ev.id_etude, COUNT(*),
-       SUM(CASE WHEN a.id_etude IS NULL AND ev.paye=1 THEN 1 ELSE 0 END),
-       SUM(CASE WHEN a.id_etude IS NULL AND (ev.paye=0 OR ev.paye IS NULL) THEN 1 ELSE 0 END),
-       SUM(CASE WHEN a.id_etude IS NULL AND ev.paye=2 THEN 1 ELSE 0 END),
-       SUM(CASE WHEN a.id_etude IS NOT NULL THEN 1 ELSE 0 END),
-       COALESCE(SUM(CASE WHEN a.id_etude IS NULL THEN ev.iv ELSE 0 END),0),
-       COALESCE(SUM(CASE WHEN a.id_etude IS NULL AND ev.paye=1 THEN ev.iv ELSE 0 END),0),
-       COALESCE(SUM(CASE WHEN a.id_etude IS NOT NULL THEN ev.iv ELSE 0 END),0)
+       SUM(CASE WHEN a.cancelled IS NULL AND ev.paye=1 THEN 1 ELSE 0 END),
+       SUM(CASE WHEN a.cancelled IS NULL AND (ev.paye=0 OR ev.paye IS NULL) THEN 1 ELSE 0 END),
+       SUM(CASE WHEN a.cancelled IS NULL AND ev.paye=2 THEN 1 ELSE 0 END),
+       SUM(CASE WHEN a.cancelled IS NOT NULL THEN 1 ELSE 0 END),
+       COALESCE(SUM(CASE WHEN a.cancelled IS NULL THEN ev.iv ELSE 0 END),0),
+       COALESCE(SUM(CASE WHEN a.cancelled IS NULL AND ev.paye=1 THEN ev.iv ELSE 0 END),0),
+       COALESCE(SUM(CASE WHEN a.cancelled IS NOT NULL THEN ev.iv ELSE 0 END),0)
       FROM etude_volontaire ev
-      LEFT JOIN annulation a ON a.id_etude=ev.id_etude AND a.id_vol=ev.id_volontaire
+      JOIN (
+       SELECT CAST(SUBSTRING_INDEX(
+        GROUP_CONCAT(id_etude_volontaire ORDER BY (numsujet>0) DESC, numsujet DESC, id_etude_volontaire DESC),
+        ',', 1
+       ) AS UNSIGNED) id_etude_volontaire
+       FROM etude_volontaire
+       GROUP BY id_etude,id_volontaire
+      ) canonical ON canonical.id_etude_volontaire=ev.id_etude_volontaire
+      LEFT JOIN (SELECT id_etude,id_vol,1 cancelled FROM annulation GROUP BY id_etude,id_vol) a
+       ON a.id_etude=ev.id_etude AND a.id_vol=ev.id_volontaire
       WHERE (:idEtude IS NULL OR ev.id_etude=:idEtude)
       GROUP BY ev.id_etude
       """, nativeQuery=true)

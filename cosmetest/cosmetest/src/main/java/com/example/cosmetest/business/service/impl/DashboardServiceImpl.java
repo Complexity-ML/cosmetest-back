@@ -85,7 +85,7 @@ public class DashboardServiceImpl implements DashboardService {
 
     @Override
     public List<EtudeDTO> getRecentEtudes(int limit) {
-        return etudeService.getRecentEtudes(limit);
+        return enrichVolunteerCounts(etudeService.getRecentEtudes(limit));
     }
 
     /**
@@ -192,19 +192,24 @@ public class DashboardServiceImpl implements DashboardService {
 
     @Override
     public List<EtudeDTO> getEtudesEnCours(int limit) {
-        List<EtudeDTO> etudes = etudeService.getCurrentEtudes();
-
-        // Peupler le nombre de volontaires pour chaque étude
-        for (EtudeDTO etude : etudes) {
-            if (etude.getIdEtude() != null) {
-                Long count = etudeVolontaireService.countVolontairesByEtude(etude.getIdEtude());
-                etude.setVolontaires(count != null ? count.intValue() : 0);
-            }
-        }
+        List<EtudeDTO> etudes = enrichVolunteerCounts(etudeService.getCurrentEtudes());
 
         if (etudes.size() > limit) {
             return etudes.subList(0, limit);
         }
+        return etudes;
+    }
+
+    private List<EtudeDTO> enrichVolunteerCounts(List<EtudeDTO> etudes) {
+        List<Integer> studyIds = etudes.stream()
+                .map(EtudeDTO::getIdEtude)
+                .filter(Objects::nonNull)
+                .distinct()
+                .toList();
+        Map<Integer, Long> counts = etudeVolontaireService
+                .countActiveDistinctVolunteersByStudyIds(studyIds);
+        etudes.forEach(etude -> etude.setVolontaires(
+                counts.getOrDefault(etude.getIdEtude(), 0L).intValue()));
         return etudes;
     }
 }

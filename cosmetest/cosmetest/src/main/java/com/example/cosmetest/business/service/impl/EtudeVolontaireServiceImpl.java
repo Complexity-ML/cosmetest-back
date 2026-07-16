@@ -13,6 +13,8 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
+import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.Optional;
 
 @Service
@@ -58,6 +60,16 @@ public class EtudeVolontaireServiceImpl implements EtudeVolontaireService {
 
     public boolean existsByEtudeAndVolontaire(int e,int v){positive(e,"idEtude");positive(v,"idVolontaire");return repository.existsByIdEtudeAndIdVolontaire(e,v);}
     public Long countVolontairesByEtude(int e){positive(e,"idEtude");return repository.countVolontairesByEtude(e);}
+    public Map<Integer, Long> countActiveDistinctVolunteersByStudyIds(List<Integer> ids){
+        if(ids==null||ids.isEmpty()) return Map.of();
+        List<Integer> validIds=ids.stream().filter(id->id!=null&&id>0).distinct().toList();
+        if(validIds.isEmpty()) return Map.of();
+        Map<Integer,Long> counts=new LinkedHashMap<>();
+        for(Object[] row:repository.countActiveDistinctVolunteersByStudyIds(validIds)){
+            counts.put(((Number)row[0]).intValue(),((Number)row[1]).longValue());
+        }
+        return counts;
+    }
     public Long countEtudesByVolontaire(int v){positive(v,"idVolontaire");return repository.countEtudesByVolontaire(v);}
 
     @Transactional public EtudeVolontaireDTO updateStatut(Long id,String s){EtudeVolontaire e=required(id);e.setStatut(s);return saved(e);}

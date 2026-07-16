@@ -7,7 +7,7 @@ import com.example.cosmetest.data.repository.AnnulationRepository;
 import com.example.cosmetest.data.repository.RdvRepository;
 import com.example.cosmetest.domain.model.Annulation;
 import com.example.cosmetest.domain.model.Rdv;
-import com.example.cosmetest.exception.AmbiguousRdvTraceException;
+
 
 
 import org.slf4j.Logger;
@@ -123,15 +123,12 @@ public class AnnulationServiceImpl implements AnnulationService {
         
         // Validation des données avant sauvegarde
         preserveExistingRdvTrace(annulationDTO);
-        List<Rdv> rdvsForTrace = findRdvsForTrace(annulationDTO);
-        if (annulationDTO.getIdRdv() == null && rdvsForTrace.size() > 1) {
-            throw new AmbiguousRdvTraceException(
-                    annulationDTO.getIdVol(), annulationDTO.getIdEtude(), rdvsForTrace.size());
+        List<Rdv> volunteerStudyRdvs = rdvRepository.findByIdVolontaireAndIdEtude(
+                annulationDTO.getIdVol(), annulationDTO.getIdEtude());
+        if (annulationDTO.getIdRdv() == null && volunteerStudyRdvs.size() == 1) {
+            annulationDTO.setIdRdv(volunteerStudyRdvs.get(0).getIdRdv());
         }
-        if (annulationDTO.getIdRdv() == null && !rdvsForTrace.isEmpty()) {
-            annulationDTO.setIdRdv(rdvsForTrace.get(0).getIdRdv());
-        }
-        List<Rdv> rdvsToCancel = filterActiveRdvs(rdvsForTrace);
+        List<Rdv> rdvsToReplace = filterActiveRdvs(volunteerStudyRdvs);
 
         // Conversion en entité
         Annulation annulation = annulationMapper.toEntity(annulationDTO);
@@ -140,32 +137,24 @@ public class AnnulationServiceImpl implements AnnulationService {
         Annulation savedAnnulation = annulationRepository.save(annulation);
         logger.info(" Annulation enregistrée");
 
-        // AUTOMATIQUEMENT : libérer les RDV dans la même transaction que l'annulation.
-        // Toute erreur doit remonter afin d'éviter une annulation enregistrée avec un RDV encore actif.
-        logger.debug(" Libération des créneaux RDV pour volontaire {} dans étude {}...",
+        // Rebatch atomique : recréer un créneau libre pour chaque RDV actif, puis
+        // supprimer tous les anciens RDV affectés. Toute erreur annule aussi la
+        // trace d'annulation grâce à la transaction englobante.
+        logger.debug(" Rebatch des créneaux RDV pour volontaire {} dans étude {}...",
             annulationDTO.getIdVol(), annulationDTO.getIdEtude());
-            
-            // Récupérer tous les RDV du volontaire dans cette étude
-            List<Rdv> rdvs = rdvsToCancel;
-            
-            logger.debug(" {} RDV trouvés à libérer", rdvs.size());
-            
-            // Mettre idVolontaire à null pour chaque RDV (libérer le créneau)
-            int rdvsLiberes = 0;
-            for (Rdv rdv : rdvs) {
-                boolean wasAlreadyCancelled = "ANNULE".equalsIgnoreCase(rdv.getEtat());
-                rdv.setEtat("ANNULE");
-                rdvRepository.save(rdv);
-                if (!wasAlreadyCancelled) {
-                    Rdv replacement = createEmptyReplacementRdv(rdv);
-                    rdvRepository.save(replacement);
-                    logger.debug("Nouveau creneau RDV {} cree pour remplacer {}", replacement.getId(), rdv.getId());
-                }
-                rdvsLiberes++;
-                logger.debug(" Créneau RDV {} libéré", rdv.getId());
-            }
-            
-        logger.debug(" {} créneaux RDV libérés avec succès", rdvsLiberes);
+
+        for (Rdv rdv : rdvsToReplace) {
+            Rdv replacement = createEmptyReplacementRdv(rdv);
+            rdvRepository.save(replacement);
+            logger.debug("Nouveau créneau RDV {} créé pour remplacer {}", replacement.getIdRdv(), rdv.getId());
+        }
+        if (!rdvsToReplace.isEmpty()) {
+            rdvRepository.deleteAll(rdvsToReplace);
+        }
+
+        logger.info("Rebatch annulation terminé: étude={}, volontaire={}, anciensRDV={}, nouveauxCréneaux={}",
+                annulationDTO.getIdEtude(), annulationDTO.getIdVol(),
+                rdvsToReplace.size(), rdvsToReplace.size());
 
         // Conversion en DTO pour retour
         return annulationMapper.toDto(savedAnnulation);
@@ -188,19 +177,6 @@ public class AnnulationServiceImpl implements AnnulationService {
     }
 
 
-    private List<Rdv> findRdvsForTrace(AnnulationDTO annulationDTO) {
-        List<Rdv> rdvs = rdvRepository.findByIdVolontaireAndIdEtude(
-                annulationDTO.getIdVol(),
-                annulationDTO.getIdEtude());
-
-        if (annulationDTO.getIdRdv() == null) {
-            return rdvs;
-        }
-
-        return rdvs.stream()
-                .filter(rdv -> annulationDTO.getIdRdv().equals(rdv.getIdRdv()))
-                .collect(Collectors.toList());
-    }
 
     private List<Rdv> filterActiveRdvs(List<Rdv> rdvs) {
         return rdvs.stream()

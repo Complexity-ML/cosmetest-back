@@ -325,16 +325,15 @@ class AnnulationServiceImplTest {
         verify(rdvRepository, times(1)).findByIdVolontaireAndIdEtude(10, 5);
         verify(rdvIdAllocator).nextForStudy(5);
         ArgumentCaptor<Rdv> rdvCaptor = ArgumentCaptor.forClass(Rdv.class);
-        verify(rdvRepository, times(2)).save(rdvCaptor.capture());
+        verify(rdvRepository).save(rdvCaptor.capture());
+        verify(rdvRepository).deleteAll(Collections.singletonList(rdv1));
 
         List<Rdv> savedRdvs = rdvCaptor.getAllValues();
-        assertThat(savedRdvs.get(0).getId()).isEqualTo(rdvPk1);
-        assertThat(savedRdvs.get(0).getIdVolontaire()).isEqualTo(10);
-        assertThat(savedRdvs.get(0).getEtat()).isEqualTo("ANNULE");
-        assertThat(savedRdvs.get(1).getIdEtude()).isEqualTo(5);
-        assertThat(savedRdvs.get(1).getIdRdv()).isEqualTo(2);
-        assertThat(savedRdvs.get(1).getIdVolontaire()).isNull();
-        assertThat(savedRdvs.get(1).getEtat()).isEqualTo("PLANIFIE");
+        assertThat(savedRdvs.get(0).getIdEtude()).isEqualTo(5);
+        assertThat(savedRdvs.get(0).getIdRdv()).isEqualTo(2);
+        assertThat(savedRdvs.get(0).getIdVolontaire()).isNull();
+        assertThat(savedRdvs.get(0).getEtat()).isEqualTo("PLANIFIE");
+        assertThat(rdv1.getIdVolontaire()).isEqualTo(10);
     }
 
     @Test
@@ -351,7 +350,7 @@ class AnnulationServiceImplTest {
         rdv.setEtat("PLANIFIE");
         when(rdvRepository.findByIdVolontaireAndIdEtude(10, 5))
                 .thenReturn(Collections.singletonList(rdv));
-        when(rdvRepository.save(rdv)).thenThrow(new IllegalStateException("échec sauvegarde RDV"));
+        when(rdvRepository.save(any(Rdv.class))).thenThrow(new IllegalStateException("échec sauvegarde RDV"));
 
         assertThatThrownBy(() -> annulationService.saveAnnulation(annulationDTO))
                 .isInstanceOf(IllegalStateException.class)
