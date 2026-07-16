@@ -45,6 +45,12 @@ public class AuditLogServiceImpl implements AuditLogService {
     }
 
     @Override
+    public Page<AuditLog> search(String entite, String utilisateur, AuditLog.Action action,
+                                 LocalDateTime debut, LocalDateTime fin, int page, int size) {
+        return repository.search(entite, utilisateur, action, debut, fin, PageRequest.of(page, size));
+    }
+
+    @Override
     @Transactional
     public int purgeOlderThan(LocalDateTime before) {
         return repository.deleteByCreatedAtBefore(before);

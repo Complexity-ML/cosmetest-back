@@ -112,6 +112,24 @@ class AuditLogServiceImplTest {
         verify(repository).findByUtilisateurOrderByCreatedAtDesc("alice", PageRequest.of(0, 50));
     }
 
+    @Test
+    @DisplayName("search() - doit transmettre tous les filtres dans une requête paginée")
+    void search_shouldCombineAllFilters() {
+        LocalDateTime debut = LocalDateTime.of(2026, 7, 1, 0, 0);
+        LocalDateTime fin = LocalDateTime.of(2026, 7, 16, 23, 59, 59);
+        Page<AuditLog> page = new PageImpl<>(List.of(), PageRequest.of(2, 25), 0);
+        when(repository.search("VOLONTAIRE", "alice", AuditLog.Action.DELETE,
+                debut, fin, PageRequest.of(2, 25))).thenReturn(page);
+
+        Page<AuditLog> result = service.search(
+                "VOLONTAIRE", "alice", AuditLog.Action.DELETE,
+                debut, fin, 2, 25);
+
+        assertThat(result).isSameAs(page);
+        verify(repository).search("VOLONTAIRE", "alice", AuditLog.Action.DELETE,
+                debut, fin, PageRequest.of(2, 25));
+    }
+
     // ─── purgeOlderThan() ─────────────────────────────────────────────────────
 
     @Test

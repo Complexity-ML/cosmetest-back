@@ -24,6 +24,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doAnswer;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -95,6 +96,9 @@ class SecurityConfigHttpTest {
         mockMvc.perform(get("/api/audit"))
                 .andExpect(status().isForbidden());
         mockMvc.perform(get("/api/connexions"))
+                .andExpect(status().isForbidden());
+        mockMvc.perform(delete("/api/connexions/session-history/purge")
+                        .param("before", "2026-01-01"))
                 .andExpect(status().isForbidden());
     }
 }

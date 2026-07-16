@@ -12,6 +12,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
+import java.time.ZoneId;
 
 import java.util.List;
 import java.util.Map;
@@ -120,5 +121,15 @@ public class ConnexionController {
             "page", result.getNumber(),
             "size", result.getSize()
         ));
+    }
+
+    @DeleteMapping("/session-history/purge")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<Map<String, Object>> purgeSessionHistory(@RequestParam String before) {
+        var cutoff = LocalDate.parse(before)
+                .atStartOfDay(ZoneId.systemDefault())
+                .toInstant();
+        int deleted = sessionHistoryRepository.deleteByLogoutTimeBefore(cutoff);
+        return ResponseEntity.ok(Map.of("deleted", deleted, "before", before));
     }
 }

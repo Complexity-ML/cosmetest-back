@@ -18,12 +18,12 @@ class AdminControllerHardeningTest {
     @Test
     void auditBoundsPaginationAndUsesGlobalCorsPolicy() {
         AuditLogService service = mock(AuditLogService.class);
-        when(service.findAll(0, 100)).thenReturn(Page.empty());
+        when(service.search(null, null, null, null, null, 0, 100)).thenReturn(Page.empty());
         AuditController controller = new AuditController(service);
 
-        controller.getLogs(-5, 10_000, null, null, null, null);
+        controller.getLogs(-5, 10_000, null, null, null, null, null);
 
-        verify(service).findAll(0, 100);
+        verify(service).search(null, null, null, null, null, 0, 100);
         assertThat(AuditController.class.getAnnotation(CrossOrigin.class)).isNull();
     }
 
