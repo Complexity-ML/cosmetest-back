@@ -101,4 +101,11 @@ class SecurityConfigHttpTest {
                         .param("before", "2026-01-01"))
                 .andExpect(status().isForbidden());
     }
+
+    @Test
+    @WithMockUser(username = "user", roles = "USER")
+    void creationDeCompteResteReserveeAuxAdministrateursDansLaChaineHttp() throws Exception {
+        mockMvc.perform(post("/api/identifiants"))
+                .andExpect(status().isForbidden());
+    }
 }

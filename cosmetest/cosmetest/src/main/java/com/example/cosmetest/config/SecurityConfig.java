@@ -78,7 +78,9 @@ public class SecurityConfig {
                 .requestMatchers("/planning", "/planning/**").permitAll()
                 .requestMatchers("/admin", "/admin/**").permitAll()
                 .requestMatchers("/settings", "/settings/**").permitAll()
-                // Matrice minimale issue des règles déjà présentes dans les contrôleurs
+                // Seule la création de compte est réservée aux administrateurs
+                .requestMatchers(HttpMethod.POST, "/api/identifiants").hasRole("ADMIN")
+                // Audit et journaux de connexion/session sont réservés aux administrateurs
                 .requestMatchers(
                         "/api/audit/**",
                         "/api/connexions/**")
